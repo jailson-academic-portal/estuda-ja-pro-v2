@@ -143,6 +143,15 @@ const CLINICAL_RUBRIC_5 = [
       temperature: 0.2,
     });
 
+    // DEBUG: Log raw AI response
+    console.log("[DEBUG] Raw AI Response:", JSON.stringify(ai, null, 2));
+    console.log("[DEBUG] AI scores received:", ai.scores?.length, "items");
+    if (ai.scores) {
+      ai.scores.forEach((s, i) => {
+        console.log(`[DEBUG] Score ${i + 1}: id=${s.id}, score=${s.score}, comment=${String(s.comment).slice(0, 50)}...`);
+      });
+    }
+
     const byId = new Map(rubric.map((c) => [c.id, c]));
     const rubricScores = rubric.map((crit) => {
       const found = (ai.scores ?? []).find((s) => String(s?.id) === crit.id);
@@ -156,11 +165,20 @@ const CLINICAL_RUBRIC_5 = [
         comment: String(found?.comment ?? "").trim(),
       };
     });
+
+    // DEBUG: Log processed rubric scores
+    console.log("[DEBUG] Processed rubric scores:");
+    rubricScores.forEach((r) => {
+      console.log(`[DEBUG]   ${r.id}: ${r.score}/${r.max_score} - ${r.comment.slice(0, 30)}...`);
+    });
+
     void byId;
     if (!ai.scores?.length) throw new Error("A IA não retornou a avaliação da rubrica. Tente novamente.");
 
     const rubricTotal = rubricScores.reduce((acc, r) => acc + r.score, 0);
+    console.log("[DEBUG] Rubric total (before penalty):", rubricTotal);
     const finalScore = Number(Math.max(0, Math.min(10, rubricTotal - latePenalty)).toFixed(2));
+    console.log("[DEBUG] Final score (after penalty):", finalScore);
     const aiFeedback = String(ai.feedback ?? "").replace(/\\n/g, "\n").trim();
 
     const penaltyBlock =
