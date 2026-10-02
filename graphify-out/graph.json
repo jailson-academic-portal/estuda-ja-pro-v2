@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-01T19:34:29.067257+00:00",
+  "generated_at": "2026-10-02T13:20:39.529388+00:00",
   "files": [
     {
       "path": "roadmap.md",
@@ -10,8 +10,16 @@
       "bytes": 245
     },
     {
+      "path": "package-lock.json",
+      "bytes": 730255
+    },
+    {
       "path": "AGENTS.md",
       "bytes": 168
+    },
+    {
+      "path": ".mcp.json",
+      "bytes": 233
     },
     {
       "path": "tsconfig.json",
@@ -36,6 +44,10 @@
     {
       "path": "components.json",
       "bytes": 443
+    },
+    {
+      "path": ".claude/settings.local.json",
+      "bytes": 53
     },
     {
       "path": "public/push-sw.js",
@@ -1183,7 +1195,7 @@
     },
     {
       "path": "src/backend/simulsaude-review.functions.ts",
-      "bytes": 16081
+      "bytes": 15718
     },
     {
       "path": "src/backend/ai-assistant-core.server.ts",
@@ -1747,7 +1759,7 @@
     },
     {
       "path": "src/components/discipline/SimulSaudeModule.tsx",
-      "bytes": 65606
+      "bytes": 65550
     },
     {
       "path": "src/components/discipline/ActivityDeadlineBadges.tsx",
