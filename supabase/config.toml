@@ -1,0 +1,4 @@
+project_id = "itzhuwlngohstxbpoiqy"
+
+[functions.matricula-login]
+verify_jwt = false

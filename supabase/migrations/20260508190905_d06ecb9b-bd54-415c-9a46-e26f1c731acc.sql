@@ -1,0 +1,1 @@
+ALTER TABLE public.disciplines ADD COLUMN IF NOT EXISTS location text;

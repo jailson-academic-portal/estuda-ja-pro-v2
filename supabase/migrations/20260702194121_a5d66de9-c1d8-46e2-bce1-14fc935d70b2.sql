@@ -1,0 +1,1 @@
+UPDATE public.profiles SET name = 'Jaílson Resende' WHERE id = 'fed0622b-8b22-46e2-a565-a517ea869692';

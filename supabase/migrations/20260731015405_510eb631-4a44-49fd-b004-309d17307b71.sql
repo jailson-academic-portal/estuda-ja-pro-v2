@@ -1,0 +1,1 @@
+ALTER TABLE public.assessment_header_templates ADD COLUMN IF NOT EXISTS logo_scale numeric NOT NULL DEFAULT 1.0;

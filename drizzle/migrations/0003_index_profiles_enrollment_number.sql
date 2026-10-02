@@ -1,0 +1,2 @@
+CREATE INDEX IF NOT EXISTS idx_profiles_enrollment_number ON public.profiles (enrollment_number);
+CREATE INDEX IF NOT EXISTS idx_profiles_enrollment_number_lower ON public.profiles (lower(enrollment_number));

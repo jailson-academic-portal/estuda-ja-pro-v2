@@ -1,0 +1,90 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1788031821989,
+      "tag": "0000_security_fix_profiles_grades_materials",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788124363426,
+      "tag": "0001_add_submission_text_and_discipline_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788124462577,
+      "tag": "0002_add_assessment_schedule_text",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788309597402,
+      "tag": "0003_index_profiles_enrollment_number",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788312414128,
+      "tag": "0004_perf_concurrency_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789002686036,
+      "tag": "0005_fix_work_submission_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789003203059,
+      "tag": "0006_student_stats_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1789083443822,
+      "tag": "0007_create_lesson_plan_items",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789090848707,
+      "tag": "0008_clinical_cases_plan_integration_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1789435397953,
+      "tag": "0009_activities_sort_order",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790276412530,
+      "tag": "0010_restrict_courses_select",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790731426353,
+      "tag": "0011_simulsaude_single_submission_manual_grading",
+      "breakpoints": true
+    }
+  ]
+}

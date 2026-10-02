@@ -1,0 +1,357 @@
+# Design system
+
+Generated: 2026-10-01T19:34:29.067257+00:00
+
+## Tokens
+- --radius-sm: calc(var(--radius) - 4px) (src/styles.css)
+- --radius-md: calc(var(--radius) - 2px) (src/styles.css)
+- --radius-lg: var(--radius) (src/styles.css)
+- --radius-xl: calc(var(--radius) + 4px) (src/styles.css)
+- --radius-2xl: calc(var(--radius) + 8px) (src/styles.css)
+- --radius-3xl: calc(var(--radius) + 12px) (src/styles.css)
+- --radius-4xl: calc(var(--radius) + 16px) (src/styles.css)
+- --color-background: var(--background) (src/styles.css)
+- --color-foreground: var(--foreground) (src/styles.css)
+- --color-card: var(--card) (src/styles.css)
+- --color-card-foreground: var(--card-foreground) (src/styles.css)
+- --color-popover: var(--popover) (src/styles.css)
+- --color-popover-foreground: var(--popover-foreground) (src/styles.css)
+- --color-primary: var(--primary) (src/styles.css)
+- --color-primary-foreground: var(--primary-foreground) (src/styles.css)
+- --color-secondary: var(--secondary) (src/styles.css)
+- --color-secondary-foreground: var(--secondary-foreground) (src/styles.css)
+- --color-muted: var(--muted) (src/styles.css)
+- --color-muted-foreground: var(--muted-foreground) (src/styles.css)
+- --color-accent: var(--accent) (src/styles.css)
+- --color-accent-foreground: var(--accent-foreground) (src/styles.css)
+- --color-destructive: var(--destructive) (src/styles.css)
+- --color-destructive-foreground: var(--destructive-foreground) (src/styles.css)
+- --color-border: var(--border) (src/styles.css)
+- --color-input: var(--input) (src/styles.css)
+- --color-ring: var(--ring) (src/styles.css)
+- --color-ring-offset-background: var(--background) (src/styles.css)
+- --color-chart-1: var(--chart-1) (src/styles.css)
+- --color-chart-2: var(--chart-2) (src/styles.css)
+- --color-chart-3: var(--chart-3) (src/styles.css)
+- --color-chart-4: var(--chart-4) (src/styles.css)
+- --color-chart-5: var(--chart-5) (src/styles.css)
+- --color-sidebar: var(--sidebar) (src/styles.css)
+- --color-sidebar-foreground: var(--sidebar-foreground) (src/styles.css)
+- --color-sidebar-primary: var(--sidebar-primary) (src/styles.css)
+- --color-sidebar-primary-foreground: var(--sidebar-primary-foreground) (src/styles.css)
+- --color-sidebar-accent: var(--sidebar-accent) (src/styles.css)
+- --color-sidebar-accent-foreground: var(--sidebar-accent-foreground) (src/styles.css)
+- --color-sidebar-border: var(--sidebar-border) (src/styles.css)
+- --color-sidebar-ring: var(--sidebar-ring) (src/styles.css)
+- --color-category-plano-bg: var(--category-plano-bg) (src/styles.css)
+- --color-category-plano-text: var(--category-plano-text) (src/styles.css)
+- --color-category-plano-border: var(--category-plano-border) (src/styles.css)
+- --color-category-apostila-bg: var(--category-apostila-bg) (src/styles.css)
+- --color-category-apostila-text: var(--category-apostila-text) (src/styles.css)
+- --color-category-apostila-border: var(--category-apostila-border) (src/styles.css)
+- --color-category-aula-bg: var(--category-aula-bg) (src/styles.css)
+- --color-category-aula-text: var(--category-aula-text) (src/styles.css)
+- --color-category-aula-border: var(--category-aula-border) (src/styles.css)
+- --color-category-outros-bg: var(--category-outros-bg) (src/styles.css)
+- --color-category-outros-text: var(--category-outros-text) (src/styles.css)
+- --color-category-outros-border: var(--category-outros-border) (src/styles.css)
+- --radius: 0.625rem (src/styles.css)
+- --background: oklch(1 0 0) (src/styles.css)
+- --foreground: oklch(0.129 0.042 264.695) (src/styles.css)
+- --card: oklch(1 0 0) (src/styles.css)
+- --card-foreground: oklch(0.129 0.042 264.695) (src/styles.css)
+- --popover: oklch(1 0 0) (src/styles.css)
+- --popover-foreground: oklch(0.129 0.042 264.695) (src/styles.css)
+- --primary: oklch(0.62 0.13 200) (src/styles.css)
+- --primary-foreground: oklch(0.99 0 0) (src/styles.css)
+- --primary-glow: oklch(0.72 0.14 215) (src/styles.css)
+- --secondary: oklch(0.96 0.02 210) (src/styles.css)
+- --secondary-foreground: oklch(0.25 0.08 230) (src/styles.css)
+- --muted: oklch(0.97 0.012 220) (src/styles.css)
+- --muted-foreground: oklch(0.5 0.03 230) (src/styles.css)
+- --accent: oklch(0.93 0.05 200) (src/styles.css)
+- --accent-foreground: oklch(0.25 0.08 230) (src/styles.css)
+- --destructive: oklch(0.577 0.245 27.325) (src/styles.css)
+- --destructive-foreground: oklch(0.984 0.003 247.858) (src/styles.css)
+- --border: oklch(0.92 0.012 220) (src/styles.css)
+- --input: oklch(0.92 0.012 220) (src/styles.css)
+- --ring: oklch(0.62 0.13 200) (src/styles.css)
+- --success: oklch(0.7 0.15 160) (src/styles.css)
+- --warning: oklch(0.78 0.15 75) (src/styles.css)
+- --info: oklch(0.7 0.13 240) (src/styles.css)
+- --gradient-brand: linear-gradient(135deg, oklch(0.55 0.12 195), oklch(0.62 0.14 220)) (src/styles.css)
+- --gradient-header: linear-gradient(120deg, oklch(0.5 0.13 195) 0%, oklch(0.55 0.14 215) 50%, oklch(0.6 0.14 240) 100%) (src/styles.css)
+- --shadow-soft: 0 4px 20px -8px color-mix(in oklab, oklch(0.3 0.1 220) 25%, transparent) (src/styles.css)
+- --shadow-card: 0 2px 12px -4px color-mix(in oklab, oklch(0.3 0.1 220) 15%, transparent) (src/styles.css)
+- --color-card-blue: oklch(0.7 0.13 230) (src/styles.css)
+- --color-card-teal: oklch(0.68 0.13 195) (src/styles.css)
+- --color-card-green: oklch(0.72 0.14 160) (src/styles.css)
+- --color-card-purple: oklch(0.65 0.15 295) (src/styles.css)
+- --color-card-pink: oklch(0.72 0.14 0) (src/styles.css)
+- --color-card-orange: oklch(0.75 0.15 50) (src/styles.css)
+- --color-card-indigo: oklch(0.6 0.16 275) (src/styles.css)
+- --color-card-red: oklch(0.65 0.2 25) (src/styles.css)
+- --color-card-amber: oklch(0.78 0.14 80) (src/styles.css)
+- --color-card-cyan: oklch(0.72 0.13 210) (src/styles.css)
+- --color-card-lime: oklch(0.78 0.16 130) (src/styles.css)
+- --color-card-rose: oklch(0.68 0.16 350) (src/styles.css)
+- --category-plano-bg: oklch(0.96 0.015 230) (src/styles.css)
+- --category-plano-text: oklch(0.35 0.08 230) (src/styles.css)
+- --category-plano-border: oklch(0.85 0.025 230) (src/styles.css)
+- --category-apostila-bg: oklch(0.96 0.015 160) (src/styles.css)
+- --category-apostila-text: oklch(0.32 0.08 160) (src/styles.css)
+- --category-apostila-border: oklch(0.83 0.025 160) (src/styles.css)
+- --category-aula-bg: oklch(0.96 0.018 45) (src/styles.css)
+- --category-aula-text: oklch(0.38 0.08 45) (src/styles.css)
+- --category-aula-border: oklch(0.85 0.03 45) (src/styles.css)
+- --category-outros-bg: oklch(0.96 0.012 270) (src/styles.css)
+- --category-outros-text: oklch(0.35 0.07 270) (src/styles.css)
+- --category-outros-border: oklch(0.85 0.022 270) (src/styles.css)
+- --chart-1: oklch(0.646 0.222 41.116) (src/styles.css)
+- --chart-2: oklch(0.6 0.118 184.704) (src/styles.css)
+- --chart-3: oklch(0.398 0.07 227.392) (src/styles.css)
+- --chart-4: oklch(0.828 0.189 84.429) (src/styles.css)
+- --chart-5: oklch(0.769 0.188 70.08) (src/styles.css)
+- --sidebar: oklch(0.984 0.003 247.858) (src/styles.css)
+- --sidebar-foreground: oklch(0.129 0.042 264.695) (src/styles.css)
+- --sidebar-primary: oklch(0.208 0.042 265.755) (src/styles.css)
+- --sidebar-primary-foreground: oklch(0.984 0.003 247.858) (src/styles.css)
+- --sidebar-accent: oklch(0.968 0.007 247.896) (src/styles.css)
+- --sidebar-accent-foreground: oklch(0.208 0.042 265.755) (src/styles.css)
+- --sidebar-border: oklch(0.929 0.013 255.508) (src/styles.css)
+- --sidebar-ring: oklch(0.704 0.04 256.788) (src/styles.css)
+- --background: oklch(0.129 0.042 264.695) (src/styles.css)
+- --foreground: oklch(0.984 0.003 247.858) (src/styles.css)
+- --card: oklch(0.208 0.042 265.755) (src/styles.css)
+- --card-foreground: oklch(0.984 0.003 247.858) (src/styles.css)
+- --popover: oklch(0.208 0.042 265.755) (src/styles.css)
+- --popover-foreground: oklch(0.984 0.003 247.858) (src/styles.css)
+- --primary: oklch(0.929 0.013 255.508) (src/styles.css)
+- --primary-foreground: oklch(0.208 0.042 265.755) (src/styles.css)
+- --secondary: oklch(0.279 0.041 260.031) (src/styles.css)
+- --secondary-foreground: oklch(0.984 0.003 247.858) (src/styles.css)
+- --muted: oklch(0.279 0.041 260.031) (src/styles.css)
+- --muted-foreground: oklch(0.704 0.04 256.788) (src/styles.css)
+- --accent: oklch(0.279 0.041 260.031) (src/styles.css)
+- --accent-foreground: oklch(0.984 0.003 247.858) (src/styles.css)
+- --destructive: oklch(0.704 0.191 22.216) (src/styles.css)
+- --destructive-foreground: oklch(0.984 0.003 247.858) (src/styles.css)
+- --border: oklch(1 0 0 / 10%) (src/styles.css)
+- --input: oklch(1 0 0 / 15%) (src/styles.css)
+- --ring: oklch(0.551 0.027 264.364) (src/styles.css)
+- --chart-1: oklch(0.488 0.243 264.376) (src/styles.css)
+- --chart-2: oklch(0.696 0.17 162.48) (src/styles.css)
+- --chart-3: oklch(0.769 0.188 70.08) (src/styles.css)
+- --chart-4: oklch(0.627 0.265 303.9) (src/styles.css)
+- --chart-5: oklch(0.645 0.246 16.439) (src/styles.css)
+- --sidebar: oklch(0.208 0.042 265.755) (src/styles.css)
+- --sidebar-foreground: oklch(0.984 0.003 247.858) (src/styles.css)
+- --sidebar-primary: oklch(0.488 0.243 264.376) (src/styles.css)
+- --sidebar-primary-foreground: oklch(0.984 0.003 247.858) (src/styles.css)
+- --sidebar-accent: oklch(0.279 0.041 260.031) (src/styles.css)
+- --sidebar-accent-foreground: oklch(0.984 0.003 247.858) (src/styles.css)
+- --sidebar-border: oklch(1 0 0 / 10%) (src/styles.css)
+- --sidebar-ring: oklch(0.551 0.027 264.364) (src/styles.css)
+- --category-plano-bg: oklch(0.25 0.04 230) (src/styles.css)
+- --category-plano-text: oklch(0.86 0.05 230) (src/styles.css)
+- --category-plano-border: oklch(0.35 0.05 230) (src/styles.css)
+- --category-apostila-bg: oklch(0.24 0.04 160) (src/styles.css)
+- --category-apostila-text: oklch(0.85 0.05 160) (src/styles.css)
+- --category-apostila-border: oklch(0.34 0.05 160) (src/styles.css)
+- --category-aula-bg: oklch(0.25 0.04 45) (src/styles.css)
+- --category-aula-text: oklch(0.88 0.05 45) (src/styles.css)
+- --category-aula-border: oklch(0.35 0.05 45) (src/styles.css)
+- --category-outros-bg: oklch(0.25 0.035 270) (src/styles.css)
+- --category-outros-text: oklch(0.86 0.045 270) (src/styles.css)
+- --category-outros-border: oklch(0.35 0.045 270) (src/styles.css)
+
+## UI components
+- accordion
+- alert
+- alert-dialog
+- aspect-ratio
+- avatar
+- badge
+- breadcrumb
+- button
+- calendar
+- card
+- carousel
+- chart
+- checkbox
+- collapsible
+- command
+- context-menu
+- dialog
+- drawer
+- dropdown-menu
+- form
+- hover-card
+- input
+- input-otp
+- label
+- menubar
+- navigation-menu
+- pagination
+- popover
+- progress
+- radio-group
+- resizable
+- scroll-area
+- select
+- separator
+- sheet
+- sidebar
+- skeleton
+- slider
+- sonner
+- switch
+- table
+- tabs
+- textarea
+- toggle
+- toggle-group
+- tooltip
+
+## Project components
+- src/components/AILoadingOverlay.tsx
+- src/components/AppHeader.tsx
+- src/components/AppUpdateNotifier.tsx
+- src/components/BulkDeleteBar.tsx
+- src/components/CustomErrorBoundary.tsx
+- src/components/DisciplineCard.tsx
+- src/components/DisciplineFormDialog.tsx
+- src/components/DisciplinesManager.tsx
+- src/components/EmptyState.tsx
+- src/components/HelpManualButton.tsx
+- src/components/InstallAppButton.tsx
+- src/components/InvitationsPanel.tsx
+- src/components/NotificationsBell.tsx
+- src/components/OwlLogo.tsx
+- src/components/PaymentTestModeBanner.tsx
+- src/components/PushPermissionBanner.tsx
+- src/components/QuickAttendanceDialog.tsx
+- src/components/StripeEmbeddedCheckout.tsx
+- src/components/SubscriptionStatusCard.tsx
+- src/components/UpgradeRequiredDialog.tsx
+- src/components/WelcomeGate.tsx
+- src/components/WelcomeVideoDialog.tsx
+- src/components/admin/AcademicHierarchyTab.tsx
+- src/components/admin/AdminImportStudentsV2.tsx
+- src/components/admin/CatalogTab.tsx
+- src/components/admin/ClassesTab.tsx
+- src/components/admin/CoursesTab.tsx
+- src/components/admin/EditUserDialog.tsx
+- src/components/admin/ImportStudentsTab.tsx
+- src/components/admin/InstitutionBrandingTab.tsx
+- src/components/admin/InvitationsTab.tsx
+- src/components/admin/MarketingTab.tsx
+- src/components/admin/NewInvitationDialog.tsx
+- src/components/admin/SubscriptionsTab.tsx
+- src/components/admin/UsersTab.tsx
+- src/components/analytics/InstitutionAnalyticsCharts.tsx
+- src/components/analytics/InstitutionAnalyticsTab.tsx
+- src/components/analytics/StudentAnalyticsCharts.tsx
+- src/components/assessment/AssessmentHeaderTemplates.tsx
+- src/components/dashboards/AdminDashboard.tsx
+- src/components/dashboards/InstitutionDashboard.tsx
+- src/components/dashboards/StatCard.tsx
+- src/components/dashboards/StudentDashboard.tsx
+- src/components/dashboards/TeacherDashboard.tsx
+- src/components/diary/ModalLancamentoNotaDiario.tsx
+- src/components/discipline/AIAssistantModule.tsx
+- src/components/discipline/ActivitiesModule.tsx
+- src/components/discipline/ActivityDeadlineBadges.tsx
+- src/components/discipline/ActivitySyllabusDraftReview.tsx
+- src/components/discipline/ActivityWorkCreatorDialog.tsx
+- src/components/discipline/AnalyticsModule.tsx
+- src/components/discipline/AssessmentGraderDialog.tsx
+- src/components/discipline/AssessmentReviewDialog.tsx
+- src/components/discipline/AssessmentsModule.tsx
+- src/components/discipline/AttendanceGrid.tsx
+- src/components/discipline/AttendanceModule.tsx
+- src/components/discipline/AttendanceQr.tsx
+- src/components/discipline/CalendarModule.tsx
+- src/components/discipline/ChatModule.tsx
+- src/components/discipline/CurrentPresencePanel.tsx
+- src/components/discipline/DataTablesModule.tsx
+- src/components/discipline/DeadlineBadgesGroup.tsx
+- src/components/discipline/DirectChatPanel.tsx
+- src/components/discipline/DispatchToStudentDialog.tsx
+- src/components/discipline/ExercisesModule.tsx
+- src/components/discipline/GradesModule.tsx
+- src/components/discipline/GroupManagementModule.tsx
+- src/components/discipline/GroupPanel.tsx
+- src/components/discipline/InlineSubmissionDialog.tsx
+- src/components/discipline/LabDialogs.tsx
+- src/components/discipline/MaterialsModule.tsx
+- src/components/discipline/ModuleGrid.tsx
+- src/components/discipline/ModulePlaceholder.tsx
+- src/components/discipline/MyDiaryModule.tsx
+- src/components/discipline/OMRScannerPane.tsx
+- src/components/discipline/PrintableDocumentLayout.tsx
+- src/components/discipline/RubricLibraryDialog.tsx
+- src/components/discipline/RubricsModule.tsx
+- src/components/discipline/SimulSaudeModule.tsx
+- src/components/discipline/StudentAssessmentsModule.tsx
+- src/components/discipline/StudentsModule.tsx
+- src/components/discipline/SubmissionReviewDialog.tsx
+- src/components/discipline/VirtualLabModule.tsx
+- src/components/discipline/WorkSubmissionAssistant.tsx
+- src/components/discipline/WorkTutorPanel.tsx
+- src/components/discipline/WorksModule.tsx
+- src/components/institution/DisciplineConfigDialog.tsx
+- src/components/institution/DisciplineGradesDialog.tsx
+- src/components/institution/InstitutionDisciplinesTab.tsx
+- src/components/institution/InstitutionStudentsTab.tsx
+- src/components/simulsaude/CaseDeadlineInfoRow.tsx
+- src/components/simulsaude/ClinicalCaseDraftReview.tsx
+- src/components/simulsaude/ClinicalCaseGenerator.tsx
+- src/components/simulsaude/PEPInterface.tsx
+- src/components/simulsaude/PatientChat.tsx
+- src/components/ui/accordion.tsx
+- src/components/ui/alert-dialog.tsx
+- src/components/ui/alert.tsx
+- src/components/ui/aspect-ratio.tsx
+- src/components/ui/avatar.tsx
+- src/components/ui/badge.tsx
+- src/components/ui/breadcrumb.tsx
+- src/components/ui/button.tsx
+- src/components/ui/calendar.tsx
+- src/components/ui/card.tsx
+- src/components/ui/carousel.tsx
+- src/components/ui/chart.tsx
+- src/components/ui/checkbox.tsx
+- src/components/ui/collapsible.tsx
+- src/components/ui/command.tsx
+- src/components/ui/context-menu.tsx
+- src/components/ui/dialog.tsx
+- src/components/ui/drawer.tsx
+- src/components/ui/dropdown-menu.tsx
+- src/components/ui/form.tsx
+- src/components/ui/hover-card.tsx
+- src/components/ui/input-otp.tsx
+- src/components/ui/input.tsx
+- src/components/ui/label.tsx
+- src/components/ui/menubar.tsx
+- src/components/ui/navigation-menu.tsx
+- src/components/ui/pagination.tsx
+- src/components/ui/popover.tsx
+- src/components/ui/progress.tsx
+- src/components/ui/radio-group.tsx
+- src/components/ui/resizable.tsx
+- src/components/ui/scroll-area.tsx
+- src/components/ui/select.tsx
+- src/components/ui/separator.tsx
+- src/components/ui/sheet.tsx
+- src/components/ui/sidebar.tsx
+- src/components/ui/skeleton.tsx
+- src/components/ui/slider.tsx
+- src/components/ui/sonner.tsx
+- src/components/ui/switch.tsx
+- src/components/ui/table.tsx
+- src/components/ui/tabs.tsx
+- src/components/ui/textarea.tsx
+- src/components/ui/toggle-group.tsx
+- src/components/ui/toggle.tsx
+- src/components/ui/tooltip.tsx

@@ -1,0 +1,2 @@
+ALTER TABLE public.assessments DROP CONSTRAINT IF EXISTS assessments_version_count_check;
+ALTER TABLE public.assessments ADD CONSTRAINT assessments_version_count_check CHECK (version_count >= 1 AND version_count <= 4);

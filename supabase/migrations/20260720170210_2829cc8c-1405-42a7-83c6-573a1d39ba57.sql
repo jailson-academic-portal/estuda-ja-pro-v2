@@ -1,0 +1,2 @@
+CREATE INDEX IF NOT EXISTS idx_ai_generations_discipline_tool_created ON public.ai_generations (discipline_id, tool, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_generations_user_tool_created ON public.ai_generations (user_id, tool, created_at DESC);
