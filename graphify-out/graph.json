@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-02T13:20:39.529388+00:00",
+  "generated_at": "2026-10-02T13:28:03.532497+00:00",
   "files": [
     {
       "path": "roadmap.md",
@@ -1195,7 +1195,7 @@
     },
     {
       "path": "src/backend/simulsaude-review.functions.ts",
-      "bytes": 15718
+      "bytes": 16477
     },
     {
       "path": "src/backend/ai-assistant-core.server.ts",
