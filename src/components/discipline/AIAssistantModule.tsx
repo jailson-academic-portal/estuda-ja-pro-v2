@@ -2694,11 +2694,11 @@ function renderSlidesTwoColumn(markdown: string): string {
       : '';
 
     if (currentSlide.imageUrl) {
-      // Layout de duas colunas com imagem
+      // Layout de duas colunas com imagem (Gamma-style)
       slides.push(`<div class="slide-card"><div class="slide-content-col">${titleHtml}${bulletsHtml}</div><div class="slide-image-col"><img src="${escapeHtml(currentSlide.imageUrl)}" alt="Imagem ilustrativa" class="w-full h-full object-contain" loading="lazy" crossOrigin="anonymous" /></div></div>`);
-    } else if (titleHtml || bulletsHtml) {
-      // Sem imagem: ocupa toda a largura
-      slides.push(`<div class="slide-card" style="grid-template-columns: 1fr !important;"><div class="slide-content-col" style="width: 100%;">${titleHtml}${bulletsHtml}</div></div>`);
+    } else {
+      // Sem imagem: ocupa toda a largura (layout elegante centralizado)
+      slides.push(`<div class="slide-card no-image"><div class="slide-content-col">${titleHtml}${bulletsHtml}</div></div>`);
     }
 
     currentSlide = null;

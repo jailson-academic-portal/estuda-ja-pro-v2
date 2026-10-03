@@ -270,7 +270,8 @@
   word-break: break-word;
 }
 
-/* ===== Slide Layout: Duas Colunas ===== */
+/* ===== Slide Layout: Condicional (Gamma-style) ===== */
+/* Layout de 2 colunas: Texto (esquerda) + Imagem (direita) */
 .slide-card {
   display: grid !important;
   grid-template-columns: 1fr 1fr !important;
@@ -281,6 +282,27 @@
   border-radius: 12px !important;
   background: white !important;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+}
+
+/* Layout de 1 coluna: Texto ocupando largura total (centralizado e elegante) */
+.slide-card.no-image {
+  grid-template-columns: 1fr !important;
+  max-width: 800px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.slide-card.no-image .slide-content-col {
+  text-align: center !important;
+  align-items: center !important;
+}
+
+.slide-card.no-image .slide-content-col h3 {
+  text-align: center !important;
+}
+
+.slide-card.no-image .slide-content-col ul {
+  text-align: left !important;
 }
 
 .slide-content-col {
