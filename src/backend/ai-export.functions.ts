@@ -1808,7 +1808,8 @@ export async function buildGenerationPPTX(
           if (/^Sugest[ãa]o de Recurso Visual\s*:/i.test(line)) { section = null; continue; }
           if ((m = line.match(/^Notas do Professor\s*:\s*(.*)$/i))) { notes.push(m[1].trim()); section = null; continue; }
           // Extract image URL from slide content (flexible regex to handle variations)
-          if ((m = line.match(/^Imagem\s*:\s*(https?:\/\/\S+)$/i))) { imageUrl = m[1].trim(); section = null; continue; }
+          // Also accepts text after the URL (e.g., "Imagem: https://... (description)")
+          if ((m = line.match(/^Imagem\s*:\s*(https?:\/\/\S+)/i))) { imageUrl = m[1].trim(); section = null; continue; }
           // Extract example practical section
           if ((m = line.match(/^Exemplo Pr[áa]tico\s*:\s*$/i))) { section = "example"; continue; }
           const bm = line.match(/^[-*•]\s+(.*)$/);
@@ -2203,7 +2204,8 @@ export async function buildGenerationSlidesPDF(
       if (/^Sugest[ãa]o de Recurso Visual\s*:/i.test(line)) { section = null; continue; }
       if (/^Notas do Professor\s*:/i.test(line)) { section = null; continue; }
       // Extract image URL from slide content (flexible regex to handle variations)
-      if ((m = line.match(/^Imagem\s*:\s*(https?:\/\/\S+)$/i))) { imageUrl = m[1].trim(); section = null; continue; }
+      // Also accepts text after the URL (e.g., "Imagem: https://... (description)")
+      if ((m = line.match(/^Imagem\s*:\s*(https?:\/\/\S+)/i))) { imageUrl = m[1].trim(); section = null; continue; }
       const bm = line.match(/^[-*•]\s+(.*)$/);
       const text = bm ? bm[1].trim() : line;
       if (section === "main") bullets.push(text);

@@ -2731,11 +2731,11 @@ function renderSlidesTwoColumn(markdown: string): string {
       continue;
     }
 
-    // Verifica se é uma imagem de slide
-    const slideImage = trimmed.match(/^Imagem\s*:\s*(https?:\/\/\S+)$/i);
+    // Verifica se é uma imagem de slide - regex flexível para aceitar texto após URL
+    const slideImage = trimmed.match(/^Imagem\s*:\s*(https?:\/\/\S+)/i);
     if (slideImage) {
       if (!currentSlide) currentSlide = { bullets: [] };
-      currentSlide.imageUrl = slideImage[1];
+      currentSlide.imageUrl = slideImage[1].trim();
       i++;
       continue;
     }
@@ -2843,7 +2843,8 @@ function renderMarkdownHtml(markdown: string): string {
     // crossOrigin="anonymous" is required for html2canvas/PDF export compatibility.
     // Uses object-contain to prevent distortion/flattening of the image.
     // Regex is flexible to handle various formats like "Imagem:", "Imagem :" or "Imagem : ".
-    const slideImage = trimmed.match(/^Imagem\s*:\s*(https?:\/\/\S+)$/i);
+    // Also accepts text after the URL (e.g., "Imagem: https://... (description)")
+    const slideImage = trimmed.match(/^Imagem\s*:\s*(https?:\/\/\S+)/i);
     if (slideImage) {
       html.push(
         `<div class="my-4 rounded-lg overflow-hidden border bg-muted/20">

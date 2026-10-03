@@ -221,7 +221,8 @@ REGRAS DE CONTEÚDO:
 REGRAS DE EXEMPLOS PRÁTICOS E IMAGENS:
 9. OBRIGATORIEDADE DE EXEMPLO PRÁTICO: TODO slide de conteúdo (exceto Capa e Encerramento) deve conter OBRIGATORIAMENTE uma seção "Exemplo Prático:" com um exemplo curto e direto relacionado ao tema do slide. O exemplo deve ter 2 a 4 bullets que ilustrem a aplicação prática do conceito. Esta seção NÃO é opcional.
 10. GERAÇÃO DE IMAGEM: Para cada slide de conteúdo, inclua OBRIGATORIAMENTE uma linha com a URL de uma imagem gratuita gerada por IA usando Pollinations:
-    - Use o formato: "Imagem: https://image.pollinations.ai/prompt/[descrição-em-inglês-sem-espaços]?width=800&height=450&nologo=true"
+    - Use o formato EXATO: "Imagem: https://image.pollinations.ai/prompt/[descrição-em-inglês-sem-espaços]?width=800&height=450&nologo=true"
+    - A URL deve estar sozinha na linha (sem texto adicional após a URL)
     - PROIBIDO usar termos abstratos como: "abstract", "concept", "conceptual", "diagram", "flowchart", "infographic", "illustration", "schematic", "symbol", "icon", "3d render", "digital art", "fantasy", "surreal"
     - OBRIGATÓRIO usar descrições de CENA REALISTA E CONCRETA: pessoas reais, locais reais, objetos reais em situações práticas. Descreva uma cena que você poderia fotografar na vida real.
     - Formato obrigatório da descrição: [substantivos concretos] + [verbo de ação] + [contexto/espaço] + "realistic photography, 4k"
@@ -233,6 +234,7 @@ REGRAS DE EXEMPLOS PRÁTICOS E IMAGENS:
     - Extraia 2-4 palavras-chave concretas do título/conteúdo do slide e traduza para inglês (ex: "farmacêutico" → "pharmacist", "paciente" → "patient", "farmácia" → "pharmacy")
     - Use apenas letras, números e hífens (sem espaços) na URL
     - SEMPRE inclua a linha de imagem em todos os slides de conteúdo (é obrigatória)
+    - IMPORTANTE: A linha deve começar com "Imagem:" seguido de UM ESPAÇO e depois a URL completa, nada mais
 11. FALLBACK: Se não encontrar palavras-chave adequadas, use uma imagem genérica de cenário real relacionado à disciplina. SEMPRE inclua a linha de imagem em todos os slides de conteúdo.`,
 
 
