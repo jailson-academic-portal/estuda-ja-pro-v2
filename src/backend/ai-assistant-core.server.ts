@@ -235,7 +235,27 @@ REGRAS DE EXEMPLOS PRÁTICOS E IMAGENS:
     - Use apenas letras, números e hífens (sem espaços) na URL
     - SEMPRE inclua a linha de imagem em todos os slides de conteúdo (é obrigatória)
     - IMPORTANTE: A linha deve começar com "Imagem:" seguido de UM ESPAÇO e depois a URL completa, nada mais
-11. FALLBACK: Se não encontrar palavras-chave adequadas, use uma imagem genérica de cenário real relacionado à disciplina. SEMPRE inclua a linha de imagem em todos os slides de conteúdo.`,
+11. FALLBACK: Se não encontrar palavras-chave adequadas, use uma imagem genérica de cenário real relacionado à disciplina. SEMPRE inclua a linha de imagem em todos os slides de conteúdo.
+
+EXEMPLO OBRIGATÓRIO DE ESTRUTURA DE SLIDE DE CONTEÚDO (siga este formato EXATAMENTE):
+
+SLIDE 3:
+Tipo de Slide: Conteúdo
+Título do Slide: Interações Medicamentosas Farmacocinéticas
+Conteúdo Principal:
+- Absorção: medicamentos que alteram o pH gástrico podem afetar a absorção de outros fármacos
+- Distribuição: competição por proteínas plasmáticas aumenta risco de toxicidade
+- Metabolismo: indutores e inibidores do citocromo P450
+- Excreção: competição por transporte renal ativo
+Exemplo Prático:
+- Omeprazol reduz absorção de cetoconazol — ajustar horários
+- Varfarina + AINE = risco aumentado de sangramento
+- Rifampicina reduz efeito de anticoncepcionais — orientar paciente
+Notas do Professor: Pergunte aos alunos sobre experiências com interações na farmácia comunitária.
+
+Imagem: https://image.pollinations.ai/prompt/pharmacist-checking-drug-interactions-chart-realistic-photography-4k?width=800&height=450&nologo=true
+
+⚠️ ATENÇÃO: A ÚLTIMA LINHA do conteúdo de CADA slide de conteúdo DEVE ser exatamente "Imagem: https://image.pollinations.ai/prompt/[descrição]?width=800&height=450&nologo=true" — sem exceções, sem variações, sem texto após a URL.`,
 
 
   exercise_list: `VOCÊ É UM CRIADOR DE EXERCÍCIOS DE FIXAÇÃO PEDAGÓGICA.
