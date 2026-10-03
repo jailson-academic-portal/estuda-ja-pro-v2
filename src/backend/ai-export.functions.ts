@@ -66,7 +66,11 @@ async function loadGeneration(id: string, userId: string): Promise<{ tool: strin
 async function fetchImageDataUri(url: string | null | undefined): Promise<string | null> {
   if (!url || typeof url !== "string") return null;
   try {
-    const res = await fetch(url);
+    // Add timeout for external URLs (Pollinations can be slow)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
     if (!res.ok) return null;
     const ct = res.headers.get("content-type") || "image/png";
     const buf = new Uint8Array(await res.arrayBuffer());
@@ -182,7 +186,11 @@ async function renderToPDF(
   const embedImageFromUrl = async (url: string | null) => {
     if (!url) return null;
     try {
-      const res = await fetch(url);
+      // Add timeout for external URLs (Pollinations can be slow)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
       if (!res.ok) return null;
       const buf = new Uint8Array(await res.arrayBuffer());
       const ct = (res.headers.get("content-type") || "").toLowerCase();
@@ -1799,8 +1807,8 @@ export async function buildGenerationPPTX(
           if (/^Detalhes Adicionais.*:?\s*$/i.test(line)) { section = "extra"; continue; }
           if (/^Sugest[ãa]o de Recurso Visual\s*:/i.test(line)) { section = null; continue; }
           if ((m = line.match(/^Notas do Professor\s*:\s*(.*)$/i))) { notes.push(m[1].trim()); section = null; continue; }
-          // Extract image URL from slide content
-          if ((m = line.match(/^Imagem:\s*(https?:\/\/[^\s]+)$/i))) { imageUrl = m[1].trim(); section = null; continue; }
+          // Extract image URL from slide content (flexible regex to handle variations)
+          if ((m = line.match(/^Imagem\s*:\s*(https?:\/\/\S+)$/i))) { imageUrl = m[1].trim(); section = null; continue; }
           // Extract example practical section
           if ((m = line.match(/^Exemplo Pr[áa]tico\s*:\s*$/i))) { section = "example"; continue; }
           const bm = line.match(/^[-*•]\s+(.*)$/);
@@ -1933,8 +1941,12 @@ export async function buildGenerationPPTX(
                 // Image at bottom of slide
                 slide.addImage({ data: imageUri, x: bx, y: 5.1, w: SW - bx - 0.8, h: 2.1, sizing: { type: "contain", w: SW - bx - 0.8, h: 2.1 } });
                 contentBottomY = 5.0;
+              } else {
+                console.warn(`[PPTX] Failed to fetch slide image: ${imageUrl}`);
               }
-            } catch { /* ignore image errors */ }
+            } catch (e) {
+              console.warn(`[PPTX] Error adding slide image: ${e}`);
+            }
           }
 
           const bodyH = callouts.length ? 3.3 : contentBottomY - 1.85;
@@ -2070,7 +2082,11 @@ export async function buildGenerationSlidesPDF(
   const embedFromUrl = async (url: string | null | undefined) => {
     if (!url || typeof url !== "string") return null;
     try {
-      const res = await fetch(url);
+      // Add timeout for external URLs (Pollinations can be slow)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
       if (!res.ok) return null;
       const buf = new Uint8Array(await res.arrayBuffer());
       const isPng = buf[0] === 0x89 && buf[1] === 0x50;
@@ -2182,8 +2198,8 @@ export async function buildGenerationSlidesPDF(
       if (/^Detalhes Adicionais.*:?\s*$/i.test(line)) { section = "extra"; continue; }
       if (/^Sugest[ãa]o de Recurso Visual\s*:/i.test(line)) { section = null; continue; }
       if (/^Notas do Professor\s*:/i.test(line)) { section = null; continue; }
-      // Extract image URL from slide content
-      if ((m = line.match(/^Imagem:\s*(https?:\/\/[^\s]+)$/i))) { imageUrl = m[1].trim(); section = null; continue; }
+      // Extract image URL from slide content (flexible regex to handle variations)
+      if ((m = line.match(/^Imagem\s*:\s*(https?:\/\/\S+)$/i))) { imageUrl = m[1].trim(); section = null; continue; }
       const bm = line.match(/^[-*•]\s+(.*)$/);
       const text = bm ? bm[1].trim() : line;
       if (section === "main") bullets.push(text);
@@ -2330,6 +2346,8 @@ export async function buildGenerationSlidesPDF(
           imageHeight = Math.min(slideImg.height * ratio, 150);
           const imgX = (W - imgW) / 2;
           page.drawImage(slideImg, { x: imgX, y: 20, width: imgW, height: imageHeight });
+        } else {
+          console.warn(`[PDF] Failed to embed slide image: ${imageUrl}`);
         }
       }
 

@@ -2690,11 +2690,13 @@ function renderMarkdownHtml(markdown: string): string {
     }
 
     // Slide images: "Imagem: https://..." format — render with larger size for slides.
-    const slideImage = trimmed.match(/^Imagem:\s*(https?:\/\/[^\s]+)$/i);
+    // crossOrigin="anonymous" is required for html2canvas/PDF export compatibility.
+    // Regex is flexible to handle various formats like "Imagem:", "Imagem :" or "Imagem : ".
+    const slideImage = trimmed.match(/^Imagem\s*:\s*(https?:\/\/\S+)$/i);
     if (slideImage) {
       html.push(
         `<div class="my-4 rounded-lg overflow-hidden border bg-muted/20">
-          <img src="${escapeHtml(slideImage[1])}" alt="Imagem ilustrativa do slide" class="w-full max-h-64 object-cover" loading="lazy" />
+          <img src="${escapeHtml(slideImage[1])}" alt="Imagem ilustrativa do slide" class="w-full max-h-64 object-cover" loading="lazy" crossOrigin="anonymous" />
          </div>`,
       );
       i += 1;
