@@ -2689,6 +2689,18 @@ function renderMarkdownHtml(markdown: string): string {
       continue;
     }
 
+    // Slide images: "Imagem: https://..." format — render with larger size for slides.
+    const slideImage = trimmed.match(/^Imagem:\s*(https?:\/\/[^\s]+)$/i);
+    if (slideImage) {
+      html.push(
+        `<div class="my-4 rounded-lg overflow-hidden border bg-muted/20">
+          <img src="${escapeHtml(slideImage[1])}" alt="Imagem ilustrativa do slide" class="w-full max-h-64 object-cover" loading="lazy" />
+         </div>`,
+      );
+      i += 1;
+      continue;
+    }
+
     const heading = trimmed.match(/^(#{1,6})\s+(.+)$/);
     if (heading) {
       const level = Math.min(heading[1].length, 6);

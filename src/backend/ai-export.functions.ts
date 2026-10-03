@@ -1787,7 +1787,8 @@ export async function buildGenerationPPTX(
         const bullets: string[] = [];
         const extras: string[] = [];
         const notes: string[] = [];
-        let section: "main" | "extra" | null = null;
+        let imageUrl: string | null = null;
+        let section: "main" | "extra" | "example" | null = null;
         for (const raw of lines) {
           const line = raw.trim();
           if (!line) continue;
@@ -1798,6 +1799,10 @@ export async function buildGenerationPPTX(
           if (/^Detalhes Adicionais.*:?\s*$/i.test(line)) { section = "extra"; continue; }
           if (/^Sugest[ãa]o de Recurso Visual\s*:/i.test(line)) { section = null; continue; }
           if ((m = line.match(/^Notas do Professor\s*:\s*(.*)$/i))) { notes.push(m[1].trim()); section = null; continue; }
+          // Extract image URL from slide content
+          if ((m = line.match(/^Imagem:\s*(https?:\/\/[^\s]+)$/i))) { imageUrl = m[1].trim(); section = null; continue; }
+          // Extract example practical section
+          if ((m = line.match(/^Exemplo Pr[áa]tico\s*:\s*$/i))) { section = "example"; continue; }
           const bm = line.match(/^[-*•]\s+(.*)$/);
           const text = bm ? bm[1].trim() : line;
           if (section === "main") bullets.push(text);
@@ -1918,7 +1923,21 @@ export async function buildGenerationPPTX(
             );
           });
           if (bulletRuns.length === 0 && callouts.length === 0) bulletRuns.push({ text: "", options: {} });
-          const bodyH = callouts.length ? 3.3 : 4.9;
+
+          // Add slide image if available
+          let contentBottomY = 5.2;
+          if (imageUrl) {
+            try {
+              const imageUri = await fetchImageDataUri(imageUrl);
+              if (imageUri) {
+                // Image at bottom of slide
+                slide.addImage({ data: imageUri, x: bx, y: 5.1, w: SW - bx - 0.8, h: 2.1, sizing: { type: "contain", w: SW - bx - 0.8, h: 2.1 } });
+                contentBottomY = 5.0;
+              }
+            } catch { /* ignore image errors */ }
+          }
+
+          const bodyH = callouts.length ? 3.3 : contentBottomY - 1.85;
           // Dynamically shrink the body font so dense slides never overflow.
           const bodyW = SW - bx - 0.9;
           let bodyFont = 23;
@@ -1938,7 +1957,7 @@ export async function buildGenerationPPTX(
               { x: bx, y: 1.9, w: bodyW, h: bodyH, fontSize: bodyFont, color: contentBodyColor, valign: "top", lineSpacingMultiple: 1.24, paraSpaceAfter: 11, fontFace: FONT, fit: "shrink" });
           }
           if (callouts.length) {
-            const cy = 5.35;
+            const cy = contentBottomY - 0.15;
             const cBg = isDark ? DARK_CALLOUT_BG : CALLOUT_BG;
             const cTxt = isDark ? DARK_CALLOUT_TXT : CALLOUT_TXT;
             slide.addShape(pptx.ShapeType.roundRect, {
@@ -2151,7 +2170,8 @@ export async function buildGenerationSlidesPDF(
     let kind = "";
     const bullets: string[] = [];
     const extras: string[] = [];
-    let section: "main" | "extra" | null = null;
+    let section: "main" | "extra" | "example" | null = null;
+    let imageUrl: string | null = null;
     for (const raw of block.split(/\r?\n/)) {
       const line = raw.trim();
       if (!line) continue;
@@ -2162,6 +2182,8 @@ export async function buildGenerationSlidesPDF(
       if (/^Detalhes Adicionais.*:?\s*$/i.test(line)) { section = "extra"; continue; }
       if (/^Sugest[ãa]o de Recurso Visual\s*:/i.test(line)) { section = null; continue; }
       if (/^Notas do Professor\s*:/i.test(line)) { section = null; continue; }
+      // Extract image URL from slide content
+      if ((m = line.match(/^Imagem:\s*(https?:\/\/[^\s]+)$/i))) { imageUrl = m[1].trim(); section = null; continue; }
       const bm = line.match(/^[-*•]\s+(.*)$/);
       const text = bm ? bm[1].trim() : line;
       if (section === "main") bullets.push(text);
@@ -2297,8 +2319,22 @@ export async function buildGenerationSlidesPDF(
       );
       const bx = leftRail ? 58 : 50;
       const pdfBodyItems = normal.slice(0, 8).map(emphasizeBulletLabel);
+
+      // Add slide image if available (at bottom of content area)
+      let imageHeight = 0;
+      if (imageUrl) {
+        const slideImg = await embedFromUrl(imageUrl);
+        if (slideImg) {
+          const imgW = 280;
+          const ratio = imgW / Math.max(slideImg.width, 1);
+          imageHeight = Math.min(slideImg.height * ratio, 150);
+          const imgX = (W - imgW) / 2;
+          page.drawImage(slideImg, { x: imgX, y: 20, width: imgW, height: imageHeight });
+        }
+      }
+
       // Dynamically shrink the body font so dense slides never overflow the page.
-      const bottomMargin = callouts.length ? 140 : 46;
+      const bottomMargin = callouts.length ? 140 : (imageUrl ? imageHeight + 60 : 46);
       const availH = y - bottomMargin;
       let bodySize = 20;
       for (const candidate of [20, 18, 17, 16, 15, 14, 13, 12, 11]) {
@@ -2319,7 +2355,7 @@ export async function buildGenerationSlidesPDF(
 
       if (callouts.length) {
         const boxH = 84;
-        const boxY = 34;
+        const boxY = imageUrl ? (20 + imageHeight + 20) : 34;
         page.drawRectangle({
           x: bx - 2, y: boxY, width: W - (bx - 2) - 54, height: boxH,
           color: isDark ? DARK_CALLOUT_BG : CALLOUT_BG, borderColor: accent, borderWidth: 2,

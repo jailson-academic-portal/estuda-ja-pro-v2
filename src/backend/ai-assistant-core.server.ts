@@ -218,7 +218,18 @@ REGRAS DE CONTEÚDO:
 8. Bullets curtos e objetivos, respeitando a densidade de texto informada; no máximo 6 bullets por slide.
 9. Quando o conteúdo pedir suporte visual (esquemas, vias bioquímicas/imunológicas, tubos de coleta, fluxogramas diagnósticos, lâminas, gráficos), inclua a linha:
    "Sugestão de Recurso Visual: [descrição detalhada do diagrama, fluxograma, lâmina ou ilustração recomendada]".
-10. Respeite rigorosamente o número máximo de slides informado (padrão 20), preenchendo os slides intermediários com fundamentação teórica e exemplos aplicados. Sem metalinguagem sobre apostila ou material no corpo dos slides.`,
+10. Respeite rigorosamente o número máximo de slides informado (padrão 20), preenchendo os slides intermediários com fundamentação teórica e exemplos aplicados. Sem metalinguagem sobre apostila ou material no corpo dos slides.
+
+REGRAS DE EXEMPLOS PRÁTICOS E IMAGENS:
+11. OBRIGATORIEDADE: TODO slide de conteúdo (exceto Capa, Módulo, Aula e Encerramento) deve conter uma seção "Exemplo Prático:" com um exemplo curto e direto relacionado ao tema do slide. O exemplo deve ter 2 a 4 bullets que ilustrem a aplicação prática do conceito.
+12. GERAÇÃO DE IMAGEM: Para cada slide de conteúdo, inclua OBRIGATORIAMENTE uma linha com a URL de uma imagem gratuita do Unsplash baseada no tema:
+    - Use o formato: "Imagem: https://source.unsplash.com/800x450/?[palavras-chave-em-inglês-sem-espaços]"
+    - Exemplo: para um slide sobre hemácias, use: "Imagem: https://source.unsplash.com/800x450/?blood-cells,microscope"
+    - Para slides teóricos: use palavras-chave que representem o conceito principal
+    - Para slides de exemplos: use palavras-chave relacionadas ao cenário prático
+    - Escolha imagens de alta qualidade (800x450 é o tamanho recomendado para slides 16:9)
+13. SELEÇÃO DE PALAVRAS-CHAVE: Extraia 2-3 palavras-chave do título/conteúdo do slide e traduza para inglês (ex: "célula" → "cell", "sangue" → "blood", "análise" → "analysis"). Use apenas letras, números e vírgulas sem espaços.
+14. FALLBACK: Se não encontrar palavras-chave adequadas, use uma imagem genérica relacionada à disciplina. SEMPRE inclua a linha de imagem em todos os slides de conteúdo.`,
 
 
   exercise_list: `VOCÊ É UM CRIADOR DE EXERCÍCIOS DE FIXAÇÃO PEDAGÓGICA.
