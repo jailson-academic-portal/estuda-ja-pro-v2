@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-03T13:58:44.658635+00:00",
+  "generated_at": "2026-10-03T14:28:19.136744+00:00",
   "files": [
     {
       "path": "roadmap.md",
@@ -1199,7 +1199,7 @@
     },
     {
       "path": "src/backend/ai-assistant-core.server.ts",
-      "bytes": 29386
+      "bytes": 29364
     },
     {
       "path": "src/backend/diary.functions.ts",
@@ -1871,7 +1871,7 @@
     },
     {
       "path": "src/backend/generators/payload-prompt.server.ts",
-      "bytes": 13377
+      "bytes": 13707
     },
     {
       "path": "src/backend/generators/lesson-plan.server.ts",
