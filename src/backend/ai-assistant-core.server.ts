@@ -222,13 +222,18 @@ REGRAS DE EXEMPLOS PRÁTICOS E IMAGENS:
 9. OBRIGATORIEDADE DE EXEMPLO PRÁTICO: TODO slide de conteúdo (exceto Capa e Encerramento) deve conter OBRIGATORIAMENTE uma seção "Exemplo Prático:" com um exemplo curto e direto relacionado ao tema do slide. O exemplo deve ter 2 a 4 bullets que ilustrem a aplicação prática do conceito. Esta seção NÃO é opcional.
 10. GERAÇÃO DE IMAGEM: Para cada slide de conteúdo, inclua OBRIGATORIAMENTE uma linha com a URL de uma imagem gratuita gerada por IA usando Pollinations:
     - Use o formato: "Imagem: https://image.pollinations.ai/prompt/[descrição-em-inglês-sem-espaços]?width=800&height=450&nologo=true"
-    - Exemplo: para um slide sobre hemácias, use: "Imagem: https://image.pollinations.ai/prompt/red-blood-cells-under-microscope-medical-laboratory?width=800&height=450&nologo=true"
-    - Para slides teóricos: use palavras-chave que representem o conceito principal
-    - Para slides de exemplos: use palavras-chave relacionadas ao cenário prático
-    - Extraia 2-3 palavras-chave do título/conteúdo do slide e traduza para inglês (ex: "célula" → "cell", "sangue" → "blood", "análise" → "analysis")
+    - PROIBIDO usar termos abstratos como: "abstract", "concept", "conceptual", "diagram", "flowchart", "infographic", "illustration", "schematic", "symbol", "icon", "3d render", "digital art", "fantasy", "surreal"
+    - OBRIGATÓRIO usar descrições de CENA REALISTA E CONCRETA: pessoas reais, locais reais, objetos reais em situações práticas. Descreva uma cena que você poderia fotografar na vida real.
+    - Formato obrigatório da descrição: [substantivos concretos] + [verbo de ação] + [contexto/espaço] + "realistic photography, 4k"
+    - Exemplo CORRETO: "pharmacist talking to patient in modern pharmacy realistic photography 4k"
+    - Exemplo CORRETO: "microscope laboratory technician examining blood sample realistic photography 4k"
+    - Exemplo INCORRETO (PROIBIDO): "microscope cells diagram illustration"
+    - Para slides teóricos: descreva uma cena concreta mostrando o conceito (ex: "doctor examining patient in clinic realistic photography 4k" para falar de exame físico)
+    - Para slides de exemplos práticos: descreva o cenário real da rotina profissional/laboratorial
+    - Extraia 2-4 palavras-chave concretas do título/conteúdo do slide e traduza para inglês (ex: "farmacêutico" → "pharmacist", "paciente" → "patient", "farmácia" → "pharmacy")
     - Use apenas letras, números e hífens (sem espaços) na URL
     - SEMPRE inclua a linha de imagem em todos os slides de conteúdo (é obrigatória)
-11. FALLBACK: Se não encontrar palavras-chave adequadas, use uma imagem genérica relacionada à disciplina. SEMPRE inclua a linha de imagem em todos os slides de conteúdo.`,
+11. FALLBACK: Se não encontrar palavras-chave adequadas, use uma imagem genérica de cenário real relacionado à disciplina. SEMPRE inclua a linha de imagem em todos os slides de conteúdo.`,
 
 
   exercise_list: `VOCÊ É UM CRIADOR DE EXERCÍCIOS DE FIXAÇÃO PEDAGÓGICA.
