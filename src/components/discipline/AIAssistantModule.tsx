@@ -2665,7 +2665,157 @@ function renderInlineMarkdown(value: string): string {
   );
 }
 
+/**
+ * Renderiza conteúdo de slides com layout de DUAS COLUNAS:
+ * - Coluna Esquerda: Título, bullets, exemplo prático
+ * - Coluna Direita: Apenas a imagem (imageUrl)
+ * Este layout é usado para visualização no frontend.
+ */
+function renderSlidesTwoColumn(markdown: string): string {
+  const lines = normalizeAIContent(markdown).replace(/\r\n/g, "\n").split("\n");
+  const slides: string[] = [];
+  let i = 0;
+  let currentSlide: { title?: string; bullets: string[]; imageUrl?: string } | null = null;
+  let currentSection = "";
+  let isInList = false;
+
+  const flushSlide = () => {
+    if (!currentSlide) return;
+
+    // Constrói HTML do slide
+    const titleHtml = currentSlide.title
+      ? `<h3 style="margin: 0 0 0.75rem; font-size: 1.1rem; color: #1e293b; border-bottom: 2px solid var(--primary); padding-bottom: 0.5rem;">${renderInlineMarkdown(currentSlide.title)}</h3>`
+      : '';
+
+    const bulletsHtml = currentSlide.bullets.length > 0
+      ? `<ul style="margin: 0.5rem 0; padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.35rem;">${
+          currentSlide.bullets.map(b => `<li style="font-size: 0.85rem; line-height: 1.5;">${renderInlineMarkdown(b)}</li>`).join('')
+        }</ul>`
+      : '';
+
+    if (currentSlide.imageUrl) {
+      // Layout de duas colunas com imagem
+      slides.push(`<div class="slide-card"><div class="slide-content-col">${titleHtml}${bulletsHtml}</div><div class="slide-image-col"><img src="${escapeHtml(currentSlide.imageUrl)}" alt="Imagem ilustrativa" class="w-full h-full object-contain" loading="lazy" crossOrigin="anonymous" /></div></div>`);
+    } else if (titleHtml || bulletsHtml) {
+      // Sem imagem: ocupa toda a largura
+      slides.push(`<div class="slide-card" style="grid-template-columns: 1fr !important;"><div class="slide-content-col" style="width: 100%;">${titleHtml}${bulletsHtml}</div></div>`);
+    }
+
+    currentSlide = null;
+  };
+
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (!trimmed) {
+      if (isInList) {
+        slides.push('</ul>');
+        isInList = false;
+      }
+      i++;
+      continue;
+    }
+
+    // Verifica se é divisor de seção
+    const sectionMatch = trimmed.match(/^(?:SLIDE\s+\d+|---SLIDE---|M[OÓ]DULO\s*\d*|AULA\s*\d*|ENCERRAMENTO|COVER)\s*:?\s*/i);
+    if (sectionMatch) {
+      flushSlide();
+      const sectionName = trimmed
+        .replace(/^SLIDE\s+\d+\s*:\s*/i, '')
+        .replace(/^---\s*/, '')
+        .replace(/:$/, '')
+        .trim();
+      slides.push(`<div class="slide-section-title">${renderInlineMarkdown(sectionName || trimmed)}</div>`);
+      i++;
+      continue;
+    }
+
+    // Verifica se é uma imagem de slide
+    const slideImage = trimmed.match(/^Imagem\s*:\s*(https?:\/\/\S+)$/i);
+    if (slideImage) {
+      if (!currentSlide) currentSlide = { bullets: [] };
+      currentSlide.imageUrl = slideImage[1];
+      i++;
+      continue;
+    }
+
+    // Verifica se é título
+    const heading = trimmed.match(/^(#{1,6})\s+(.+)$/);
+    if (heading) {
+      flushSlide();
+      const title = heading[2].replace(/^\d+\s*[-–]\s*/, '');
+      currentSlide = { bullets: [] };
+      currentSlide.title = title;
+      i++;
+      continue;
+    }
+
+    // Verifica se é seção de conteúdo
+    if (/^Conte[úu]do Principal\s*:?\s*$/i.test(trimmed)) {
+      currentSection = "main";
+      i++;
+      continue;
+    }
+    if (/^Detalhes Adicionais\s*:?\s*$/i.test(trimmed)) {
+      currentSection = "extra";
+      i++;
+      continue;
+    }
+
+    // Pula "Sugestão de Recurso Visual" e "Notas do Professor"
+    if (/^Sugest[ãa]o de Recurso Visual\s*:/i.test(trimmed) || /^Notas do Professor\s*:/i.test(trimmed)) {
+      i++;
+      continue;
+    }
+
+    // Bullet point
+    const bullet = trimmed.match(/^[-*•]\s+(.+)$/);
+    if (bullet) {
+      if (!currentSlide) currentSlide = { bullets: [] };
+      if (!isInList) {
+        slides.push('<ul style="margin: 0.5rem 0; padding-left: 1.25rem;">');
+        isInList = true;
+      }
+      slides.push(`<li style="font-size: 0.85rem; line-height: 1.5;">${renderInlineMarkdown(bullet[1])}</li>`);
+      currentSlide.bullets.push(bullet[1]);
+      i++;
+      continue;
+    }
+
+    // Fecha lista ao encontrar outro conteúdo
+    if (isInList) {
+      slides.push('</ul>');
+      isInList = false;
+    }
+
+    // Parágrafo (inicia novo slide se necessário)
+    if (!currentSlide || currentSlide.title || currentSlide.bullets.length > 0) {
+      flushSlide();
+      currentSlide = { bullets: [] };
+    }
+    if (currentSlide) {
+      currentSlide.bullets.push(trimmed);
+    }
+
+    i++;
+  }
+
+  // Fecha lista e slide final
+  if (isInList) {
+    slides.push('</ul>');
+  }
+  flushSlide();
+
+  return slides.join('\n');
+}
+
 function renderMarkdownHtml(markdown: string): string {
+  // Detecta se é conteúdo de slides e usa renderização de duas colunas
+  if (/^\s*SLIDE\s+\d+\s*:/im.test(markdown) || /^\s*M[OÓ]DULO\s+\d+\s*:/im.test(markdown)) {
+    return renderSlidesTwoColumn(markdown);
+  }
+
   const lines = normalizeAIContent(markdown).replace(/\r\n/g, "\n").split("\n");
   const html: string[] = [];
   let i = 0;

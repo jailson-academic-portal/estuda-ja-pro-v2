@@ -1932,15 +1932,17 @@ export async function buildGenerationPPTX(
           });
           if (bulletRuns.length === 0 && callouts.length === 0) bulletRuns.push({ text: "", options: {} });
 
-          // Add slide image if available
-          let contentBottomY = 5.2;
+          // Add slide image if available - LAYOUT DUAS COLUNAS: imagem na metade direita
           if (imageUrl) {
             try {
               const imageUri = await fetchImageDataUri(imageUrl);
               if (imageUri) {
-                // Image at bottom of slide
-                slide.addImage({ data: imageUri, x: bx, y: 5.1, w: SW - bx - 0.8, h: 2.1, sizing: { type: "contain", w: SW - bx - 0.8, h: 2.1 } });
-                contentBottomY = 5.0;
+                // Image on the RIGHT side of the slide (two-column layout)
+                const imgX = SW * 0.52; // 52% from left
+                const imgY = 1.6; // below title
+                const imgW = SW * 0.43; // 43% width
+                const imgH = 5.4; // height to fill most of slide height
+                slide.addImage({ data: imageUri, x: imgX, y: imgY, w: imgW, h: imgH, sizing: { type: "contain", w: imgW, h: imgH } });
               } else {
                 console.warn(`[PPTX] Failed to fetch slide image: ${imageUrl}`);
               }
@@ -1949,9 +1951,10 @@ export async function buildGenerationPPTX(
             }
           }
 
-          const bodyH = callouts.length ? 3.3 : contentBottomY - 1.85;
-          // Dynamically shrink the body font so dense slides never overflow.
-          const bodyW = SW - bx - 0.9;
+          // Layout DUAS COLUNAS: texto na esquerda, imagem na direita
+          const bodyH = callouts.length ? 3.3 : 5.2;
+          // Texto ocupa apenas a metade esquerda (até ~50% da largura do slide)
+          const bodyW = imageUrl ? SW * 0.48 : SW - bx - 0.9;
           let bodyFont = 23;
           for (const candidate of [23, 21, 20, 18, 17, 16, 15, 14, 13, 12]) {
             const charsPerLine = Math.max(10, (bodyW * 72) / (candidate * 0.52));
@@ -1968,12 +1971,13 @@ export async function buildGenerationPPTX(
             slide.addText(bulletRuns,
               { x: bx, y: 1.9, w: bodyW, h: bodyH, fontSize: bodyFont, color: contentBodyColor, valign: "top", lineSpacingMultiple: 1.24, paraSpaceAfter: 11, fontFace: FONT, fit: "shrink" });
           }
+          // Callout box: posicionado na metade esquerda também
           if (callouts.length) {
-            const cy = contentBottomY - 0.15;
+            const cy = 5.2 - 0.15;
             const cBg = isDark ? DARK_CALLOUT_BG : CALLOUT_BG;
             const cTxt = isDark ? DARK_CALLOUT_TXT : CALLOUT_TXT;
             slide.addShape(pptx.ShapeType.roundRect, {
-              x: bx, y: cy, w: SW - bx - 0.9, h: 1.55, rectRadius: 0.1,
+              x: bx, y: cy, w: bodyW, h: 1.55, rectRadius: 0.1,
               fill: { color: cBg }, line: { color: accent, width: 1.5 },
             });
             const cRuns: Array<{ text: string; options: Record<string, unknown> }> = [];
@@ -1985,7 +1989,7 @@ export async function buildGenerationPPTX(
               );
             });
             slide.addText(cRuns,
-              { x: bx + 0.22, y: cy + 0.12, w: SW - bx - 1.3, h: 1.3, fontSize: 17, color: cTxt, valign: "middle", lineSpacingMultiple: 1.2, fontFace: FONT });
+              { x: bx + 0.22, y: cy + 0.12, w: bodyW - 0.3, h: 1.3, fontSize: 17, color: cTxt, valign: "middle", lineSpacingMultiple: 1.2, fontFace: FONT });
           }
         }
         if (notes.length) slide.addNotes(notes.join("\n"));
@@ -2336,29 +2340,37 @@ export async function buildGenerationSlidesPDF(
       const bx = leftRail ? 58 : 50;
       const pdfBodyItems = normal.slice(0, 8).map(emphasizeBulletLabel);
 
-      // Add slide image if available (at bottom of content area)
-      let imageHeight = 0;
+      // LAYOUT DUAS COLUNAS: imagem na metade direita
       if (imageUrl) {
         const slideImg = await embedFromUrl(imageUrl);
         if (slideImg) {
-          const imgW = 280;
-          const ratio = imgW / Math.max(slideImg.width, 1);
-          imageHeight = Math.min(slideImg.height * ratio, 150);
-          const imgX = (W - imgW) / 2;
-          page.drawImage(slideImg, { x: imgX, y: 20, width: imgW, height: imageHeight });
+          // Imagem na metade direita do slide
+          const imgX = W * 0.52; // 52% da largura
+          const imgY = 50; // abaixo do título
+          const imgW = W * 0.44; // 44% da largura
+          const imgH = H - 100; // altura para ocupar quase toda a altura disponível
+          const ratio = Math.min(imgW / slideImg.width, imgH / slideImg.height);
+          const finalW = slideImg.width * ratio;
+          const finalH = slideImg.height * ratio;
+          const finalX = imgX + (imgW - finalW) / 2; // centralizado na coluna direita
+          page.drawImage(slideImg, { x: finalX, y: imgY, width: finalW, height: finalH });
         } else {
           console.warn(`[PDF] Failed to embed slide image: ${imageUrl}`);
         }
       }
 
+      // Texto ocupa apenas a metade esquerda (antes da imagem)
+      const textRightEdge = imageUrl ? W * 0.50 : W - 54;
+      const availTextW = textRightEdge - bx;
+
       // Dynamically shrink the body font so dense slides never overflow the page.
-      const bottomMargin = callouts.length ? 140 : (imageUrl ? imageHeight + 60 : 46);
+      const bottomMargin = callouts.length ? 140 : 46;
       const availH = y - bottomMargin;
       let bodySize = 20;
       for (const candidate of [20, 18, 17, 16, 15, 14, 13, 12, 11]) {
         let needed = 0;
         for (const b of pdfBodyItems) {
-          const lines = wrapRuns(parseBold(b), W - (bx + 100), candidate, font, fontBold);
+          const lines = wrapRuns(parseBold(b), availTextW - 26, candidate, font, fontBold);
           needed += lines.length * candidate * 1.34 + 9;
         }
         bodySize = candidate;
@@ -2366,22 +2378,22 @@ export async function buildGenerationSlidesPDF(
       }
       const markSize = Math.round(bodySize * 0.75);
       for (const b of pdfBodyItems) {
-        const lines = wrapRuns(parseBold(b), W - (bx + 100), bodySize, font, fontBold);
+        const lines = wrapRuns(parseBold(b), availTextW - 26, bodySize, font, fontBold);
         page.drawText(MARK, { x: bx, y: y - bodySize + 1, size: markSize, font: fontBold, color: accent });
-        y = drawLines(lines, bx + 26, y, W - (bx + 100), bodySize, "left", bodyColor, 1.34) - 9;
+        y = drawLines(lines, bx + 26, y, availTextW - 26, bodySize, "left", bodyColor, 1.34) - 9;
       }
 
       if (callouts.length) {
         const boxH = 84;
-        const boxY = imageUrl ? (20 + imageHeight + 20) : 34;
+        const boxY = 34;
         page.drawRectangle({
-          x: bx - 2, y: boxY, width: W - (bx - 2) - 54, height: boxH,
+          x: bx - 2, y: boxY, width: availTextW - bx + 2, height: boxH,
           color: isDark ? DARK_CALLOUT_BG : CALLOUT_BG, borderColor: accent, borderWidth: 2,
         });
         const cText = callouts.join("  ");
         const cRuns: Run[] = [{ text: "Atenção — ", bold: true }, ...parseBold(cText)];
-        const cLines = wrapRuns(cRuns, W - (bx + 40), 15, fontBold, fontBold);
-        drawLines(cLines.slice(0, 3), bx + 16, boxY + boxH - 16, W - (bx + 40), 15, "left", isDark ? DARK_CALLOUT_TXT : CALLOUT_TXT, 1.3);
+        const cLines = wrapRuns(cRuns, availTextW - 16, 15, fontBold, fontBold);
+        drawLines(cLines.slice(0, 3), bx + 16, boxY + boxH - 16, availTextW - 16, 15, "left", isDark ? DARK_CALLOUT_TXT : CALLOUT_TXT, 1.3);
       }
     }
   }
