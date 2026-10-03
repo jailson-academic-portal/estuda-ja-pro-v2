@@ -197,15 +197,13 @@ Conteúdo Principal:
 Notas do Professor: [3 a 5 frases de roteiro de fala]
 
 SEQUÊNCIA OBRIGATÓRIA DO DECK:
-1. SLIDE 1 — Tipo de Slide: Capa (conforme acima).
-2. SLIDE 2 — Tipo de Slide: Módulo. Título do Slide: nome do módulo (será exibido como "MÓDULO 01 - Nome do Módulo").
-3. SLIDE 3 — Tipo de Slide: Aula. Título do Slide: tema da aula (será exibido como "AULA 1 - Tema da Aula").
-4. SLIDE 4 em diante — Tipo de Slide: Conteúdo, nesta ordem pedagógica:
+1. SLIDE 1 — Tipo de Slide: Capa (conforme acima). Este slide já contém Módulo e Aula, NÃO crie slides separados para módulo ou aula.
+2. SLIDE 2 em diante — Tipo de Slide: Conteúdo, nesta ordem pedagógica:
    a) Contextualização da área/tema;
    b) Fundamentação Teórica aprofundada, dividida em vários slides com tópicos claros em bullet points;
    c) Exemplos Práticos e Casos de Rotina Laboratorial/Clínica (após cada bloco conceitual);
    d) Síntese, Conexões Multidisciplinares e Desafios Atuais.
-5. ÚLTIMO SLIDE — Tipo de Slide: Encerramento.
+3. ÚLTIMO SLIDE — Tipo de Slide: Encerramento.
    - Título do Slide: MENSAGEM DO PROFESSOR (exatamente assim).
    - Conteúdo Principal: um parágrafo reflexivo e inspirador ligando o conteúdo da aula ao compromisso com o diagnóstico correto, a ética profissional e o cuidado com o paciente.
    - Última linha do Conteúdo Principal: a assinatura iniciada por "—" com o nome do docente em maiúsculas (ex.: "— PROF. JAÍLSON RESENDE").
@@ -213,23 +211,24 @@ SEQUÊNCIA OBRIGATÓRIA DO DECK:
    - Notas do Professor: mensagem cordial de agradecimento e incentivo ao estudo contínuo.
 
 REGRAS DE CONTEÚDO:
-6. Baseie cada slide exclusivamente nos conteúdos, conceitos e objetivos da aula selecionada. Não invente temas fora do escopo.
-7. TODOS os slides, sem exceção, terminam com "Notas do Professor:" seguido de 3 a 5 frases didáticas de roteiro de fala (explicação, analogia, erro comum e pergunta para a turma).
-8. Bullets curtos e objetivos, respeitando a densidade de texto informada; no máximo 6 bullets por slide.
-9. Quando o conteúdo pedir suporte visual (esquemas, vias bioquímicas/imunológicas, tubos de coleta, fluxogramas diagnósticos, lâminas, gráficos), inclua a linha:
+4. Baseie cada slide exclusivamente nos conteúdos, conceitos e objetivos da aula selecionada. Não invente temas fora do escopo.
+5. TODOS os slides, sem exceção, terminam com "Notas do Professor:" seguido de 3 a 5 frases didáticas de roteiro de fala (explicação, analogia, erro comum e pergunta para a turma).
+6. Bullets curtos e objetivos, respeitando a densidade de texto informada; no máximo 6 bullets por slide.
+7. Quando o conteúdo pedir suporte visual (esquemas, vias bioquímicas/imunológicas, tubos de coleta, fluxogramas diagnósticos, lâminas, gráficos), inclua a linha:
    "Sugestão de Recurso Visual: [descrição detalhada do diagrama, fluxograma, lâmina ou ilustração recomendada]".
-10. Respeite rigorosamente o número máximo de slides informado (padrão 20), preenchendo os slides intermediários com fundamentação teórica e exemplos aplicados. Sem metalinguagem sobre apostila ou material no corpo dos slides.
+8. Respeite rigorosamente o número máximo de slides informado (padrão 20), preenchendo os slides intermediários com fundamentação teórica e exemplos aplicados. Sem metalinguagem sobre apostila ou material no corpo dos slides.
 
 REGRAS DE EXEMPLOS PRÁTICOS E IMAGENS:
-11. OBRIGATORIEDADE: TODO slide de conteúdo (exceto Capa, Módulo, Aula e Encerramento) deve conter uma seção "Exemplo Prático:" com um exemplo curto e direto relacionado ao tema do slide. O exemplo deve ter 2 a 4 bullets que ilustrem a aplicação prática do conceito.
-12. GERAÇÃO DE IMAGEM: Para cada slide de conteúdo, inclua OBRIGATORIAMENTE uma linha com a URL de uma imagem gratuita do Unsplash baseada no tema:
-    - Use o formato: "Imagem: https://source.unsplash.com/800x450/?[palavras-chave-em-inglês-sem-espaços]"
-    - Exemplo: para um slide sobre hemácias, use: "Imagem: https://source.unsplash.com/800x450/?blood-cells,microscope"
+9. OBRIGATORIEDADE DE EXEMPLO PRÁTICO: TODO slide de conteúdo (exceto Capa e Encerramento) deve conter OBRIGATORIAMENTE uma seção "Exemplo Prático:" com um exemplo curto e direto relacionado ao tema do slide. O exemplo deve ter 2 a 4 bullets que ilustrem a aplicação prática do conceito. Esta seção NÃO é opcional.
+10. GERAÇÃO DE IMAGEM: Para cada slide de conteúdo, inclua OBRIGATORIAMENTE uma linha com a URL de uma imagem gratuita gerada por IA usando Pollinations:
+    - Use o formato: "Imagem: https://image.pollinations.ai/prompt/[descrição-em-inglês-sem-espaços]?width=800&height=450&nologo=true"
+    - Exemplo: para um slide sobre hemácias, use: "Imagem: https://image.pollinations.ai/prompt/red-blood-cells-under-microscope-medical-laboratory?width=800&height=450&nologo=true"
     - Para slides teóricos: use palavras-chave que representem o conceito principal
     - Para slides de exemplos: use palavras-chave relacionadas ao cenário prático
-    - Escolha imagens de alta qualidade (800x450 é o tamanho recomendado para slides 16:9)
-13. SELEÇÃO DE PALAVRAS-CHAVE: Extraia 2-3 palavras-chave do título/conteúdo do slide e traduza para inglês (ex: "célula" → "cell", "sangue" → "blood", "análise" → "analysis"). Use apenas letras, números e vírgulas sem espaços.
-14. FALLBACK: Se não encontrar palavras-chave adequadas, use uma imagem genérica relacionada à disciplina. SEMPRE inclua a linha de imagem em todos os slides de conteúdo.`,
+    - Extraia 2-3 palavras-chave do título/conteúdo do slide e traduza para inglês (ex: "célula" → "cell", "sangue" → "blood", "análise" → "analysis")
+    - Use apenas letras, números e hífens (sem espaços) na URL
+    - SEMPRE inclua a linha de imagem em todos os slides de conteúdo (é obrigatória)
+11. FALLBACK: Se não encontrar palavras-chave adequadas, use uma imagem genérica relacionada à disciplina. SEMPRE inclua a linha de imagem em todos os slides de conteúdo.`,
 
 
   exercise_list: `VOCÊ É UM CRIADOR DE EXERCÍCIOS DE FIXAÇÃO PEDAGÓGICA.

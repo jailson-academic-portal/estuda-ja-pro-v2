@@ -84,9 +84,10 @@ export async function runSlidesFromPayload(data: AnyRecord, userId: string) {
   const structureRules = [
     "ESTRUTURA OBRIGATÓRIA:",
     `- Gere exatamente ${maxSlides} slides, numerados de SLIDE 1 a SLIDE ${maxSlides}.`,
-    "- SLIDE 1: Capa (Título da Apresentação + Disciplina, Professor(a), Módulo e Aula com seus temas).",
-    "- SLIDE 2: Divisor de Módulo. SLIDE 3: Divisor de Aula.",
-    "- SLIDE 4 em diante: Contextualização → Fundamentação Teórica → Exemplos Práticos/Casos de Rotina → Síntese, Conexões Multidisciplinares e Desafios Atuais.",
+    "- SLIDE 1: Capa (Título da Apresentação + Disciplina, Professor(a), Módulo e Aula com seus temas). NÃO crie slides separados para Módulo ou Aula - essas informações já estão na Capa.",
+    "- SLIDE 2 em diante: Contextualização → Fundamentação Teórica → Exemplos Práticos/Casos de Rotina → Síntese, Conexões Multidisciplinares e Desafios Atuais.",
+    "- TODO slide de conteúdo (exceto Capa e Encerramento) deve ter OBRIGATORIAMENTE uma seção \"Exemplo Prático:\" com 2 a 4 bullets.",
+    "- TODO slide de conteúdo deve ter OBRIGATORIAMENTE uma linha \"Imagem: https://image.pollinations.ai/prompt/[keywords]?width=800&height=450&nologo=true\".",
     "- ÚLTIMO SLIDE: Tipo de Slide: Encerramento, título \"MENSAGEM DO PROFESSOR\", parágrafo reflexivo e assinatura em maiúsculas iniciada por \"—\". NÃO inclua referências bibliográficas.",
     "- Todos os slides devem ter \"Notas do Professor:\".",
     moduleLabel ? `- Módulo: ${moduleLabel}` : null,
