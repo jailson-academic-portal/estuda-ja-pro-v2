@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-03T21:39:50.716610+00:00",
+  "generated_at": "2026-10-03T21:57:06.845731+00:00",
   "files": [
     {
       "path": "roadmap.md",
@@ -1015,7 +1015,7 @@
     },
     {
       "path": "src/backend/ai-export.functions.ts",
-      "bytes": 110412
+      "bytes": 110584
     },
     {
       "path": "src/backend/push.server.ts",
@@ -1199,7 +1199,7 @@
     },
     {
       "path": "src/backend/ai-assistant-core.server.ts",
-      "bytes": 30162
+      "bytes": 30353
     },
     {
       "path": "src/backend/diary.functions.ts",
@@ -1655,7 +1655,7 @@
     },
     {
       "path": "src/components/discipline/AIAssistantModule.tsx",
-      "bytes": 249087
+      "bytes": 249222
     },
     {
       "path": "src/components/discipline/ModulePlaceholder.tsx",
