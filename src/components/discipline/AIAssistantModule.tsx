@@ -2717,6 +2717,15 @@ function renderSlidesTwoColumn(markdown: string): string {
       continue;
     }
 
+    // Extrai imageUrl do comentário HTML estruturado (formato JSON)
+    const imageUrlMatch = line.match(/<!--\s*imageUrl:(\S+)\s*-->/i);
+    if (imageUrlMatch) {
+      if (!currentSlide) currentSlide = { bullets: [] };
+      currentSlide.imageUrl = imageUrlMatch[1].trim();
+      i++;
+      continue;
+    }
+
     // Verifica se é divisor de seção
     const sectionMatch = trimmed.match(/^(?:SLIDE\s+\d+|---SLIDE---|M[OÓ]DULO\s*\d*|AULA\s*\d*|ENCERRAMENTO|COVER)\s*:?\s*/i);
     if (sectionMatch) {
@@ -2837,6 +2846,13 @@ function renderMarkdownHtml(markdown: string): string {
       );
       i += 1;
       continue;
+    }
+
+    // Extrai imageUrl do comentário HTML estruturado (formato JSON)
+    const imageUrlMatch = trimmed.match(/<!--\s*imageUrl:(\S+)\s*-->/i);
+    if (imageUrlMatch) {
+      i += 1;
+      continue; // O imageUrl será renderizado pela linha "Imagem:" seguinte
     }
 
     // Slide images: "Imagem: https://..." format — render with larger size for slides.

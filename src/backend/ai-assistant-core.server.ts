@@ -185,77 +185,71 @@ ESTRUTURA OBRIGATÓRIA (markdown, nesta ordem):
 REGRAS: linguagem didática e técnica, sem metalinguagem sobre "este material"; nunca use tabelas para o corpo teórico; não invente datas; não repita o Sumário no meio do texto; nunca combine Módulo e Aula no mesmo título.`,
   slides: `Você gera o roteiro completo de slides de aula em pt-BR a partir do conteúdo e dos objetivos da aula selecionada no Plano de Aula/Apostila.
 
-FORMATO OBRIGATÓRIO (respeite literalmente os rótulos; um bloco por slide):
-SLIDE 1:
-Tipo de Slide: Capa
-Título do Slide: [Título da Apresentação = Tema da Aula]
-Conteúdo Principal:
-- Disciplina: [nome]
-- Professor(a): [nome]
-- Módulo [nº]: [nome do módulo]
-- Aula [nº]: [tema da aula]
-Notas do Professor: [3 a 5 frases de roteiro de fala]
+RESPONDA EXCLUSIVAMENTE COM JSON VÁLIDO neste formato:
+{
+  "slides": [
+    {
+      "tipo": "Capa" | "Conteúdo" | "Encerramento",
+      "titulo": "string",
+      "bullets": ["string"],
+      "exemploPratico": ["string"] | null,
+      "notasProfessor": ["string"],
+      "imageUrl": "string | null"
+    }
+  ]
+}
+
+REGRAS OBRIGATÓRIAS DO JSON:
+- Responda SOMENTE com JSON válido, sem texto antes ou depois
+- Campo "imageUrl": para slides de CONTEÚDO, OBRIGATORIAMENTE preencha com URL do Pollinations (ex: "https://image.pollinations.ai/prompt/pharmacist-talking-to-patient-realistic-photography?width=800&height=450&nologo=true"). Para Capa e Encerramento use null.
+- Campo "exemploPratico": arrays de strings para slides de Conteúdo, null para Capa/Encerramento
+- Campo "notasProfessor": array de 3-5 strings com roteiro de fala
+- Campo "bullets": array de strings com os pontos principais
 
 SEQUÊNCIA OBRIGATÓRIA DO DECK:
-1. SLIDE 1 — Tipo de Slide: Capa (conforme acima). Este slide já contém Módulo e Aula, NÃO crie slides separados para módulo ou aula.
-2. SLIDE 2 em diante — Tipo de Slide: Conteúdo, nesta ordem pedagógica:
+1. PRIMEIRO slide — tipo: "Capa" (sem imageUrl)
+2. SLIDES INTERMEDIÁRIOS — tipo: "Conteúdo" (COM imageUrl OBRIGATORIO)
    a) Contextualização da área/tema;
-   b) Fundamentação Teórica aprofundada, dividida em vários slides com tópicos claros em bullet points;
-   c) Exemplos Práticos e Casos de Rotina Laboratorial/Clínica (após cada bloco conceitual);
-   d) Síntese, Conexões Multidisciplinares e Desafios Atuais.
-3. ÚLTIMO SLIDE — Tipo de Slide: Encerramento.
-   - Título do Slide: MENSAGEM DO PROFESSOR (exatamente assim).
-   - Conteúdo Principal: um parágrafo reflexivo e inspirador ligando o conteúdo da aula ao compromisso com o diagnóstico correto, a ética profissional e o cuidado com o paciente.
-   - Última linha do Conteúdo Principal: a assinatura iniciada por "—" com o nome do docente em maiúsculas (ex.: "— PROF. JAÍLSON RESENDE").
-   - PROIBIDO incluir referências bibliográficas neste slide (nem em nenhum outro slide de encerramento).
-   - Notas do Professor: mensagem cordial de agradecimento e incentivo ao estudo contínuo.
+   b) Fundamentação Teórica aprofundada;
+   c) Exemplos Práticos e Casos de Rotina;
+   d) Síntese e Conexões Multidisciplinares.
+3. ÚLTIMO slide — tipo: "Encerramento" (sem imageUrl)
 
 REGRAS DE CONTEÚDO:
-4. Baseie cada slide exclusivamente nos conteúdos, conceitos e objetivos da aula selecionada. Não invente temas fora do escopo.
-5. TODOS os slides, sem exceção, terminam com "Notas do Professor:" seguido de 3 a 5 frases didáticas de roteiro de fala (explicação, analogia, erro comum e pergunta para a turma).
-6. Bullets curtos e objetivos, respeitando a densidade de texto informada; no máximo 6 bullets por slide.
-7. Quando o conteúdo pedir suporte visual (esquemas, vias bioquímicas/imunológicas, tubos de coleta, fluxogramas diagnósticos, lâminas, gráficos), inclua a linha:
-   "Sugestão de Recurso Visual: [descrição detalhada do diagrama, fluxograma, lâmina ou ilustração recomendada]".
-8. Respeite rigorosamente o número máximo de slides informado (padrão 20), preenchendo os slides intermediários com fundamentação teórica e exemplos aplicados. Sem metalinguagem sobre apostila ou material no corpo dos slides.
+- Baseie cada slide exclusivamente nos conteúdos e objetivos da aula selecionada
+- Bullets curtos e objetivos, máximo 6 por slide
+- Sem metalinguagem sobre apostila ou material
 
-REGRAS DE EXEMPLOS PRÁTICOS E IMAGENS:
-9. OBRIGATORIEDADE DE EXEMPLO PRÁTICO: TODO slide de conteúdo (exceto Capa e Encerramento) deve conter OBRIGATORIAMENTE uma seção "Exemplo Prático:" com um exemplo curto e direto relacionado ao tema do slide. O exemplo deve ter 2 a 4 bullets que ilustrem a aplicação prática do conceito. Esta seção NÃO é opcional.
-10. GERAÇÃO DE IMAGEM: Para cada slide de conteúdo, inclua OBRIGATORIAMENTE uma linha com a URL de uma imagem gratuita gerada por IA usando Pollinations:
-    - Use o formato EXATO: "Imagem: https://image.pollinations.ai/prompt/[descrição-em-inglês-sem-espaços]?width=800&height=450&nologo=true"
-    - A URL deve estar sozinha na linha (sem texto adicional após a URL)
-    - PROIBIDO usar termos abstratos como: "abstract", "concept", "conceptual", "diagram", "flowchart", "infographic", "illustration", "schematic", "symbol", "icon", "3d render", "digital art", "fantasy", "surreal"
-    - OBRIGATÓRIO usar descrições de CENA REALISTA E CONCRETA: pessoas reais, locais reais, objetos reais em situações práticas. Descreva uma cena que você poderia fotografar na vida real.
-    - Formato obrigatório da descrição: [substantivos concretos] + [verbo de ação] + [contexto/espaço] + "realistic photography, 4k"
-    - Exemplo CORRETO: "pharmacist talking to patient in modern pharmacy realistic photography 4k"
-    - Exemplo CORRETO: "microscope laboratory technician examining blood sample realistic photography 4k"
-    - Exemplo INCORRETO (PROIBIDO): "microscope cells diagram illustration"
-    - Para slides teóricos: descreva uma cena concreta mostrando o conceito (ex: "doctor examining patient in clinic realistic photography 4k" para falar de exame físico)
-    - Para slides de exemplos práticos: descreva o cenário real da rotina profissional/laboratorial
-    - Extraia 2-4 palavras-chave concretas do título/conteúdo do slide e traduza para inglês (ex: "farmacêutico" → "pharmacist", "paciente" → "patient", "farmácia" → "pharmacy")
-    - Use apenas letras, números e hífens (sem espaços) na URL
-    - SEMPRE inclua a linha de imagem em todos os slides de conteúdo (é obrigatória)
-    - IMPORTANTE: A linha deve começar com "Imagem:" seguido de UM ESPAÇO e depois a URL completa, nada mais
-11. FALLBACK: Se não encontrar palavras-chave adequadas, use uma imagem genérica de cenário real relacionado à disciplina. SEMPRE inclua a linha de imagem em todos os slides de conteúdo.
+REGRAS DE GERAÇÃO DE IMAGEM (CRÍTICO):
+- Para CADA slide de Conteúdo, gere UM imageUrl usando Pollinations AI
+- Use SOMENTE descrições de CENA REALISTA E CONCRETA (pessoas reais, locais reais, objetos reais)
+- PROIBIDO: abstract, concept, diagram, flowchart, illustration, schematic, symbol, 3d render, fantasy
+- Formato: https://image.pollinations.ai/prompt/[descrição-em-inglês-com-hífens]?width=800&height=450&nologo=true
+- Exemplo: "pharmacist examining prescription in pharmacy realistic photography 4k"
+- NUNCA deixe imageUrl vazio ou null para slides de Conteúdo
 
-EXEMPLO OBRIGATÓRIO DE ESTRUTURA DE SLIDE DE CONTEÚDO (siga este formato EXATAMENTE):
+EXEMPLO DE SAÍDA JSON:
+{
+  "slides": [
+    {
+      "tipo": "Capa",
+      "titulo": "Interações Medicamentosas",
+      "bullets": ["Disciplina: Farmacologia", "Professor(a): Dr. João", "Módulo 3: Farmacocinética"],
+      "exemploPratico": null,
+      "notasProfessor": ["Boas-vindas", "Objetivos da aula"],
+      "imageUrl": null
+    },
+    {
+      "tipo": "Conteúdo",
+      "titulo": "Interações na Absorção",
+      "bullets": ["Omeprazol reduz absorção de cetoconazol", "Alimentos podem interferir na biodisponibilidade"],
+      "exemploPratico": ["Omeprazol + Cetoconazol: ajustar horários", "Levotiroxina: tomar em jejum"],
+      "notasProfessor": ["Pergunte sobre experiências na farmácia", "Erro comum: tomar antiácido junto"],
+      "imageUrl": "https://image.pollinations.ai/prompt/pharmacist-counseling-patient-about-medications-realistic-photography?width=800&height=450&nologo=true"
+    }
+  ]
+}`,
 
-SLIDE 3:
-Tipo de Slide: Conteúdo
-Título do Slide: Interações Medicamentosas Farmacocinéticas
-Conteúdo Principal:
-- Absorção: medicamentos que alteram o pH gástrico podem afetar a absorção de outros fármacos
-- Distribuição: competição por proteínas plasmáticas aumenta risco de toxicidade
-- Metabolismo: indutores e inibidores do citocromo P450
-- Excreção: competição por transporte renal ativo
-Exemplo Prático:
-- Omeprazol reduz absorção de cetoconazol — ajustar horários
-- Varfarina + AINE = risco aumentado de sangramento
-- Rifampicina reduz efeito de anticoncepcionais — orientar paciente
-Notas do Professor: Pergunte aos alunos sobre experiências com interações na farmácia comunitária.
-
-Imagem: https://image.pollinations.ai/prompt/pharmacist-checking-drug-interactions-chart-realistic-photography-4k?width=800&height=450&nologo=true
-
-⚠️ ATENÇÃO: A ÚLTIMA LINHA do conteúdo de CADA slide de conteúdo DEVE ser exatamente "Imagem: https://image.pollinations.ai/prompt/[descrição]?width=800&height=450&nologo=true" — sem exceções, sem variações, sem texto após a URL.`,
 
 
   exercise_list: `VOCÊ É UM CRIADOR DE EXERCÍCIOS DE FIXAÇÃO PEDAGÓGICA.

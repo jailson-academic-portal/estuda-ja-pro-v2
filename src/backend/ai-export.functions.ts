@@ -1801,6 +1801,8 @@ export async function buildGenerationPPTX(
           const line = raw.trim();
           if (!line) continue;
           let m: RegExpMatchArray | null;
+          // Extrai imageUrl do comentário HTML estruturado (formato JSON)
+          if ((m = line.match(/<!--\s*imageUrl:(\S+)\s*-->/i))) { imageUrl = m[1].trim(); continue; }
           if ((m = line.match(/^Tipo de Slide\s*:\s*(.*)$/i))) { kind = m[1].trim(); section = null; continue; }
           if ((m = line.match(/^T[íi]tulo do Slide\s*:\s*(.*)$/i))) { title = m[1].trim(); section = null; continue; }
           if (/^Conte[úu]do Principal\s*:?\s*$/i.test(line)) { section = "main"; continue; }
@@ -2197,6 +2199,8 @@ export async function buildGenerationSlidesPDF(
       const line = raw.trim();
       if (!line) continue;
       let m: RegExpMatchArray | null;
+      // Extrai imageUrl do comentário HTML estruturado (formato JSON)
+      if ((m = line.match(/<!--\s*imageUrl:(\S+)\s*-->/i))) { imageUrl = m[1].trim(); continue; }
       if ((m = line.match(/^Tipo de Slide\s*:\s*(.*)$/i))) { kind = m[1].trim(); section = null; continue; }
       if ((m = line.match(/^T[íi]tulo do Slide\s*:\s*(.*)$/i))) { title = m[1].trim(); section = null; continue; }
       if (/^Conte[úu]do Principal\s*:?\s*$/i.test(line)) { section = "main"; continue; }
