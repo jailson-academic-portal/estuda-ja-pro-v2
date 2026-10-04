@@ -5,6 +5,76 @@ import { stripHardcodedCorrectLetter } from "@/lib/text-sanitize";
 /** Campo de data estático — preenchido manualmente à caneta na prova impressa. */
 const STATIC_DATE_FIELD = "___/___/___";
 
+/* ============================================================================
+ * ANTI-OCR SECURITY FEATURES
+ * ============================================================================ */
+
+/**
+ * Desenha marca d'água diagonal com o nome da disciplina.
+ * - Todas as páginas recebem a marca d'água
+ * - Fonte grande, cinza claro semi-transparente
+ */
+function drawWatermark(page: PDFPage, discipline: string, font: PDFFont, bold: PDFFont) {
+  const watermarkText = discipline.toUpperCase();
+  const size = 48;
+  const opacity = 0.08; // Muito sutil, não atrapalha leitura
+
+  // Calcula posição centralizada na diagonal
+  const textWidth = bold.widthOfTextAtSize(watermarkText, size);
+
+  // Posição centralizada
+  const centerX = (PAGE_W - textWidth) / 2;
+  const centerY = PAGE_H / 2 - size / 2;
+
+  // Rotaciona o texto em 45 graus usando transform
+  page.drawText(watermarkText, {
+    x: centerX,
+    y: centerY,
+    size,
+    font: bold,
+    color: rgb(0.5, 0.5, 0.55),
+    opacity,
+  });
+}
+
+/**
+ * Desenha padrão de fundo anti-OCR.
+ * - Linhas diagonais finas muito suaves
+ * - Dificulta reconhecimento por câmeras de celular
+ * - NÃO afeta folhas de gabarito (identificadas por section.label)
+ */
+function drawAntiOCRPattern(page: PDFPage, isGabarito: boolean) {
+  if (isGabarito) return; // Gabarito fica com fundo limpo para OCR
+
+  const lineColor = rgb(0.92, 0.92, 0.94); // Linhas quase invisíveis
+  const spacing = 18; // Espaçamento entre linhas diagonais
+  const thickness = 0.3; // Linha muito fina
+
+  // Desenha linhas diagonais em toda a página
+  // Direção: diagonal ↘ (canto inferior esquerdo para superior direito)
+  for (let y = -PAGE_H; y < PAGE_H + PAGE_W; y += spacing) {
+    page.drawLine({
+      start: { x: 0, y: y },
+      end: { x: y + PAGE_H, y: PAGE_H },
+      thickness,
+      color: lineColor,
+    });
+  }
+
+  // Adiciona pontilhado sutil por cima para dificultar mais
+  const dotColor = rgb(0.88, 0.88, 0.9);
+  for (let x = 20; x < PAGE_W; x += 25) {
+    for (let y = 20; y < PAGE_H; y += 25) {
+      page.drawCircle({
+        x,
+        y,
+        size: 0.5,
+        color: dotColor,
+      });
+    }
+  }
+}
+
 type Question = {
   id: string;
   position: number;
@@ -462,6 +532,16 @@ function newPage(ctx: Ctx, versionLabel?: string, badge?: string, suppressVersio
   const isFirstOfSection = !ctx.currentSection || ctx.currentSection.pages.length === 0;
   if (ctx.currentSection) ctx.currentSection.pages.push(page);
 
+  // Adiciona marca d'água com o nome da disciplina em todas as páginas
+  drawWatermark(page, ctx.header.discipline, ctx.font, ctx.bold);
+
+  // Verifica se é página de questões para adicionar anti-OCR
+  // Gabarito e folha de respostas NÃO têm anti-OCR (precisam de fundo limpo para OCR)
+  const isQuestionsSection = ctx.currentSection?.label?.includes("Folha de Questões") ?? false;
+  if (isQuestionsSection) {
+    drawAntiOCRPattern(page, false); // false = TEM anti-OCR
+  }
+
   if (ctx.template) {
     return {
       page,
@@ -598,7 +678,10 @@ function drawQuestionsPages(
   layout: "one_column" | "two_columns" | "mixed" = "one_column",
 ): void {
   startSection(ctx, `Folhas de Questões — Versão ${version.version_label}`);
-  
+
+  // Adiciona padrão anti-OCR nas páginas de questões (identificadas pela seção)
+  // O padrão será adicionado em cada chunk de páginas
+
   const orderedIds = version.question_order.length ? version.question_order : questions.map((q) => q.id);
   const colGap = 16;
   const colWidth = (PAGE_W - MARGIN_X * 2 - colGap) / 2;
@@ -697,6 +780,7 @@ function drawQuestionsPages(
   chunks.forEach((chunk, chunkIdx) => {
     // newPage returns { page, y }. 'full' header (Institutional) is for page 1.
     // 'suppressVersion: true' because drawTemplateHeader handles it via versionLabel.
+    // newPage também adiciona automaticamente a marca d'água e anti-OCR para folhas de questões.
     const ref = newPage(ctx, version.version_label, undefined, chunkIdx === 0);
     const topY = ref.y;
     let colIndex = 0;
