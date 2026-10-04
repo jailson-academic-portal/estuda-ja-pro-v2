@@ -10,34 +10,33 @@ const STATIC_DATE_FIELD = "___/___/___";
  * ============================================================================ */
 
 /**
- * Desenha marca d'água diagonal com o nome da disciplina.
- * - Todas as páginas recebem a marca d'água
+ * Desenha marca d'água com o nome da disciplina.
+ * - Desenhada no INÍCIO (background) para ficar POR BAIXO do texto
  * - Fonte grande, cinza claro semi-transparente
- * - Desenhada DEPOIS do conteúdo para ficar em foreground
  */
-function drawWatermark(page: PDFPage, discipline: string, font: PDFFont, bold: PDFFont) {
+function drawWatermark(page: PDFPage, discipline: string, bold: PDFFont) {
   const watermarkText = discipline.toUpperCase();
-  const size = 60;
+  const size = 56;
   const textWidth = bold.widthOfTextAtSize(watermarkText, size);
 
-  // Cor cinza claro bem visível (0.85 = 85% de cinza = #D9D9D9)
-  const watermarkColor = rgb(0.85, 0.85, 0.86);
+  // Cor cinza claro para marca d'água sutil (#D0D0D0)
+  const watermarkColor = rgb(0.82, 0.82, 0.84);
 
-  // Posição centralizada na diagonal (450 = 45 graus)
+  // Posição centralizada
   const centerX = (PAGE_W - textWidth) / 2;
   const centerY = PAGE_H / 2 - size / 2;
 
   // Desenha múltiplas cópias com espaçamento para criar efeito de marca d'água
-  // Usa cor clara sem opacidade (pdf-lib não suporta opacity diretamente)
-  const positions = [
-    { x: centerX, y: centerY },
-    { x: centerX - 2, y: centerY + 2 },
+  const offsets = [
+    { x: 0, y: 0 },
+    { x: -3, y: 3 },
+    { x: 3, y: -3 },
   ];
 
-  for (const pos of positions) {
+  for (const offset of offsets) {
     page.drawText(watermarkText, {
-      x: pos.x,
-      y: pos.y,
+      x: centerX + offset.x,
+      y: centerY + offset.y,
       size,
       font: bold,
       color: watermarkColor,
@@ -47,21 +46,19 @@ function drawWatermark(page: PDFPage, discipline: string, font: PDFFont, bold: P
 
 /**
  * Desenha padrão de fundo anti-OCR nas páginas de questões.
- * - Linhas diagonais muito suaves
+ * - Linhas diagonais visíveis para dificultar OCR por câmera
  * - NÃO afeta páginas de gabarito (precisam de fundo limpo para OCR)
  */
 function drawAntiOCRPattern(page: PDFPage, isQuestionsPage: boolean) {
   if (!isQuestionsPage) return; // Só desenha anti-OCR nas páginas de questões
 
-  // Cor muito clara para linhas (0.94 = quase branco)
-  const lineColor = rgb(0.94, 0.94, 0.95);
-  const spacing = 24; // Espaçamento entre linhas
-  const thickness = 0.4; // Linha fina mas visível
+  // Cor visível para as linhas (#D8D8D8 = cinza claro perceptível)
+  const lineColor = rgb(0.85, 0.85, 0.88);
+  const spacing = 18; // Espaçamento entre linhas
+  const thickness = 0.8; // Linha mais espessa para ser visível
 
   // Desenha linhas diagonais em toda a página
-  // Direção: da esquerda para direita, de baixo para cima
   for (let i = -PAGE_H; i < PAGE_W + PAGE_H; i += spacing) {
-    // Linha diagonal ↘
     page.drawLine({
       start: { x: Math.max(0, i), y: 0 },
       end: { x: Math.min(PAGE_W, i + PAGE_H), y: PAGE_H },
@@ -70,14 +67,14 @@ function drawAntiOCRPattern(page: PDFPage, isQuestionsPage: boolean) {
     });
   }
 
-  // Pontilhado sutil para dificultar mais
-  const dotColor = rgb(0.92, 0.92, 0.93);
-  for (let x = 30; x < PAGE_W; x += 40) {
-    for (let y = 30; y < PAGE_H; y += 40) {
+  // Pontilhado visível para dificultar mais
+  const dotColor = rgb(0.84, 0.84, 0.87);
+  for (let x = 22; x < PAGE_W; x += 30) {
+    for (let y = 22; y < PAGE_H; y += 30) {
       page.drawCircle({
         x,
         y,
-        size: 0.6,
+        size: 1.0,
         color: dotColor,
       });
     }
@@ -541,14 +538,14 @@ function newPage(ctx: Ctx, versionLabel?: string, badge?: string, suppressVersio
   const isFirstOfSection = !ctx.currentSection || ctx.currentSection.pages.length === 0;
   if (ctx.currentSection) ctx.currentSection.pages.push(page);
 
-  // Adiciona marca d'água com o nome da disciplina em todas as páginas
-  drawWatermark(page, ctx.header.discipline, ctx.font, ctx.bold);
+  // Marca d'água: desenhada ANTES do conteúdo (background) para ficar por baixo do texto
+  drawWatermark(page, ctx.header.discipline, ctx.bold);
 
-  // Verifica se é página de questões para adicionar anti-OCR
+  // Anti-OCR: desenhado ANTES do conteúdo nas páginas de questões
   // Gabarito e folha de respostas NÃO têm anti-OCR (precisam de fundo limpo para OCR)
   const isQuestionsSection = ctx.currentSection?.label?.includes("Folha de Questões") ?? false;
   if (isQuestionsSection) {
-    drawAntiOCRPattern(page, false); // false = TEM anti-OCR
+    drawAntiOCRPattern(page, true); // true = É página de questões = TEM anti-OCR
   }
 
   if (ctx.template) {
@@ -1362,27 +1359,8 @@ export async function buildAssessmentPDF(input: {
     });
   }
 
-  // ============================================================
-  // MARCA D'ÁGUA E ANTI-OCR: Desenhados DEPOIS do conteúdo
-  // para ficarem em foreground (visíveis por cima do texto)
-  // ============================================================
-
-  // Percorre todas as páginas do PDF
-  for (const section of ctx.sections) {
-    const isTeacher = /gabarito do professor/i.test(section.label);
-    const isQuestions = section.label.includes("Folha de Questões");
-
-    for (const page of section.pages) {
-      // Marca d'água: todas as páginas recebem (disciplina grande em cinza claro)
-      // A marca d'água fica semi-transparente sobre o conteúdo
-      drawWatermark(page, ctx.header.discipline, font, bold);
-
-      // Anti-OCR: apenas nas páginas de questões (não no gabarito)
-      if (isQuestions) {
-        drawAntiOCRPattern(page, true); // true = É página de questões = TEM anti-OCR
-      }
-    }
-  }
+  // OBS: Marca d'água e Anti-OCR são desenhados em newPage() ANTES do conteúdo
+  // para ficarem em background (por baixo do texto)
 
   const bytes = await pdf.save();
   return { bytes, bubbleLayouts };
