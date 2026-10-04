@@ -2717,15 +2717,6 @@ function renderSlidesTwoColumn(markdown: string): string {
       continue;
     }
 
-    // Extrai imageUrl do comentário HTML estruturado (formato JSON)
-    const imageUrlMatch = line.match(/<!--\s*imageUrl:(\S+)\s*-->/i);
-    if (imageUrlMatch) {
-      if (!currentSlide) currentSlide = { bullets: [] };
-      currentSlide.imageUrl = imageUrlMatch[1].trim();
-      i++;
-      continue;
-    }
-
     // Verifica se é divisor de seção
     const sectionMatch = trimmed.match(/^(?:SLIDE\s+\d+|---SLIDE---|M[OÓ]DULO\s*\d*|AULA\s*\d*|ENCERRAMENTO|COVER)\s*:?\s*/i);
     if (sectionMatch) {
@@ -2740,11 +2731,11 @@ function renderSlidesTwoColumn(markdown: string): string {
       continue;
     }
 
-    // Verifica se é uma imagem de slide - regex flexível para aceitar texto após URL
-    const slideImage = trimmed.match(/^Imagem\s*:\s*(https?:\/\/\S+)/i);
+    // Verifica se é uma imagem de slide
+    const slideImage = trimmed.match(/^Imagem\s*:\s*(https?:\/\/\S+)$/i);
     if (slideImage) {
       if (!currentSlide) currentSlide = { bullets: [] };
-      currentSlide.imageUrl = slideImage[1].trim();
+      currentSlide.imageUrl = slideImage[1];
       i++;
       continue;
     }
@@ -2848,19 +2839,11 @@ function renderMarkdownHtml(markdown: string): string {
       continue;
     }
 
-    // Extrai imageUrl do comentário HTML estruturado (formato JSON)
-    const imageUrlMatch = trimmed.match(/<!--\s*imageUrl:(\S+)\s*-->/i);
-    if (imageUrlMatch) {
-      i += 1;
-      continue; // O imageUrl será renderizado pela linha "Imagem:" seguinte
-    }
-
     // Slide images: "Imagem: https://..." format — render with larger size for slides.
     // crossOrigin="anonymous" is required for html2canvas/PDF export compatibility.
     // Uses object-contain to prevent distortion/flattening of the image.
     // Regex is flexible to handle various formats like "Imagem:", "Imagem :" or "Imagem : ".
-    // Also accepts text after the URL (e.g., "Imagem: https://... (description)")
-    const slideImage = trimmed.match(/^Imagem\s*:\s*(https?:\/\/\S+)/i);
+    const slideImage = trimmed.match(/^Imagem\s*:\s*(https?:\/\/\S+)$/i);
     if (slideImage) {
       html.push(
         `<div class="my-4 rounded-lg overflow-hidden border bg-muted/20">
