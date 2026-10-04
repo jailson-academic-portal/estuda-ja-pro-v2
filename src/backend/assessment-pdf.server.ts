@@ -13,62 +13,71 @@ const STATIC_DATE_FIELD = "___/___/___";
  * Desenha marca d'água diagonal com o nome da disciplina.
  * - Todas as páginas recebem a marca d'água
  * - Fonte grande, cinza claro semi-transparente
+ * - Desenhada DEPOIS do conteúdo para ficar em foreground
  */
 function drawWatermark(page: PDFPage, discipline: string, font: PDFFont, bold: PDFFont) {
   const watermarkText = discipline.toUpperCase();
-  const size = 48;
-  const opacity = 0.08; // Muito sutil, não atrapalha leitura
-
-  // Calcula posição centralizada na diagonal
+  const size = 60;
   const textWidth = bold.widthOfTextAtSize(watermarkText, size);
 
-  // Posição centralizada
+  // Cor cinza claro bem visível (0.85 = 85% de cinza = #D9D9D9)
+  const watermarkColor = rgb(0.85, 0.85, 0.86);
+
+  // Posição centralizada na diagonal (450 = 45 graus)
   const centerX = (PAGE_W - textWidth) / 2;
   const centerY = PAGE_H / 2 - size / 2;
 
-  // Rotaciona o texto em 45 graus usando transform
-  page.drawText(watermarkText, {
-    x: centerX,
-    y: centerY,
-    size,
-    font: bold,
-    color: rgb(0.5, 0.5, 0.55),
-    opacity,
-  });
+  // Desenha múltiplas cópias com espaçamento para criar efeito de marca d'água
+  // Usa cor clara sem opacidade (pdf-lib não suporta opacity diretamente)
+  const positions = [
+    { x: centerX, y: centerY },
+    { x: centerX - 2, y: centerY + 2 },
+  ];
+
+  for (const pos of positions) {
+    page.drawText(watermarkText, {
+      x: pos.x,
+      y: pos.y,
+      size,
+      font: bold,
+      color: watermarkColor,
+    });
+  }
 }
 
 /**
- * Desenha padrão de fundo anti-OCR.
- * - Linhas diagonais finas muito suaves
- * - Dificulta reconhecimento por câmeras de celular
- * - NÃO afeta folhas de gabarito (identificadas por section.label)
+ * Desenha padrão de fundo anti-OCR nas páginas de questões.
+ * - Linhas diagonais muito suaves
+ * - NÃO afeta páginas de gabarito (precisam de fundo limpo para OCR)
  */
-function drawAntiOCRPattern(page: PDFPage, isGabarito: boolean) {
-  if (isGabarito) return; // Gabarito fica com fundo limpo para OCR
+function drawAntiOCRPattern(page: PDFPage, isQuestionsPage: boolean) {
+  if (!isQuestionsPage) return; // Só desenha anti-OCR nas páginas de questões
 
-  const lineColor = rgb(0.92, 0.92, 0.94); // Linhas quase invisíveis
-  const spacing = 18; // Espaçamento entre linhas diagonais
-  const thickness = 0.3; // Linha muito fina
+  // Cor muito clara para linhas (0.94 = quase branco)
+  const lineColor = rgb(0.94, 0.94, 0.95);
+  const spacing = 24; // Espaçamento entre linhas
+  const thickness = 0.4; // Linha fina mas visível
 
   // Desenha linhas diagonais em toda a página
-  // Direção: diagonal ↘ (canto inferior esquerdo para superior direito)
-  for (let y = -PAGE_H; y < PAGE_H + PAGE_W; y += spacing) {
+  // Direção: da esquerda para direita, de baixo para cima
+  for (let i = -PAGE_H; i < PAGE_W + PAGE_H; i += spacing) {
+    // Linha diagonal ↘
     page.drawLine({
-      start: { x: 0, y: y },
-      end: { x: y + PAGE_H, y: PAGE_H },
+      start: { x: Math.max(0, i), y: 0 },
+      end: { x: Math.min(PAGE_W, i + PAGE_H), y: PAGE_H },
       thickness,
       color: lineColor,
     });
   }
 
-  // Adiciona pontilhado sutil por cima para dificultar mais
-  const dotColor = rgb(0.88, 0.88, 0.9);
-  for (let x = 20; x < PAGE_W; x += 25) {
-    for (let y = 20; y < PAGE_H; y += 25) {
+  // Pontilhado sutil para dificultar mais
+  const dotColor = rgb(0.92, 0.92, 0.93);
+  for (let x = 30; x < PAGE_W; x += 40) {
+    for (let y = 30; y < PAGE_H; y += 40) {
       page.drawCircle({
         x,
         y,
-        size: 0.5,
+        size: 0.6,
         color: dotColor,
       });
     }
@@ -722,41 +731,79 @@ function drawQuestionsPages(
     x: number,
     yTop: number,
     width: number,
-  ): void => {
+  ): { y: number; page: PDFPage } => {
     let y = yTop;
+    const pageRef = { page };
+
     const headLabel = `${displayPos}. (${(q.weight ?? 0).toFixed(2).replace(".", ",")} pt) `;
     const headerLines = wrap(safe(withItemBreaks(headLabel + cleanPrompt(q.prompt))), ctx.bold, sizeTitle, width);
+
+    // Verifica espaço antes de renderizar o header
+    const headerHeight = headerLines.length * (sizeTitle * lineHeight);
+    if (y - headerHeight < BOTTOM) {
+      // Necessário criar nova página
+      const newRef = newPage(ctx, version.version_label, undefined, true);
+      pageRef.page = newRef.page;
+      y = newRef.y;
+    }
+
     for (const line of headerLines) {
-      page.drawText(line, { 
-        x, 
-        y: y - sizeTitle, 
-        size: sizeTitle, 
-        font: ctx.bold, 
+      pageRef.page.drawText(line, {
+        x,
+        y: y - sizeTitle,
+        size: sizeTitle,
+        font: ctx.bold,
         color: rgb(0, 0, 0),
-        lineHeight: sizeTitle * lineHeight 
+        lineHeight: sizeTitle * lineHeight
       });
       y -= sizeTitle * lineHeight;
     }
     y -= 1.5;
+
     if (q.qtype === "multiple_choice" && Array.isArray(q.options)) {
       const order = version.option_orders[q.id] ?? q.options.map((_, i) => i);
       const letters = "ABCDE";
       order.forEach((origIdx, i) => {
         const text = `${letters[i]}) ${cleanOption(q.options![origIdx] ?? "")}`;
         const lines = wrap(safe(text), ctx.font, sizeOptions, width - 12);
+        // Verifica espaço para cada alternativa
+        const optHeight = lines.length * (sizeOptions * optLineHeight) + 1;
+        if (y - optHeight < BOTTOM) {
+          const newRef = newPage(ctx, version.version_label, undefined, true);
+          pageRef.page = newRef.page;
+          y = newRef.y;
+        }
         for (const line of lines) {
-          page.drawText(line, { x: x + 10, y: y - sizeOptions, size: sizeOptions, font: ctx.font, color: rgb(0, 0, 0) });
+          pageRef.page.drawText(line, { x: x + 10, y: y - sizeOptions, size: sizeOptions, font: ctx.font, color: rgb(0, 0, 0) });
           y -= sizeOptions * optLineHeight;
         }
         y -= 1;
       });
     } else if (q.qtype === "true_false") {
-      page.drawText("(   ) Verdadeiro       (   ) Falso", { x: x + 10, y: y - sizeOptions, size: sizeOptions, font: ctx.font });
+      // Verifica espaço
+      if (y - sizeOptions < BOTTOM) {
+        const newRef = newPage(ctx, version.version_label, undefined, true);
+        pageRef.page = newRef.page;
+        y = newRef.y;
+      }
+      pageRef.page.drawText("(   ) Verdadeiro       (   ) Falso", { x: x + 10, y: y - sizeOptions, size: sizeOptions, font: ctx.font });
     } else if (q.qtype === "fill_blank") {
-      page.drawText("Resposta: ____________________________________________", { x: x + 10, y: y - sizeOptions, size: sizeOptions, font: ctx.font });
+      // Verifica espaço
+      if (y - sizeOptions < BOTTOM) {
+        const newRef = newPage(ctx, version.version_label, undefined, true);
+        pageRef.page = newRef.page;
+        y = newRef.y;
+      }
+      pageRef.page.drawText("Resposta: ____________________________________________", { x: x + 10, y: y - sizeOptions, size: sizeOptions, font: ctx.font });
     } else {
+      // Questão dissertativa - verifica espaço para as linhas
       for (let i = 0; i < 5; i++) {
-        page.drawLine({
+        if (y - 11 < BOTTOM) {
+          const newRef = newPage(ctx, version.version_label, undefined, true);
+          pageRef.page = newRef.page;
+          y = newRef.y;
+        }
+        pageRef.page.drawLine({
           start: { x: x + 4, y: y - 4 },
           end: { x: x + width, y: y - 4 },
           thickness: 0.4,
@@ -765,6 +812,8 @@ function drawQuestionsPages(
         y -= 11;
       }
     }
+
+    return { y, page: pageRef.page };
   };
 
   const allQuestions = orderedIds
@@ -781,7 +830,7 @@ function drawQuestionsPages(
     // newPage returns { page, y }. 'full' header (Institutional) is for page 1.
     // 'suppressVersion: true' because drawTemplateHeader handles it via versionLabel.
     // newPage também adiciona automaticamente a marca d'água e anti-OCR para folhas de questões.
-    const ref = newPage(ctx, version.version_label, undefined, chunkIdx === 0);
+    let ref = newPage(ctx, version.version_label, undefined, chunkIdx === 0);
     const topY = ref.y;
     let colIndex = 0;
     let cursorY = topY;
@@ -798,7 +847,8 @@ function drawQuestionsPages(
       }
 
       const x = MARGIN_X + colIndex * (colWidth + colGap);
-      renderQuestion(ref.page, q, globalIdx + 1, x, cursorY, colWidth);
+      const result = renderQuestion(ref.page, q, globalIdx + 1, x, cursorY, colWidth);
+      ref = { page: result.page, y: result.y }; // Atualiza ref com nova página se necessário
       cursorY -= h;
     });
   });
@@ -1310,6 +1360,28 @@ export async function buildAssessmentPDF(input: {
         color: rgb(0.5, 0.5, 0.55),
       });
     });
+  }
+
+  // ============================================================
+  // MARCA D'ÁGUA E ANTI-OCR: Desenhados DEPOIS do conteúdo
+  // para ficarem em foreground (visíveis por cima do texto)
+  // ============================================================
+
+  // Percorre todas as páginas do PDF
+  for (const section of ctx.sections) {
+    const isTeacher = /gabarito do professor/i.test(section.label);
+    const isQuestions = section.label.includes("Folha de Questões");
+
+    for (const page of section.pages) {
+      // Marca d'água: todas as páginas recebem (disciplina grande em cinza claro)
+      // A marca d'água fica semi-transparente sobre o conteúdo
+      drawWatermark(page, ctx.header.discipline, font, bold);
+
+      // Anti-OCR: apenas nas páginas de questões (não no gabarito)
+      if (isQuestions) {
+        drawAntiOCRPattern(page, true); // true = É página de questões = TEM anti-OCR
+      }
+    }
   }
 
   const bytes = await pdf.save();
