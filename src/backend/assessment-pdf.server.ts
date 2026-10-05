@@ -10,46 +10,21 @@ const STATIC_DATE_FIELD = "___/___/___";
  * ============================================================================ */
 
 /**
- * Desenha marca d'água com o nome da disciplina.
- * - Chamada EXATAMENTE uma vez por página (em newPage)
- * - Fonte 50pt em cinza claro semi-transparente
+ * Desenha o background de segurança EXATAMENTE uma vez por página.
+ * - Se isGabarito: fundo branco limpo (sem nada)
+ * - Se não isGabarito: anti-OCR primeiro, depois marca d'água
  */
-function drawWatermark(page: PDFPage, discipline: string, bold: PDFFont) {
-  const watermarkText = discipline.toUpperCase();
-  const size = 50;
-  const textWidth = bold.widthOfTextAtSize(watermarkText, size);
+function drawSecurityBackground(page: PDFPage, discipline: string, bold: PDFFont, isGabarito: boolean): void {
+  // Gabarito: fundo 100% branco, sem marca d'água nem anti-OCR
+  if (isGabarito) return;
 
-  // Cor cinza claro sutil (#C0C0C0)
-  const watermarkColor = rgb(0.75, 0.75, 0.78);
+  const nomeDisciplina = (discipline || "Disciplina").toUpperCase();
 
-  // Posição centralizada na página
-  const centerX = (PAGE_W - textWidth) / 2;
-  const centerY = PAGE_H / 2 - size / 2;
+  // a) Anti-OCR: linhas diagonais cinza médio (#CCCCCC)
+  const lineColor = rgb(0.80, 0.80, 0.80);
+  const spacing = 20;
+  const thickness = 0.5;
 
-  // Desenha apenas UMA vez (sem offsets duplicados)
-  page.drawText(watermarkText, {
-    x: centerX,
-    y: centerY,
-    size,
-    font: bold,
-    color: watermarkColor,
-  });
-}
-
-/**
- * Desenha padrão de fundo anti-OCR nas páginas de questões.
- * - Linhas diagonais escuras o suficiente para serem visíveis
- * - NÃO afeta páginas de gabarito (precisam de fundo limpo para OCR)
- */
-function drawAntiOCRPattern(page: PDFPage, isQuestionsPage: boolean) {
-  if (!isQuestionsPage) return; // Só desenha anti-OCR nas páginas de questões
-
-  // Cor mais escura para ser visível (#A8A8A8)
-  const lineColor = rgb(0.66, 0.66, 0.70);
-  const spacing = 22; // Espaçamento entre linhas
-  const thickness = 1.0; // Linha bem visível
-
-  // Desenha linhas diagonais em toda a página
   for (let i = -PAGE_H; i < PAGE_W + PAGE_H; i += spacing) {
     page.drawLine({
       start: { x: Math.max(0, i), y: 0 },
@@ -59,18 +34,27 @@ function drawAntiOCRPattern(page: PDFPage, isQuestionsPage: boolean) {
     });
   }
 
-  // Pontilhado mais escuro para dificultar OCR
-  const dotColor = rgb(0.65, 0.65, 0.68);
-  for (let x = 25; x < PAGE_W; x += 35) {
-    for (let y = 25; y < PAGE_H; y += 35) {
-      page.drawCircle({
-        x,
-        y,
-        size: 1.2,
-        color: dotColor,
-      });
+  // Pontilhado sutil
+  const dotColor = rgb(0.78, 0.78, 0.78);
+  for (let x = 30; x < PAGE_W; x += 40) {
+    for (let y = 30; y < PAGE_H; y += 40) {
+      page.drawCircle({ x, y, size: 0.6, color: dotColor });
     }
   }
+
+  // b) Marca d'água: texto da disciplina, 50pt, centralizado, cinza claro (#E0E0E0)
+  const size = 50;
+  const textWidth = bold.widthOfTextAtSize(nomeDisciplina, size);
+  const centerX = (PAGE_W - textWidth) / 2;
+  const centerY = PAGE_H / 2 - size / 2;
+
+  page.drawText(nomeDisciplina, {
+    x: centerX,
+    y: centerY,
+    size,
+    font: bold,
+    color: rgb(0.88, 0.88, 0.88),
+  });
 }
 
 type Question = {
@@ -530,15 +514,11 @@ function newPage(ctx: Ctx, versionLabel?: string, badge?: string, suppressVersio
   const isFirstOfSection = !ctx.currentSection || ctx.currentSection.pages.length === 0;
   if (ctx.currentSection) ctx.currentSection.pages.push(page);
 
-  // Marca d'água: desenhada ANTES do conteúdo (background) para ficar por baixo do texto
-  drawWatermark(page, ctx.header.discipline, ctx.bold);
+  // Determina se é página de gabarito (fundo limpo)
+  const isGabarito = /gabarito do professor/i.test(ctx.currentSection?.label ?? "");
 
-  // Anti-OCR: desenhado ANTES do conteúdo nas páginas de questões
-  // Gabarito e folha de respostas NÃO têm anti-OCR (precisam de fundo limpo para OCR)
-  const isQuestionsSection = ctx.currentSection?.label?.includes("Folha de Questões") ?? false;
-  if (isQuestionsSection) {
-    drawAntiOCRPattern(page, true); // true = É página de questões = TEM anti-OCR
-  }
+  // Background de segurança: marca d'água + anti-OCR (se não for gabarito)
+  drawSecurityBackground(page, ctx.header.discipline, ctx.bold, isGabarito);
 
   if (ctx.template) {
     return {
