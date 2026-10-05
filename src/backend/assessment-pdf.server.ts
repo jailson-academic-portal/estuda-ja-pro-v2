@@ -770,11 +770,19 @@ function drawQuestionsPages(
       const x = MARGIN_X + colIndex * (colWidth + colGap);
 
       // Verifica se a questão cabe na coluna atual
+      // Se não couber, move para coluna 2 ou cria nova página
       if (cursorY - h < BOTTOM) {
         if (colIndex === 0) {
-          // Move para coluna 2
+          // Move para coluna 2 e verifica se cabe lá
           colIndex = 1;
           cursorY = ref.y;
+          const h2 = measureQuestion(q, globalIdx + 1, colWidth);
+          // Se nem na coluna 2 couber, cria nova página
+          if (cursorY - h2 < BOTTOM) {
+            ref = newPage(ctx, version.version_label, undefined, true);
+            cursorY = ref.y;
+            colIndex = 0;
+          }
         } else {
           // Coluna 2 também não cabe, cria nova página
           ref = newPage(ctx, version.version_label, undefined, true);
@@ -783,8 +791,11 @@ function drawQuestionsPages(
         }
       }
 
+      // Calcula X novamente após possível mudança de coluna
+      const finalX = MARGIN_X + colIndex * (colWidth + colGap);
+
       // Renderiza a questão (já retorna Y atualizado)
-      cursorY = renderQuestion(ref.page, q, globalIdx + 1, x, cursorY, colWidth);
+      cursorY = renderQuestion(ref.page, q, globalIdx + 1, finalX, cursorY, colWidth);
     }
   });
 }
