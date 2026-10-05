@@ -436,13 +436,6 @@ function expandedAssessmentQuestionCount(dist: AssessmentDistribution, formats: 
   }, 0);
 }
 
-const FORMATTABLE_TYPES: FormattableTypeKey[] = [
-  "verdadeiro_falso",
-  "completar_lacunas",
-  "calculo",
-  "associacao",
-];
-
 const ASSESSMENT_TYPES: Array<{ key: AssessmentTypeKey; label: string }> = [
   { key: "multipla_escolha", label: "Múltipla Escolha" },
   { key: "discursiva", label: "Discursiva" },
@@ -851,21 +844,50 @@ function AssessmentCreatorDialog({
   const [assessmentDate, setAssessmentDate] = useState<string>(
     () => new Date().toISOString().slice(0, 10),
   );
-  const [dist, setDist] = useState<AssessmentDistribution>({
-    ...ZERO_ASSESSMENT_DIST,
-    multipla_escolha: 5,
-    discursiva: 2,
-    verdadeiro_falso: 1,
-    completar_lacunas: 1,
-    aplicacao_conceitos: 1,
-  });
-  const [formats, setFormats] = useState<AssessmentFormats>({
+  // Tipos de questão marcados pelo usuário. A distribuição por tipo (dist) é
+  // DERIVADA destes checkboxes: o total informado acima é dividido igualmente
+  // entre os tipos marcados, e desmarcar um tipo o zera no payload.
+  const INITIAL_SELECTED_TYPES = ASSESSMENT_TYPES.filter((t) =>
+    ["multipla_escolha", "discursiva", "verdadeiro_falso", "completar_lacunas", "aplicacao_conceitos"].includes(t.key),
+  ).map((t) => t.key);
+  const [selectedTypeKeys, setSelectedTypeKeys] = useState<AssessmentTypeKey[]>(INITIAL_SELECTED_TYPES);
+  // Formato de resposta de cada tipo. O seletor saiu da interface (a
+  // distribuição agora é só por checkbox), mas o valor padrão continua sendo
+  // enviado ao backend em generateStructuredAssessment.
+  const [formats] = useState<AssessmentFormats>({
     verdadeiro_falso: "gabarito_direto",
     completar_lacunas: "gabarito_direto",
     calculo: "gabarito_direto",
     associacao: "gabarito_direto",
   });
   const [loading, setLoading] = useState(false);
+
+  // Distribuição por tipo DERIVADA dos checkboxes: o total informado no campo
+  // "Número Total de Questões" é dividido igualmente entre os tipos marcados.
+  // A soma sempre bate com o total, então a validação existente continua válida.
+  const dist = useMemo<AssessmentDistribution>(() => {
+    const next: AssessmentDistribution = { ...ZERO_ASSESSMENT_DIST };
+    const ativos = ASSESSMENT_TYPES.filter((t) => selectedTypeKeys.includes(t.key));
+    if (ativos.length === 0 || total <= 0) return next;
+    const base = Math.floor(total / ativos.length);
+    const resto = total % ativos.length;
+    ativos.forEach((t, i) => {
+      next[t.key] = base + (i < resto ? 1 : 0);
+    });
+    return next;
+  }, [selectedTypeKeys, total]);
+
+  // Marca/desmarca um tipo, mantendo ao menos um marcado.
+  const alternarTipoQuestao = (key: AssessmentTypeKey, marcado: boolean) => {
+    setSelectedTypeKeys((prev) => {
+      if (marcado) {
+        const proximos = ASSESSMENT_TYPES.map((t) => t.key).filter((k) => [...prev, key].includes(k));
+        return proximos.length > 0 ? proximos : prev;
+      }
+      const restantes = prev.filter((k) => k !== key);
+      return restantes.length > 0 ? restantes : [key];
+    });
+  };
 
   const distSum = useMemo(
     () => ASSESSMENT_TYPES.reduce((acc, t) => acc + (dist[t.key] || 0), 0),
@@ -976,6 +998,16 @@ function AssessmentCreatorDialog({
             discipline: cleanAssessmentHeaderValue(apostilaHeader.discipline) || prev.discipline,
             professor: prev.professor || cleanAssessmentHeaderValue(apostilaHeader.professor),
           }));
+          // Tema preenchido automaticamente: "Avaliação: [Módulo] - [Tema]".
+          // Só é aplicado enquanto o usuário não tiver digitado um tema próprio.
+          setAssessmentTitle((prev) => {
+            if (prev.trim() && !temaDerivadoDaApostila(prev)) return prev;
+            const modulo = defaultModules[0] ?? "";
+            const tema = suggestedTopics[0] ?? "";
+            if (!modulo && !tema) return prev;
+            const partes = [modulo, tema].filter(Boolean).join(" - ");
+            return partes ? `Avaliação: ${partes}` : prev;
+          });
         }
       } catch (e) {
         if (!cancelled) toast.error(e instanceof Error ? e.message : "Erro ao ler apostila");
@@ -992,6 +1024,25 @@ function AssessmentCreatorDialog({
     const allowed = new Set(availableThemes.map((t) => t.theme));
     setSelectedThemes((prev) => prev.filter((t) => allowed.has(t)));
   }, [availableThemes]);
+
+  // A distribuição por tipo agora é derivada dos checkboxes, então a
+  // dificuldade por tipo precisa acompanhar. Para cada tipo marcado, colocamos
+  // todas as questões no nível "difficultyLevel" (o botão que fazia isso saiu
+  // da tela). Tipos desmarcados ou com contagem zero são zerados.
+  useEffect(() => {
+    setDifficultyByType((previous) => {
+      const next: AssessmentDifficultyByType = {} as AssessmentDifficultyByType;
+      for (const type of ASSESSMENT_TYPES) {
+        const qtd = dist[type.key] || 0;
+        next[type.key] = qtd > 0
+          ? { ...emptyDifficultyCounts(), [difficultyLevel]: qtd }
+          : emptyDifficultyCounts();
+      }
+      // Só devolve um objeto novo se algo realmente mudou, evitando
+      // re-renderizações em loop.
+      return JSON.stringify(next) === JSON.stringify(previous) ? previous : next;
+    });
+  }, [dist, difficultyLevel]);
 
   useEffect(() => {
     if (!apostilaMarkdown || loadingStructure) return;
@@ -1097,6 +1148,12 @@ function AssessmentCreatorDialog({
 
   const toggle = (arr: string[], value: string): string[] =>
     arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value];
+
+  // Indica se o tema atual foi gerado automaticamente a partir de uma apostila
+  // (prefixo "Avaliação:"), para que uma nova apostila possa sobrescrevê-lo.
+  // Um tema digitado manualmente pelo professor nunca é sobrescrito.
+  const temaDerivadoDaApostila = (valor: string): boolean =>
+    /^avaliação:\s*/i.test(valor.trim());
 
   const submit = async () => {
     if (!selectedApostilaId) return toast.error("Selecione uma Apostila");
@@ -1494,8 +1551,12 @@ function AssessmentCreatorDialog({
               )}
             </div>
 
+            {/* "Módulo(s) da Avaliação" e "Tópicos de Conteúdo" ficam ocultos
+                na interface: ambos são marcados automaticamente ao carregar a
+                apostila (selectedModules / selectedTopics) e continuam sendo
+                enviados ao backend no generateStructuredAssessment. */}
             {selectedApostilaId && (
-              <div className="space-y-2 rounded-md border p-3">
+              <div className="space-y-2 rounded-md border p-3 hidden">
                 <Label>
                   Módulo(s) d{isExercicio ? "os Exercícios" : "a Avaliação"} <span className="text-destructive">*</span>
                 </Label>
@@ -1805,106 +1866,40 @@ function AssessmentCreatorDialog({
 
             <div className="space-y-2">
               <Label>Distribuição por Tipo de Questão</Label>
+              <p className="text-xs text-muted-foreground">
+                Marque os tipos de questão que deseja incluir na avaliação. A quantidade é
+                distribuída igualmente entre os tipos marcados, somando{" "}
+                <strong>{total}</strong> questão(ões).
+              </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {ASSESSMENT_TYPES.map((t) => (
-                  <div
+                  <label
                     key={t.key}
-                    className="flex flex-col gap-2 border rounded-md px-3 py-2"
+                    className="flex items-center gap-2 text-sm cursor-pointer border rounded-md px-3 py-2 hover:bg-muted/40"
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm">{t.label}</span>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={60}
-                        className="w-20 h-8"
-                        value={dist[t.key]}
-                        onChange={(e) =>
-                          setDist({
-                            ...dist,
-                            [t.key]: Math.max(0, Math.min(60, Number(e.target.value) || 0)),
-                          })
-                        }
-                      />
-                    </div>
-                    {(FORMATTABLE_TYPES as string[]).includes(t.key) && (
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs text-muted-foreground">Formato da resposta</span>
-                        <select
-                          className="h-8 rounded-md border bg-background px-2 text-xs"
-                          value={formats[t.key as FormattableTypeKey]}
-                          onChange={(e) =>
-                            setFormats({
-                              ...formats,
-                              [t.key as FormattableTypeKey]: e.target.value as AnswerFormat,
-                            })
-                          }
-                        >
-                          <option value="gabarito_direto">Gabarito Direto</option>
-                          <option value="multipla_escolha">Múltipla Escolha (5 alt.)</option>
-                        </select>
-                      </div>
+                    <Checkbox
+                      checked={selectedTypeKeys.includes(t.key)}
+                      onCheckedChange={(v) => alternarTipoQuestao(t.key, v === true)}
+                    />
+                    <span>{t.label}</span>
+                    {dist[t.key] > 0 && (
+                      <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+                        {dist[t.key]}
+                      </span>
                     )}
-                  </div>
+                  </label>
                 ))}
               </div>
-              <p
-                className={`text-xs ${distSum === total ? "text-muted-foreground" : "text-destructive"}`}
-              >
-                Soma atual: {distSum} / {total}{" "}
-                {distSum !== total && "— ajuste para igualar o total."}
-              </p>
             </div>
 
+            {/* "Nível de Dificuldade" (botões Fácil/Médio/Difícil) e "Padrões de
+                Qualidade das Questões" saíram da interface. Ambos seguem no
+                estado com seus valores padrão (difficultyLevel, difficultyByType
+                e qualityRules) e continuam sendo enviados ao backend. A
+                dificuldade é definida por tipo de questão logo abaixo e os
+                padrões de qualidade são aplicados como padrão no prompt. */}
             {!isExercicio && selectedApostilaId && (
               <div className="space-y-4 rounded-md border p-3">
-                <div className="space-y-2">
-                  <Label className="text-xs">Nível de Dificuldade</Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {([
-                      { value: "facil", label: "Fácil" },
-                      { value: "medio", label: "Médio" },
-                      { value: "dificil", label: "Difícil" },
-                    ] as const).map((option) => (
-                      <Button
-                        key={option.value}
-                        type="button"
-                        variant={difficultyLevel === option.value ? "default" : "outline"}
-                        onClick={() => {
-                          setDifficultyLevel(option.value);
-                          setDifficultyByType((previous) => {
-                            const next = { ...previous };
-                            for (const type of ASSESSMENT_TYPES) {
-                              next[type.key] = {
-                                ...emptyDifficultyCounts(),
-                                [option.value]: dist[type.key] || 0,
-                              };
-                            }
-                            return next;
-                          });
-                        }}
-                      >
-                        {option.label}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs">Padrões de Qualidade das Questões</Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {QUALITY_RULE_OPTIONS.map((rule) => (
-                      <label key={rule.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                        <Checkbox
-                          checked={qualityRules.includes(rule.id)}
-                          onCheckedChange={() => setQualityRules((prev) => toggle(prev, rule.id))}
-                        />
-                        <span>{rule.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
                 <div className="space-y-2">
                   <Label className="text-xs">Distribuição de Dificuldade por Tipo de Questão</Label>
                   <p className="text-[11px] text-muted-foreground">
