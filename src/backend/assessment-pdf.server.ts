@@ -704,15 +704,14 @@ function drawQuestionsPages(
     for (const line of headerLines) {
       page.drawText(line, {
         x,
-        y: y - sizeTitle,
+        y,
         size: sizeTitle,
         font: ctx.bold,
         color: rgb(0, 0, 0),
-        lineHeight: sizeTitle * lineHeight
       });
       y -= sizeTitle * lineHeight;
     }
-    y -= 1.5;
+    y -= 3; // Espaço entre header e alternativas
 
     if (q.qtype === "multiple_choice" && Array.isArray(q.options)) {
       const order = version.option_orders[q.id] ?? q.options.map((_, i) => i);
@@ -720,15 +719,17 @@ function drawQuestionsPages(
         const text = `${letters[i]}) ${cleanOption(q.options![origIdx] ?? "")}`;
         const lines = wrap(safe(text), ctx.font, sizeOptions, width - 12);
         for (const line of lines) {
-          page.drawText(line, { x: x + 10, y: y - sizeOptions, size: sizeOptions, font: ctx.font, color: rgb(0, 0, 0) });
+          page.drawText(line, { x: x + 10, y, size: sizeOptions, font: ctx.font, color: rgb(0, 0, 0) });
           y -= sizeOptions * optLineHeight;
         }
-        y -= 1;
+        y -= 2; // Espaço entre alternativas
       });
     } else if (q.qtype === "true_false") {
-      page.drawText("(   ) Verdadeiro       (   ) Falso", { x: x + 10, y: y - sizeOptions, size: sizeOptions, font: ctx.font });
+      page.drawText("(   ) Verdadeiro       (   ) Falso", { x: x + 10, y, size: sizeOptions, font: ctx.font });
+      y -= sizeOptions * optLineHeight;
     } else if (q.qtype === "fill_blank") {
-      page.drawText("Resposta: ____________________________________________", { x: x + 10, y: y - sizeOptions, size: sizeOptions, font: ctx.font });
+      page.drawText("Resposta: ____________________________________________", { x: x + 10, y, size: sizeOptions, font: ctx.font });
+      y -= sizeOptions * optLineHeight;
     } else {
       for (let i = 0; i < 5; i++) {
         page.drawLine({
@@ -740,6 +741,8 @@ function drawQuestionsPages(
         y -= 11;
       }
     }
+
+    y -= 12; // Espaço entre questões
     return y;
   };
 
@@ -780,9 +783,8 @@ function drawQuestionsPages(
         }
       }
 
-      // Renderiza a questão
+      // Renderiza a questão (já retorna Y atualizado)
       cursorY = renderQuestion(ref.page, q, globalIdx + 1, x, cursorY, colWidth);
-      cursorY -= 8; // Espaço entre questões
     }
   });
 }
