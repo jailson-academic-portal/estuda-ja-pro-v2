@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { sortItemsNumerically } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -637,11 +637,62 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
   const [apostilas, setApostilas] = useState<Array<{ id: string; title: string }>>([]);
   const [apostilaId, setApostilaId] = useState("");
   const [title, setTitle] = useState("");
+  const [titleEditado, setTitleEditado] = useState(false);
   const [moduleLessons, setModuleLessons] = useState("");
+  const [moduloEditado, setModuloEditado] = useState(false);
+
+  // Nome do módulo extraído do título da apostila ("Apostila — Módulo 1" → "Módulo 1").
+  const apostilaSelecionada = apostilas.find((a) => a.id === apostilaId);
+  const moduloDaApostila = useMemo(() => {
+    const bruto = (apostilaSelecionada?.title ?? "").trim();
+    if (!bruto) return "";
+    const modulo = bruto
+      .replace(/^apostila\s*[—–\-:]?\s*/i, "")
+      .replace(/\s*[—–\-:]?\s*$/, "")
+      .trim();
+    // Se o título não tiver nada além da palavra "Apostila", usa o título
+    // inteiro: sem isso o campo "módulo/aulas" (oculto na tela) ficaria vazio
+    // e o botão "Gerar avaliação" bloquearia sem forma de o usuário corrigir.
+    return modulo || bruto;
+  }, [apostilaSelecionada?.title]);
+
+  // Título preenchido automaticamente: "Avaliação: {módulo}".
+  // Só é sobrescrito enquanto o usuário não tiver digitado um título próprio.
+  useEffect(() => {
+    if (!moduloDaApostila) return;
+    if (!titleEditado) setTitle(`Avaliação: ${moduloDaApostila}`);
+    // O módulo/aulas também é preenchido no background: o botão "Gerar
+    // avaliação" exige esse campo, então ele continua sendo enviado ao backend
+    // mesmo estando oculto na interface.
+    if (!moduloEditado) setModuleLessons(moduloDaApostila);
+  }, [moduloDaApostila, titleEditado, moduloEditado]);
+
   const [mc, setMc] = useState(5);
   const [tf, setTf] = useState(2);
   const [fb, setFb] = useState(2);
   const [es, setEs] = useState(1);
+  // Tipos de questão marcados pelo usuário. As quantidades em mc/tf/fb/es
+  // continuam sendo a fonte de verdade enviada ao backend; os checkboxes
+  // apenas controlam quais tipos aparecem na tela.
+  const TIPOS_QUESTAO = [
+    { id: "multiple_choice", label: "Múltipla escolha" },
+    { id: "true_false", label: "V/F" },
+    { id: "fill_blank", label: "Lacunas" },
+    { id: "essay", label: "Dissertativa" },
+  ] as const;
+  type TipoQuestaoId = (typeof TIPOS_QUESTAO)[number]["id"];
+  const [tiposAtivos, setTiposAtivos] = useState<TipoQuestaoId[]>([
+    "multiple_choice",
+    "true_false",
+    "fill_blank",
+    "essay",
+  ]);
+  const [qtdPorTipo, setQtdPorTipo] = useState<Record<TipoQuestaoId, number>>({
+    multiple_choice: 5,
+    true_false: 2,
+    fill_blank: 2,
+    essay: 1,
+  });
   const [maxScore, setMaxScore] = useState(10);
   const [versions, setVersions] = useState(2);
   const [shuffleItems, setShuffleItems] = useState(true);
@@ -748,6 +799,59 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
   }, [kind, recoveryIds]);
 
   const totalQ = mc + tf + fb + es;
+
+  // Setters por tipo: mantêm mc/tf/fb/es sincronizados com a tabela de
+  // quantidades, que é o que de fato vai para o payload.
+  const setQtd = (id: TipoQuestaoId, n: number) => {
+    const valor = Math.max(0, Math.floor(Number.isFinite(n) ? n : 0));
+    setQtdPorTipo((prev) => ({ ...prev, [id]: valor }));
+    if (id === "multiple_choice") setMc(valor);
+    if (id === "true_false") setTf(valor);
+    if (id === "fill_blank") setFb(valor);
+    if (id === "essay") setEs(valor);
+  };
+
+  // Marca/desmarca um tipo. Ao desmarcar, a quantidade vai a zero (continua
+  // válida no payload) e o total é redistribuído entre os tipos restantes.
+  const alternarTipo = (id: TipoQuestaoId, marcado: boolean) => {
+    setTiposAtivos((prevAtivos) => {
+      const ativos = marcado
+        ? TIPOS_QUESTAO.map((t) => t.id).filter((t) => [...prevAtivos, id].includes(t))
+        : prevAtivos.filter((t) => t !== id);
+
+      if (ativos.length === 0) {
+        // Mantém ao menos um tipo marcado para não quebrar o formulário.
+        return prevAtivos.length === 0 ? prevAtivos : [id];
+      }
+
+      if (marcado && !prevAtivos.includes(id)) {
+        // Ao ligar um tipo novo, divide o total igualmente entre todos.
+        const total = TIPOS_QUESTAO.filter((t) => ativos.includes(t.id)).reduce(
+          (acc, t) => acc + qtdPorTipo[t.id],
+          0,
+        );
+        const base = Math.floor(total / ativos.length);
+        const resto = total % ativos.length;
+        const novaTabela = { ...qtdPorTipo };
+        ativos.forEach((t, i) => {
+          novaTabela[t] = base + (i < resto ? 1 : 0);
+        });
+        setQtdPorTipo(novaTabela);
+        setMc(novaTabela.multiple_choice);
+        setTf(novaTabela.true_false);
+        setFb(novaTabela.fill_blank);
+        setEs(novaTabela.essay);
+      } else if (!marcado) {
+        const novaTabela = { ...qtdPorTipo, [id]: 0 };
+        setQtdPorTipo(novaTabela);
+        if (id === "multiple_choice") setMc(0);
+        if (id === "true_false") setTf(0);
+        if (id === "fill_blank") setFb(0);
+        if (id === "essay") setEs(0);
+      }
+      return ativos;
+    });
+  };
 
   // Cálculo da soma dos pesos × quantidade por tipo.
   const pesoSum =
@@ -915,13 +1019,22 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
             </Select>
           </div>
           <div>
-            <Label>Título da avaliação</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: Avaliação Bimestral — Módulo 1" />
+            <Label>Tema da Avaliação</Label>
+            <Input
+              value={title}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                setTitleEditado(true);
+              }}
+              placeholder={moduloDaApostila ? `Avaliação: ${moduloDaApostila}` : "Avaliação: [Módulo]"}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Preenchido automaticamente a partir da apostila selecionada. Edite se quiser personalizar.
+            </p>
           </div>
-          <div>
-            <Label>Módulo / aulas a contemplar</Label>
-            <Textarea value={moduleLessons} onChange={(e) => setModuleLessons(e.target.value)} placeholder="Ex.: Módulo 1 — Aulas 1, 2 e 3 (Fundamentos)" rows={2} />
-          </div>
+          {/* "Módulo / aulas a contemplar" e "Tópicos de Conteúdo" seguem no
+              estado e são enviados ao backend, mas ficam ocultos na interface:
+              o módulo é preenchido automaticamente a partir da apostila. */}
 
           {/* Modalidade da prova */}
           <div className="rounded-md border bg-muted/20 p-3 space-y-3">
@@ -1032,13 +1145,47 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
             )}
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <NumField label="Múltipla escolha" value={mc} onChange={setMc} max={40} />
-            <NumField label="V/F" value={tf} onChange={setTf} max={40} />
-            <NumField label="Lacunas" value={fb} onChange={setFb} max={40} />
-            <NumField label="Dissertativa" value={es} onChange={setEs} max={20} />
+          <div className="rounded-md border bg-muted/20 p-3 space-y-3">
+            <div className="text-sm font-medium">Distribuição por Tipo de Questão</div>
+            <p className="text-xs text-muted-foreground">
+              Marque os tipos de questão que deseja incluir na prova e ajuste a quantidade de cada um.
+            </p>
+
+            <div className="space-y-2">
+              {TIPOS_QUESTAO.map((t) => {
+                const ativo = tiposAtivos.includes(t.id);
+                return (
+                  <div
+                    key={t.id}
+                    className="flex items-center justify-between gap-3 rounded-md border bg-background p-2.5"
+                  >
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <Checkbox
+                        checked={ativo}
+                        onCheckedChange={(v) => alternarTipo(t.id, v === true)}
+                      />
+                      <span>{t.label}</span>
+                    </label>
+                    {ativo && (
+                      <div className="w-20">
+                        <Input
+                          type="number"
+                          min={1}
+                          max={40}
+                          value={qtdPorTipo[t.id]}
+                          onChange={(e) => setQtd(t.id, Number(e.target.value || 0))}
+                          className="h-8"
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Total: <strong>{totalQ}</strong> questão(ões).
+            </div>
           </div>
-          <div className="text-xs text-muted-foreground">Total: <strong>{totalQ}</strong> questão(ões).</div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div>
@@ -1161,33 +1308,17 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
 
           </div>
 
-          {/* Conteúdo, dificuldade e qualidade (alimentam a geração por IA) */}
+          {/* Dificuldade e layout das folhas de questões. "Tópicos
+              específicos" (topicsText) permanece no estado e é enviado ao
+              backend, mas fica oculto da interface. */}
           <div className="rounded-md border bg-muted/20 p-3 space-y-3">
-            <div className="text-sm font-medium">Conteúdo, dificuldade e qualidade</div>
+            <div className="text-sm font-medium">Dificuldade e layout</div>
 
-            <div>
-              <Label>Tópicos específicos a contemplar (opcional)</Label>
-              <Textarea
-                value={topicsText}
-                onChange={(e) => setTopicsText(e.target.value)}
-                placeholder="Um tópico por linha. Ex.:&#10;Leis de Newton&#10;Energia cinética&#10;Atrito"
-                rows={3}
-              />
-              <p className="text-xs text-muted-foreground mt-1">A IA distribuirá as questões entre os tópicos informados.</p>
-            </div>
-
-            <div>
-              <Label>Nível de dificuldade geral</Label>
-              <Select value={difficultyLevel} onValueChange={(v) => setDifficultyLevel(v as DiffLevel)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="basico">Básico</SelectItem>
-                  <SelectItem value="medio">Médio</SelectItem>
-                  <SelectItem value="avancado">Avançado</SelectItem>
-                  <SelectItem value="superior">Superior</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* "Nível de dificuldade geral" e "Padrões de qualidade das
+                questões" saíram da interface. Ambos continuam com seus valores
+                padrão no estado e são enviados ao backend: a dificuldade é
+                definida por tipo de questão abaixo e os padrões de qualidade
+                são aplicados como padrão no prompt. */}
 
             <div>
               <Label className="text-xs">Dificuldade por tipo de questão</Label>
@@ -1196,18 +1327,6 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
                 <DifficultySelector label="V/F" value={diffTF} onChange={setDiffTF} />
                 <DifficultySelector label="Lacunas" value={diffFB} onChange={setDiffFB} />
                 <DifficultySelector label="Dissertativa" value={diffES} onChange={setDiffES} />
-              </div>
-            </div>
-
-            <div>
-              <Label className="text-xs">Padrões de qualidade das questões</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
-                {QUALITY_RULES.map((r) => (
-                  <label key={r.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <Checkbox checked={qualityRules.includes(r.id)} onCheckedChange={() => toggleQuality(r.id)} />
-                    <span>{r.label}</span>
-                  </label>
-                ))}
               </div>
             </div>
 
