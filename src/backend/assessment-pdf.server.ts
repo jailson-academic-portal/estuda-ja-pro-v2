@@ -6,56 +6,48 @@ import { stripHardcodedCorrectLetter } from "@/lib/text-sanitize";
 const STATIC_DATE_FIELD = "___/___/___";
 
 /* ============================================================================
- * ANTI-OCR SECURITY FEATURES
+ * SECURITY FEATURES
  * ============================================================================ */
 
 /**
  * Desenha marca d'água com o nome da disciplina.
- * - Desenhada no INÍCIO (background) para ficar POR BAIXO do texto
- * - Fonte grande, cinza claro semi-transparente
+ * - Chamada EXATAMENTE uma vez por página (em newPage)
+ * - Fonte 50pt em cinza claro semi-transparente
  */
 function drawWatermark(page: PDFPage, discipline: string, bold: PDFFont) {
   const watermarkText = discipline.toUpperCase();
-  const size = 56;
+  const size = 50;
   const textWidth = bold.widthOfTextAtSize(watermarkText, size);
 
-  // Cor cinza claro para marca d'água sutil (#D0D0D0)
-  const watermarkColor = rgb(0.82, 0.82, 0.84);
+  // Cor cinza claro sutil (#C0C0C0)
+  const watermarkColor = rgb(0.75, 0.75, 0.78);
 
-  // Posição centralizada
+  // Posição centralizada na página
   const centerX = (PAGE_W - textWidth) / 2;
   const centerY = PAGE_H / 2 - size / 2;
 
-  // Desenha múltiplas cópias com espaçamento para criar efeito de marca d'água
-  const offsets = [
-    { x: 0, y: 0 },
-    { x: -3, y: 3 },
-    { x: 3, y: -3 },
-  ];
-
-  for (const offset of offsets) {
-    page.drawText(watermarkText, {
-      x: centerX + offset.x,
-      y: centerY + offset.y,
-      size,
-      font: bold,
-      color: watermarkColor,
-    });
-  }
+  // Desenha apenas UMA vez (sem offsets duplicados)
+  page.drawText(watermarkText, {
+    x: centerX,
+    y: centerY,
+    size,
+    font: bold,
+    color: watermarkColor,
+  });
 }
 
 /**
  * Desenha padrão de fundo anti-OCR nas páginas de questões.
- * - Linhas diagonais visíveis para dificultar OCR por câmera
+ * - Linhas diagonais escuras o suficiente para serem visíveis
  * - NÃO afeta páginas de gabarito (precisam de fundo limpo para OCR)
  */
 function drawAntiOCRPattern(page: PDFPage, isQuestionsPage: boolean) {
   if (!isQuestionsPage) return; // Só desenha anti-OCR nas páginas de questões
 
-  // Cor visível para as linhas (#D8D8D8 = cinza claro perceptível)
-  const lineColor = rgb(0.85, 0.85, 0.88);
-  const spacing = 18; // Espaçamento entre linhas
-  const thickness = 0.8; // Linha mais espessa para ser visível
+  // Cor mais escura para ser visível (#A8A8A8)
+  const lineColor = rgb(0.66, 0.66, 0.70);
+  const spacing = 22; // Espaçamento entre linhas
+  const thickness = 1.0; // Linha bem visível
 
   // Desenha linhas diagonais em toda a página
   for (let i = -PAGE_H; i < PAGE_W + PAGE_H; i += spacing) {
@@ -67,14 +59,14 @@ function drawAntiOCRPattern(page: PDFPage, isQuestionsPage: boolean) {
     });
   }
 
-  // Pontilhado visível para dificultar mais
-  const dotColor = rgb(0.84, 0.84, 0.87);
-  for (let x = 22; x < PAGE_W; x += 30) {
-    for (let y = 22; y < PAGE_H; y += 30) {
+  // Pontilhado mais escuro para dificultar OCR
+  const dotColor = rgb(0.65, 0.65, 0.68);
+  for (let x = 25; x < PAGE_W; x += 35) {
+    for (let y = 25; y < PAGE_H; y += 35) {
       page.drawCircle({
         x,
         y,
-        size: 1.0,
+        size: 1.2,
         color: dotColor,
       });
     }
@@ -685,9 +677,6 @@ function drawQuestionsPages(
 ): void {
   startSection(ctx, `Folhas de Questões — Versão ${version.version_label}`);
 
-  // Adiciona padrão anti-OCR nas páginas de questões (identificadas pela seção)
-  // O padrão será adicionado em cada chunk de páginas
-
   const orderedIds = version.question_order.length ? version.question_order : questions.map((q) => q.id);
   const colGap = 16;
   const colWidth = (PAGE_W - MARGIN_X * 2 - colGap) / 2;
@@ -697,16 +686,16 @@ function drawQuestionsPages(
   const sizeOptions = 9;
   const lineHeight = 1.15;
   const optLineHeight = 1.15;
+  const letters = "ABCDE";
 
   const measureQuestion = (q: Question, displayPos: number, width: number): number => {
     let h = 0;
     const headLabel = `${displayPos}. (${(q.weight ?? 0).toFixed(2).replace(".", ",")} pt) `;
     const headerLines = wrap(safe(withItemBreaks(headLabel + cleanPrompt(q.prompt))), ctx.bold, sizeTitle, width);
     h += headerLines.length * (sizeTitle * lineHeight);
-    
+
     if (q.qtype === "multiple_choice" && Array.isArray(q.options)) {
       const order = version.option_orders[q.id] ?? q.options.map((_, i) => i);
-      const letters = "ABCDE";
       h += 1.5;
       order.forEach((origIdx, i) => {
         const text = `${letters[i]}) ${cleanOption(q.options![origIdx] ?? "")}`;
@@ -726,26 +715,14 @@ function drawQuestionsPages(
     q: Question,
     displayPos: number,
     x: number,
-    yTop: number,
+    y: number,
     width: number,
-  ): { y: number; page: PDFPage } => {
-    let y = yTop;
-    const pageRef = { page };
-
+  ): number => {
     const headLabel = `${displayPos}. (${(q.weight ?? 0).toFixed(2).replace(".", ",")} pt) `;
     const headerLines = wrap(safe(withItemBreaks(headLabel + cleanPrompt(q.prompt))), ctx.bold, sizeTitle, width);
 
-    // Verifica espaço antes de renderizar o header
-    const headerHeight = headerLines.length * (sizeTitle * lineHeight);
-    if (y - headerHeight < BOTTOM) {
-      // Necessário criar nova página
-      const newRef = newPage(ctx, version.version_label, undefined, true);
-      pageRef.page = newRef.page;
-      y = newRef.y;
-    }
-
     for (const line of headerLines) {
-      pageRef.page.drawText(line, {
+      page.drawText(line, {
         x,
         y: y - sizeTitle,
         size: sizeTitle,
@@ -759,48 +736,22 @@ function drawQuestionsPages(
 
     if (q.qtype === "multiple_choice" && Array.isArray(q.options)) {
       const order = version.option_orders[q.id] ?? q.options.map((_, i) => i);
-      const letters = "ABCDE";
       order.forEach((origIdx, i) => {
         const text = `${letters[i]}) ${cleanOption(q.options![origIdx] ?? "")}`;
         const lines = wrap(safe(text), ctx.font, sizeOptions, width - 12);
-        // Verifica espaço para cada alternativa
-        const optHeight = lines.length * (sizeOptions * optLineHeight) + 1;
-        if (y - optHeight < BOTTOM) {
-          const newRef = newPage(ctx, version.version_label, undefined, true);
-          pageRef.page = newRef.page;
-          y = newRef.y;
-        }
         for (const line of lines) {
-          pageRef.page.drawText(line, { x: x + 10, y: y - sizeOptions, size: sizeOptions, font: ctx.font, color: rgb(0, 0, 0) });
+          page.drawText(line, { x: x + 10, y: y - sizeOptions, size: sizeOptions, font: ctx.font, color: rgb(0, 0, 0) });
           y -= sizeOptions * optLineHeight;
         }
         y -= 1;
       });
     } else if (q.qtype === "true_false") {
-      // Verifica espaço
-      if (y - sizeOptions < BOTTOM) {
-        const newRef = newPage(ctx, version.version_label, undefined, true);
-        pageRef.page = newRef.page;
-        y = newRef.y;
-      }
-      pageRef.page.drawText("(   ) Verdadeiro       (   ) Falso", { x: x + 10, y: y - sizeOptions, size: sizeOptions, font: ctx.font });
+      page.drawText("(   ) Verdadeiro       (   ) Falso", { x: x + 10, y: y - sizeOptions, size: sizeOptions, font: ctx.font });
     } else if (q.qtype === "fill_blank") {
-      // Verifica espaço
-      if (y - sizeOptions < BOTTOM) {
-        const newRef = newPage(ctx, version.version_label, undefined, true);
-        pageRef.page = newRef.page;
-        y = newRef.y;
-      }
-      pageRef.page.drawText("Resposta: ____________________________________________", { x: x + 10, y: y - sizeOptions, size: sizeOptions, font: ctx.font });
+      page.drawText("Resposta: ____________________________________________", { x: x + 10, y: y - sizeOptions, size: sizeOptions, font: ctx.font });
     } else {
-      // Questão dissertativa - verifica espaço para as linhas
       for (let i = 0; i < 5; i++) {
-        if (y - 11 < BOTTOM) {
-          const newRef = newPage(ctx, version.version_label, undefined, true);
-          pageRef.page = newRef.page;
-          y = newRef.y;
-        }
-        pageRef.page.drawLine({
+        page.drawLine({
           start: { x: x + 4, y: y - 4 },
           end: { x: x + width, y: y - 4 },
           thickness: 0.4,
@@ -809,45 +760,50 @@ function drawQuestionsPages(
         y -= 11;
       }
     }
-
-    return { y, page: pageRef.page };
+    return y;
   };
 
   const allQuestions = orderedIds
     .map((qid) => questions.find((q) => q.id === qid))
     .filter((q): q is Question => !!q);
 
-  // Split into chunks of 5 questions to force page breaks exactly as requested.
+  // Chunk de questões: 5 por página
   const chunks: Question[][] = [];
   for (let i = 0; i < allQuestions.length; i += 5) {
     chunks.push(allQuestions.slice(i, i + 5));
   }
 
   chunks.forEach((chunk, chunkIdx) => {
-    // newPage returns { page, y }. 'full' header (Institutional) is for page 1.
-    // 'suppressVersion: true' because drawTemplateHeader handles it via versionLabel.
-    // newPage também adiciona automaticamente a marca d'água e anti-OCR para folhas de questões.
+    // Cria nova página para cada chunk de 5 questões
+    // newPage adiciona marca d'água e anti-OCR automaticamente
     let ref = newPage(ctx, version.version_label, undefined, chunkIdx === 0);
-    const topY = ref.y;
+    let cursorY = ref.y;
     let colIndex = 0;
-    let cursorY = topY;
 
-    chunk.forEach((q, qIdxInChunk) => {
+    for (let qIdxInChunk = 0; qIdxInChunk < chunk.length; qIdxInChunk++) {
+      const q = chunk[qIdxInChunk];
       const globalIdx = chunkIdx * 5 + qIdxInChunk;
       const h = measureQuestion(q, globalIdx + 1, colWidth);
+      const x = MARGIN_X + colIndex * (colWidth + colGap);
 
-      // If Q overflows col 0, move to col 1.
-      // If it still overflows col 1, we let it spill (but difficulty/length constraints should prevent this).
-      if (colIndex === 0 && cursorY - h < BOTTOM) {
-        colIndex = 1;
-        cursorY = topY;
+      // Verifica se a questão cabe na coluna atual
+      if (cursorY - h < BOTTOM) {
+        if (colIndex === 0) {
+          // Move para coluna 2
+          colIndex = 1;
+          cursorY = ref.y;
+        } else {
+          // Coluna 2 também não cabe, cria nova página
+          ref = newPage(ctx, version.version_label, undefined, true);
+          cursorY = ref.y;
+          colIndex = 0;
+        }
       }
 
-      const x = MARGIN_X + colIndex * (colWidth + colGap);
-      const result = renderQuestion(ref.page, q, globalIdx + 1, x, cursorY, colWidth);
-      ref = { page: result.page, y: result.y }; // Atualiza ref com nova página se necessário
-      cursorY -= h;
-    });
+      // Renderiza a questão
+      cursorY = renderQuestion(ref.page, q, globalIdx + 1, x, cursorY, colWidth);
+      cursorY -= 8; // Espaço entre questões
+    }
   });
 }
 
