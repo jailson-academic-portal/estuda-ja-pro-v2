@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-05T00:18:08.295131+00:00",
+  "generated_at": "2026-10-05T00:32:44.323987+00:00",
   "files": [
     {
       "path": "roadmap.md",
@@ -1231,7 +1231,7 @@
     },
     {
       "path": "src/backend/assessment-pdf.server.ts",
-      "bytes": 52904
+      "bytes": 52252
     },
     {
       "path": "src/backend/discipline-fetch.server.ts",
