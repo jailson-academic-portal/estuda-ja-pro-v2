@@ -1,4 +1,4 @@
-import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, degrees, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
 import QRCode from "qrcode";
 import { stripHardcodedCorrectLetter } from "@/lib/text-sanitize";
 
@@ -47,62 +47,118 @@ function drawSecurityBackground(page: PDFPage, discipline: string, bold: PDFFont
   //
   //   Dimensões disponíveis considerando margens de segurança (10mm em cada lado)
   const MARGIN_SECURITY = 28; // ~10mm de margem de segurança
-  const availableWidth = PAGE_W - MARGIN_SECURITY * 2;
-  const availableHeight = PAGE_H - MARGIN_SECURITY * 2;
   const maxFontSize = 80; // Tamanho máximo da fonte
   const minFontSize = 24; // Tamanho mínimo da fonte
   const fontSizeStep = 2;
 
-  // Calcula o tamanho ideal da fonte para que o texto caiba na página
-  // Considera a diagonal da página para texto rotacionado a 45°
-  const diagonal = Math.sqrt(PAGE_W * PAGE_W + PAGE_H * PAGE_H);
-  const maxTextLen = Math.min(availableWidth, diagonal * 0.7); // Limita a 70% da diagonal
-
-  let fontSize = maxFontSize;
-  let textWidth = bold.widthOfTextAtSize(nomeDisciplina, fontSize);
-
-  // Reduz o tamanho da fonte até que o texto caiba
-  while (fontSize > minFontSize && textWidth > maxTextLen) {
-    fontSize -= fontSizeStep;
-    textWidth = bold.widthOfTextAtSize(nomeDisciplina, fontSize);
+  // Divide o nome em até 2 linhas equilibradas:
+  // 1 palavra -> 1 linha; 2 ou mais -> quebra na metade do array de palavras
+  const words = nomeDisciplina.split(/\s+/).filter(Boolean);
+  const lineBreaks = words.length > 1 ? [Math.ceil(words.length / 2)] : [];
+  const lines: string[] = [];
+  let from = 0;
+  for (const at of lineBreaks) {
+    lines.push(words.slice(from, at).join(" "));
+    from = at;
   }
+  lines.push(words.slice(from).join(" "));
 
-  // Calcula altura estimada do texto (aproximadamente 1.2x do tamanho da fonte para UPPERCASE)
-  const textHeight = fontSize * 1.2;
+  // Ângulo de rotação: -45° para texto diagonal (mais legível e elegante)
+  const angleRadians = -Math.PI / 4; // -45 graus
+  const cosA = Math.cos(angleRadians);
+  const sinA = Math.sin(angleRadians);
 
-  // Centro exato da página
+  // Altura de uma linha (aprox. 1.2x do corpo para UPPERCASE) e entrelinha
+  // entre as linhas do bloco.
+  const LINE_RATIO = 1.2;
+  const LINE_SPACING = 1.1;
+
   const centerX = PAGE_W / 2;
   const centerY = PAGE_H / 2;
 
-  // Ângulo de rotação: -45° para texto diagonal (mais legível e elegante)
-  // pdf-lib usa radianos, 45° = π/4
-  const angleRadians = -Math.PI / 4; // -45 graus
+  /**
+   * Mede a caixa que o bloco de texto ocupa na página JÁ ROTACIONADO, a partir
+   * do ponto âncora do pdf-lib (base do primeiro caractere da primeira linha).
+   * Usa a largura real de cada linha, então linhas de tamanhos diferentes são
+   * tratadas corretamente.
+   */
+  const measure = (size: number) => {
+    const widths = lines.map((line) => bold.widthOfTextAtSize(line, size));
+    const textWidth = Math.max(...widths);
+    const textHeight = size * LINE_RATIO;
+    const lineStep = textHeight * LINE_SPACING;
 
-  // Calcula a posição para centralizar o texto considerando a rotação
-  // O ponto âncora (x, y) no pdf-lib é o canto inferior esquerdo do texto
-  // Para centralizar, precisamos compensar as dimensões do texto rotacionado
-  const halfWidth = textWidth / 2;
-  const halfHeight = textHeight / 2;
+    // Deslocamento local de cada linha: centralizada na horizontal e empilhada
+    // de cima para baixo a partir da âncora da primeira.
+    const locais = lines.map((_, index) => ({
+      u: (textWidth - widths[index]) / 2,
+      v: -index * lineStep,
+      w: widths[index],
+    }));
 
-  // Com rotação de 45°, o texto ocupa um retângulo maior
-  // A projeção diagonal é: width*cos(45°) + height*sin(45°)
-  const cos45 = Math.cos(Math.abs(angleRadians));
-  const sin45 = Math.sin(Math.abs(angleRadians));
-  const rotatedWidth = Math.abs(textWidth * cos45 - textHeight * sin45);
-  const rotatedHeight = Math.abs(textWidth * sin45 + textHeight * cos45);
+    // Primeiro posiciona o centro do bloco no centro da página
+    const centerU = textWidth / 2;
+    const centerV = (textHeight - lineStep * (lines.length - 1)) / 2;
+    const ax = centerX - (centerU * cosA - centerV * sinA);
+    const ay = centerY - (centerU * sinA + centerV * cosA);
 
-  // Posição final: centro da página menos metade das dimensões rotacionadas
-  const finalX = centerX - rotatedWidth / 2;
-  const finalY = centerY - rotatedHeight / 2;
+    // Depois compensa pela assimetria: com duas linhas de larguras diferentes a
+    // tinta rotacionada não é simétrica em torno do centro do bloco, então
+    // centralizamos a PRÓPRIA tinta.
+    const pts: [number, number][] = [];
+    for (const { u, v, w } of locais) {
+      for (const [pu, pv] of [
+        [u, v],
+        [u + w, v],
+        [u, v + textHeight],
+        [u + w, v + textHeight],
+      ] as [number, number][]) {
+        pts.push([ax + (pu * cosA - pv * sinA), ay + (pu * sinA + pv * cosA)]);
+      }
+    }
+    const xs = pts.map((p) => p[0]);
+    const ys = pts.map((p) => p[1]);
+    const dx = centerX - (Math.min(...xs) + Math.max(...xs)) / 2;
+    const dy = centerY - (Math.min(...ys) + Math.max(...ys)) / 2;
 
-  // Desenha o texto rotacionado
-  page.drawText(nomeDisciplina, {
-    x: finalX,
-    y: finalY,
-    size: fontSize,
-    font: bold,
-    color: rgb(0.88, 0.88, 0.88),
-    rotate: { angle: angleRadians * (180 / Math.PI), type: "degrees" as const },
+    return {
+      anchorX: ax + dx,
+      anchorY: ay + dy,
+      locais,
+      minX: Math.min(...xs) + dx,
+      maxX: Math.max(...xs) + dx,
+      minY: Math.min(...ys) + dy,
+      maxY: Math.max(...ys) + dy,
+    };
+  };
+
+  // Reduz o tamanho da fonte até que o bloco ROTACIONADO caiba na área útil.
+  // O que precisa caber nas margens não é a largura do texto, e sim a caixa
+  // que ele ocupa já rotacionada.
+  let fontSize = maxFontSize;
+  let box = measure(fontSize);
+  while (
+    fontSize > minFontSize &&
+    (box.minX < MARGIN_SECURITY ||
+      box.maxX > PAGE_W - MARGIN_SECURITY ||
+      box.minY < MARGIN_SECURITY ||
+      box.maxY > PAGE_H - MARGIN_SECURITY)
+  ) {
+    fontSize -= fontSizeStep;
+    box = measure(fontSize);
+  }
+
+  // Desenha as linhas
+  lines.forEach((line, index) => {
+    const { u, v } = box.locais[index];
+    page.drawText(line, {
+      x: box.anchorX + (u * cosA - v * sinA),
+      y: box.anchorY + (u * sinA + v * cosA),
+      size: fontSize,
+      font: bold,
+      color: rgb(0.88, 0.88, 0.88),
+      rotate: degrees(-45),
+    });
   });
 }
 
