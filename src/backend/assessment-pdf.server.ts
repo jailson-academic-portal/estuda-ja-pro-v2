@@ -11,12 +11,13 @@ const STATIC_DATE_FIELD = "___/___/___";
 
 /**
  * Desenha o background de segurança EXATAMENTE uma vez por página.
- * - Se isGabarito: fundo branco limpo (sem nada)
- * - Se não isGabarito: anti-OCR primeiro, depois marca d'água
+ * - Marca d'água e anti-OCR são aplicados SOMENTE nas "Folhas de Questões"
+ * - "Folha de Respostas" e "Gabarito do Professor" ficam 100% limpos
+ *   para não interferir na leitura OCR.
  */
-function drawSecurityBackground(page: PDFPage, discipline: string, bold: PDFFont, isGabarito: boolean): void {
-  // Gabarito: fundo 100% branco, sem marca d'água nem anti-OCR
-  if (isGabarito) return;
+function drawSecurityBackground(page: PDFPage, discipline: string, bold: PDFFont, isQuestionsSheet: boolean): void {
+  // Aplica marca d'água e anti-OCR SOMENTE nas Folhas de Questões
+  if (!isQuestionsSheet) return;
 
   const nomeDisciplina = (discipline || "Disciplina").toUpperCase();
 
@@ -514,11 +515,12 @@ function newPage(ctx: Ctx, versionLabel?: string, badge?: string, suppressVersio
   const isFirstOfSection = !ctx.currentSection || ctx.currentSection.pages.length === 0;
   if (ctx.currentSection) ctx.currentSection.pages.push(page);
 
-  // Determina se é página de gabarito (fundo limpo)
-  const isGabarito = /gabarito do professor/i.test(ctx.currentSection?.label ?? "");
+  // Marca d'água e anti-OCR SOMENTE nas Folhas de Questões
+  // Folha de Respostas e Gabarito do Professor ficam 100% limpos (OCR não pode ter interferência)
+  const isQuestionsSheet = /folhas de questões/i.test(ctx.currentSection?.label ?? "");
 
-  // Background de segurança: marca d'água + anti-OCR (se não for gabarito)
-  drawSecurityBackground(page, ctx.header.discipline, ctx.bold, isGabarito);
+  // Background de segurança: marca d'água + anti-OCR (apenas nas folhas de questões)
+  drawSecurityBackground(page, ctx.header.discipline, ctx.bold, isQuestionsSheet);
 
   if (ctx.template) {
     return {
@@ -1308,8 +1310,8 @@ export async function buildAssessmentPDF(input: {
     });
   }
 
-  // OBS: Marca d'água e Anti-OCR são desenhados em newPage() ANTES do conteúdo
-  // para ficarem em background (por baixo do texto)
+  // OBS: Marca d'água e Anti-OCR são desenhados em newPage() APENAS nas Folhas de Questões
+  // Folha de Respostas e Gabarito ficam 100% limpos para leitura OCR
 
   const bytes = await pdf.save();
   return { bytes, bubbleLayouts };
