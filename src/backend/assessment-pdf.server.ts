@@ -43,18 +43,66 @@ function drawSecurityBackground(page: PDFPage, discipline: string, bold: PDFFont
     }
   }
 
-  // b) Marca d'água: texto da disciplina, 50pt, centralizado, cinza claro (#E0E0E0)
-  const size = 50;
-  const textWidth = bold.widthOfTextAtSize(nomeDisciplina, size);
-  const centerX = (PAGE_W - textWidth) / 2;
-  const centerY = PAGE_H / 2 - size / 2;
+  // b) Marca d'água: texto da disciplina, centralizado e rotacionado diagonalmente
+  //
+  //   Dimensões disponíveis considerando margens de segurança (10mm em cada lado)
+  const MARGIN_SECURITY = 28; // ~10mm de margem de segurança
+  const availableWidth = PAGE_W - MARGIN_SECURITY * 2;
+  const availableHeight = PAGE_H - MARGIN_SECURITY * 2;
+  const maxFontSize = 80; // Tamanho máximo da fonte
+  const minFontSize = 24; // Tamanho mínimo da fonte
+  const fontSizeStep = 2;
 
+  // Calcula o tamanho ideal da fonte para que o texto caiba na página
+  // Considera a diagonal da página para texto rotacionado a 45°
+  const diagonal = Math.sqrt(PAGE_W * PAGE_W + PAGE_H * PAGE_H);
+  const maxTextLen = Math.min(availableWidth, diagonal * 0.7); // Limita a 70% da diagonal
+
+  let fontSize = maxFontSize;
+  let textWidth = bold.widthOfTextAtSize(nomeDisciplina, fontSize);
+
+  // Reduz o tamanho da fonte até que o texto caiba
+  while (fontSize > minFontSize && textWidth > maxTextLen) {
+    fontSize -= fontSizeStep;
+    textWidth = bold.widthOfTextAtSize(nomeDisciplina, fontSize);
+  }
+
+  // Calcula altura estimada do texto (aproximadamente 1.2x do tamanho da fonte para UPPERCASE)
+  const textHeight = fontSize * 1.2;
+
+  // Centro exato da página
+  const centerX = PAGE_W / 2;
+  const centerY = PAGE_H / 2;
+
+  // Ângulo de rotação: -45° para texto diagonal (mais legível e elegante)
+  // pdf-lib usa radianos, 45° = π/4
+  const angleRadians = -Math.PI / 4; // -45 graus
+
+  // Calcula a posição para centralizar o texto considerando a rotação
+  // O ponto âncora (x, y) no pdf-lib é o canto inferior esquerdo do texto
+  // Para centralizar, precisamos compensar as dimensões do texto rotacionado
+  const halfWidth = textWidth / 2;
+  const halfHeight = textHeight / 2;
+
+  // Com rotação de 45°, o texto ocupa um retângulo maior
+  // A projeção diagonal é: width*cos(45°) + height*sin(45°)
+  const cos45 = Math.cos(Math.abs(angleRadians));
+  const sin45 = Math.sin(Math.abs(angleRadians));
+  const rotatedWidth = Math.abs(textWidth * cos45 - textHeight * sin45);
+  const rotatedHeight = Math.abs(textWidth * sin45 + textHeight * cos45);
+
+  // Posição final: centro da página menos metade das dimensões rotacionadas
+  const finalX = centerX - rotatedWidth / 2;
+  const finalY = centerY - rotatedHeight / 2;
+
+  // Desenha o texto rotacionado
   page.drawText(nomeDisciplina, {
-    x: centerX,
-    y: centerY,
-    size,
+    x: finalX,
+    y: finalY,
+    size: fontSize,
     font: bold,
     color: rgb(0.88, 0.88, 0.88),
+    rotate: { angle: angleRadians * (180 / Math.PI), type: "degrees" as const },
   });
 }
 
