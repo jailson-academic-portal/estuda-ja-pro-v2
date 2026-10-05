@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-05T17:11:09.431252+00:00",
+  "generated_at": "2026-10-05T17:42:50.298251+00:00",
   "files": [
     {
       "path": "roadmap.md",
@@ -1655,7 +1655,7 @@
     },
     {
       "path": "src/components/discipline/AIAssistantModule.tsx",
-      "bytes": 249087
+      "bytes": 250015
     },
     {
       "path": "src/components/discipline/ModulePlaceholder.tsx",
