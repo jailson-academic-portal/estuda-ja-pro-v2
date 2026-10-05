@@ -127,7 +127,7 @@ function hexToRgb(hex: string | null | undefined, fallback: [number, number, num
 const PAGE_W = 595.28; // A4 portrait
 const PAGE_H = 841.89;
 const MARGIN_X = 48;
-const MARGIN_Y = 56;
+const MARGIN_Y = 48;
 
 /* ============================================================================
  * OMR LAYOUT — geometry captured during answer-sheet rendering so the
@@ -658,14 +658,14 @@ function drawQuestionsPages(
   startSection(ctx, `Folhas de Questões — Versão ${version.version_label}`);
 
   const orderedIds = version.question_order.length ? version.question_order : questions.map((q) => q.id);
-  const colGap = 16;
+  const colGap = 12;
   const colWidth = (PAGE_W - MARGIN_X * 2 - colGap) / 2;
-  const BOTTOM = 34;
+  const BOTTOM = 28;
 
   const sizeTitle = 10;
   const sizeOptions = 9;
-  const lineHeight = 1.15;
-  const optLineHeight = 1.15;
+  const lineHeight = 1.1;
+  const optLineHeight = 1.1;
   const letters = "ABCDE";
 
   const measureQuestion = (q: Question, displayPos: number, width: number): number => {
@@ -676,7 +676,7 @@ function drawQuestionsPages(
 
     if (q.qtype === "multiple_choice" && Array.isArray(q.options)) {
       const order = version.option_orders[q.id] ?? q.options.map((_, i) => i);
-      h += 1.5;
+      h += 1;
       order.forEach((origIdx, i) => {
         const text = `${letters[i]}) ${cleanOption(q.options![origIdx] ?? "")}`;
         const lines = wrap(safe(text), ctx.font, sizeOptions, width - 12);
@@ -687,7 +687,7 @@ function drawQuestionsPages(
     } else {
       h += 2 + 5 * 11;
     }
-    return h + 8;
+    return h + 6;
   };
 
   const renderQuestion = (
@@ -711,7 +711,7 @@ function drawQuestionsPages(
       });
       y -= sizeTitle * lineHeight;
     }
-    y -= 3; // Espaço entre header e alternativas
+    y -= 2; // Espaço entre header e alternativas
 
     if (q.qtype === "multiple_choice" && Array.isArray(q.options)) {
       const order = version.option_orders[q.id] ?? q.options.map((_, i) => i);
@@ -722,7 +722,7 @@ function drawQuestionsPages(
           page.drawText(line, { x: x + 10, y, size: sizeOptions, font: ctx.font, color: rgb(0, 0, 0) });
           y -= sizeOptions * optLineHeight;
         }
-        y -= 2; // Espaço entre alternativas
+        y -= 1; // Espaço entre alternativas
       });
     } else if (q.qtype === "true_false") {
       page.drawText("(   ) Verdadeiro       (   ) Falso", { x: x + 10, y, size: sizeOptions, font: ctx.font });
@@ -742,7 +742,7 @@ function drawQuestionsPages(
       }
     }
 
-    y -= 12; // Espaço entre questões
+    y -= 6; // Espaço entre questões
     return y;
   };
 
