@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-05T16:07:44.329484+00:00",
+  "generated_at": "2026-10-05T17:11:09.431252+00:00",
   "files": [
     {
       "path": "roadmap.md",
@@ -1747,7 +1747,7 @@
     },
     {
       "path": "src/components/discipline/AssessmentsModule.tsx",
-      "bytes": 57689
+      "bytes": 62431
     },
     {
       "path": "src/components/discipline/AssessmentGraderDialog.tsx",
