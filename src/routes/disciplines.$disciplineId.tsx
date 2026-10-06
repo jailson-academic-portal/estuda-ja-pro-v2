@@ -58,6 +58,11 @@ const AIAssistantModule = lazy(() =>
 const AssessmentsModule = lazy(() =>
   import("@/components/discipline/AssessmentsModule").then((m) => ({ default: m.AssessmentsModule })),
 );
+const OnlineExamsModule = lazy(() =>
+  import("@/components/discipline/OnlineExamsModule").then((m) => ({
+    default: m.OnlineExamsModule,
+  })),
+);
 const StudentAssessmentsModule = lazy(() =>
   import("@/components/discipline/StudentAssessmentsModule").then((m) => ({
     default: m.StudentAssessmentsModule,
@@ -339,6 +344,9 @@ function DisciplinePage() {
             )}
             {active === "assessments" && !isTeacher && (
               <StudentAssessmentsModule disciplineId={discipline.id} />
+            )}
+            {active === "online_exams" && isTeacher && (
+              <OnlineExamsModule disciplineId={discipline.id} />
             )}
             {active === "virtual_lab" && (
               <VirtualLabModule disciplineId={discipline.id} isTeacher={isTeacher} />

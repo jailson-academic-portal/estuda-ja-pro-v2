@@ -13,7 +13,8 @@ import {
   CalendarDays, 
   NotebookPen, 
   Library, 
-  ClipboardCheck, 
+  ClipboardCheck,
+  ShieldCheck,
   Database,
   Search,
   FileJson,
@@ -51,6 +52,7 @@ export type ModuleKey =
   | "diary"
   | "simulsaude"
   | "assessments"
+  | "online_exams"
   | "virtual_lab"
   | "data_tables";
 
@@ -95,6 +97,14 @@ export const MODULES: ModuleDef[] = [
     illustration: "https://illustrations.popsy.co/teal/checklist.svg",
     color: "orange",
     icon: ClipboardCheck,
+  },
+  {
+    key: "online_exams",
+    label: "Provas Online",
+    description: "Aplicação no navegador com biometria",
+    illustration: "https://illustrations.popsy.co/teal/shield.svg",
+    color: "indigo",
+    icon: ShieldCheck,
   },
   {
     key: "calendar",

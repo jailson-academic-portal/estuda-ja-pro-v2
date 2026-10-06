@@ -2820,6 +2820,275 @@ export type Database = {
         }
         Relationships: []
       }
+      // ==== INICIO: blocos manuais de avaliações online ====
+      // Estas 4 tabelas foram criadas direto no SQL Editor e ainda não entram
+      // no types.ts gerado. Blocos entre estes marcadores são SOBREPOSTOS
+      // quando o types.ts for regenerado a partir do banco.
+      exam_answers: {
+        Row: {
+          answer: Json | null
+          answered_at: string | null
+          auto_score: number | null
+          created_at: string
+          flagged: boolean
+          grader_comment: string | null
+          id: string
+          is_blank: boolean
+          is_correct: boolean | null
+          manual_score: number | null
+          max_points: number | null
+          points_awarded: number | null
+          question_id: string
+          session_id: string
+          updated_at: string
+        }
+        Insert: {
+          answer?: Json | null
+          answered_at?: string | null
+          auto_score?: number | null
+          created_at?: string
+          flagged?: boolean
+          grader_comment?: string | null
+          id?: string
+          is_blank?: boolean
+          is_correct?: boolean | null
+          manual_score?: number | null
+          max_points?: number | null
+          points_awarded?: number | null
+          question_id: string
+          session_id: string
+          updated_at?: string
+        }
+        Update: {
+          answer?: Json | null
+          answered_at?: string | null
+          auto_score?: number | null
+          created_at?: string
+          flagged?: boolean
+          grader_comment?: string | null
+          id?: string
+          is_blank?: boolean
+          is_correct?: boolean | null
+          manual_score?: number | null
+          max_points?: number | null
+          points_awarded?: number | null
+          question_id?: string
+          session_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      exam_sessions: {
+        Row: {
+          access_token: string
+          attempt_number: number
+          biometric_match_score: number | null
+          biometric_ref: string | null
+          biometric_status: Database["public"]["Enums"]["biometric_verify_result"]
+          created_at: string
+          exam_id: string
+          expires_at: string | null
+          final_feedback: string | null
+          focus_lost_count: number
+          fullscreen_exits: number
+          graded_at: string | null
+          id: string
+          identity_snapshot: Json
+          integrity_flags: Json
+          last_activity_at: string | null
+          score: number | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["exam_session_status"]
+          student_id: string
+          submitted_at: string | null
+          tab_switches: number
+          updated_at: string
+        }
+        Insert: {
+          access_token?: string
+          attempt_number?: number
+          biometric_match_score?: number | null
+          biometric_ref?: string | null
+          biometric_status?: Database["public"]["Enums"]["biometric_verify_result"]
+          created_at?: string
+          exam_id: string
+          expires_at?: string | null
+          final_feedback?: string | null
+          focus_lost_count?: number
+          fullscreen_exits?: number
+          graded_at?: string | null
+          id?: string
+          identity_snapshot?: Json
+          integrity_flags?: Json
+          last_activity_at?: string | null
+          score?: number | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["exam_session_status"]
+          student_id: string
+          submitted_at?: string | null
+          tab_switches?: number
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          attempt_number?: number
+          biometric_match_score?: number | null
+          biometric_ref?: string | null
+          biometric_status?: Database["public"]["Enums"]["biometric_verify_result"]
+          created_at?: string
+          exam_id?: string
+          expires_at?: string | null
+          final_feedback?: string | null
+          focus_lost_count?: number
+          fullscreen_exits?: number
+          graded_at?: string | null
+          id?: string
+          identity_snapshot?: Json
+          integrity_flags?: Json
+          last_activity_at?: string | null
+          score?: number | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["exam_session_status"]
+          student_id?: string
+          submitted_at?: string | null
+          tab_switches?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      online_exams: {
+        Row: {
+          allow_resume: boolean
+          assessment_id: string
+          biometric_kind_required: Database["public"]["Enums"]["biometric_kind"] | null
+          biometric_required: boolean
+          closes_at: string | null
+          config: Json
+          created_at: string
+          created_by: string
+          discipline_id: string
+          id: string
+          instructions: string | null
+          max_attempts: number
+          max_score: number
+          opens_at: string | null
+          proctoring_enabled: boolean
+          randomize_options: boolean
+          randomize_questions: boolean
+          require_face_match: boolean
+          status: Database["public"]["Enums"]["online_exam_status"]
+          tab_switch_limit: number | null
+          time_limit_minutes: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          allow_resume?: boolean
+          assessment_id: string
+          biometric_kind_required?: Database["public"]["Enums"]["biometric_kind"] | null
+          biometric_required?: boolean
+          closes_at?: string | null
+          config?: Json
+          created_at?: string
+          created_by: string
+          discipline_id: string
+          id?: string
+          instructions?: string | null
+          max_attempts?: number
+          max_score?: number
+          opens_at?: string | null
+          proctoring_enabled?: boolean
+          randomize_options?: boolean
+          randomize_questions?: boolean
+          require_face_match?: boolean
+          status?: Database["public"]["Enums"]["online_exam_status"]
+          tab_switch_limit?: number | null
+          time_limit_minutes?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          allow_resume?: boolean
+          assessment_id?: string
+          biometric_kind_required?: Database["public"]["Enums"]["biometric_kind"] | null
+          biometric_required?: boolean
+          closes_at?: string | null
+          config?: Json
+          created_at?: string
+          created_by?: string
+          discipline_id?: string
+          id?: string
+          instructions?: string | null
+          max_attempts?: number
+          max_score?: number
+          opens_at?: string | null
+          proctoring_enabled?: boolean
+          randomize_options?: boolean
+          randomize_questions?: boolean
+          require_face_match?: boolean
+          status?: Database["public"]["Enums"]["online_exam_status"]
+          tab_switch_limit?: number | null
+          time_limit_minutes?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_biometrics: {
+        Row: {
+          created_at: string
+          device_label: string | null
+          enrolled_at: string
+          id: string
+          is_active: boolean
+          is_primary: boolean
+          kind: Database["public"]["Enums"]["biometric_kind"]
+          last_verified_at: string | null
+          provider: string
+          provider_ref: string | null
+          quality_score: number | null
+          template_data: Json
+          template_hash: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_label?: string | null
+          enrolled_at?: string
+          id?: string
+          is_active?: boolean
+          is_primary?: boolean
+          kind?: Database["public"]["Enums"]["biometric_kind"]
+          last_verified_at?: string | null
+          provider?: string
+          provider_ref?: string | null
+          quality_score?: number | null
+          template_data?: Json
+          template_hash?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_label?: string | null
+          enrolled_at?: string
+          id?: string
+          is_active?: boolean
+          is_primary?: boolean
+          kind?: Database["public"]["Enums"]["biometric_kind"]
+          last_verified_at?: string | null
+          provider?: string
+          provider_ref?: string | null
+          quality_score?: number | null
+          template_data?: Json
+          template_hash?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      // ==== FIM: blocos manuais de avaliações online ====
     }
     Views: {
       attendance_sessions_view: {
@@ -3061,6 +3330,18 @@ export type Database = {
         | { Args: { _env?: string; _user_id: string }; Returns: boolean }
     }
     Enums: {
+      // ==== INICIO: enums manuais de avaliações online ====
+      // Serão substituídos quando o types.ts for regenerado do banco.
+      biometric_kind: "face" | "fingerprint" | "iris" | "voice"
+      biometric_verify_result: "pending" | "verified" | "failed" | "skipped"
+      exam_session_status:
+        | "not_started"
+        | "in_progress"
+        | "submitted"
+        | "graded"
+        | "invalidated"
+      online_exam_status: "draft" | "scheduled" | "open" | "closed" | "archived"
+      // ==== FIM: enums manuais ====
       academic_work_subtype:
         | "tcc"
         | "artigo_cientifico"
