@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-06T14:17:13.260154+00:00",
+  "generated_at": "2026-10-06T15:42:57.433525+00:00",
   "files": [
     {
       "path": "roadmap.md",
@@ -1763,7 +1763,7 @@
     },
     {
       "path": "src/components/discipline/AssessmentsModule.tsx",
-      "bytes": 66101
+      "bytes": 71719
     },
     {
       "path": "src/components/discipline/AssessmentGraderDialog.tsx",
@@ -8778,6 +8778,10 @@
     {
       "source": "src/components/discipline/AssessmentsModule.tsx",
       "target": "@/backend/assessments.functions"
+    },
+    {
+      "source": "src/components/discipline/AssessmentsModule.tsx",
+      "target": "@/backend/online-exams.functions"
     },
     {
       "source": "src/components/discipline/AssessmentsModule.tsx",
