@@ -1,6 +1,6 @@
 # Design system
 
-Generated: 2026-10-06T00:33:48.373434+00:00
+Generated: 2026-10-06T00:53:35.020010+00:00
 
 ## Tokens
 - --radius-sm: calc(var(--radius) - 4px) (src/styles.css)
@@ -289,7 +289,7 @@ Generated: 2026-10-06T00:33:48.373434+00:00
 - src/components/discipline/ModulePlaceholder.tsx
 - src/components/discipline/MyDiaryModule.tsx
 - src/components/discipline/OMRScannerPane.tsx
-- src/components/discipline/OnlineExamsModule.tsx
+- src/components/discipline/OnlineExamConfigDialog.tsx
 - src/components/discipline/PrintableDocumentLayout.tsx
 - src/components/discipline/RubricLibraryDialog.tsx
 - src/components/discipline/RubricsModule.tsx

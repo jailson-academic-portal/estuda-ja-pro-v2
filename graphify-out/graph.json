@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-06T00:33:48.373434+00:00",
+  "generated_at": "2026-10-06T00:53:35.020010+00:00",
   "files": [
     {
       "path": "roadmap.md",
@@ -328,6 +328,10 @@
     {
       "path": "supabase/migrations/20260807010225_44e9558e-9e50-4cd6-b8e5-8a7ec3fc3e60.sql",
       "bytes": 150
+    },
+    {
+      "path": "supabase/migrations/20261005130000_secure_biometrics_rls.sql",
+      "bytes": 6742
     },
     {
       "path": "supabase/migrations/20260802053642_e556b4cc-2923-4b9b-81ec-6fa6f50b3477.sql",
@@ -1183,7 +1187,7 @@
     },
     {
       "path": "src/backend/online-exams.functions.ts",
-      "bytes": 13877
+      "bytes": 17796
     },
     {
       "path": "src/backend/calendar.functions.ts",
@@ -1271,7 +1275,7 @@
     },
     {
       "path": "src/routes/disciplines.$disciplineId.tsx",
-      "bytes": 15681
+      "bytes": 15394
     },
     {
       "path": "src/routes/invite.$token.tsx",
@@ -1718,10 +1722,6 @@
       "bytes": 13743
     },
     {
-      "path": "src/components/discipline/OnlineExamsModule.tsx",
-      "bytes": 25123
-    },
-    {
       "path": "src/components/discipline/WorksModule.tsx",
       "bytes": 105407
     },
@@ -1763,7 +1763,7 @@
     },
     {
       "path": "src/components/discipline/AssessmentsModule.tsx",
-      "bytes": 62431
+      "bytes": 66101
     },
     {
       "path": "src/components/discipline/AssessmentGraderDialog.tsx",
@@ -1771,7 +1771,7 @@
     },
     {
       "path": "src/components/discipline/ModuleGrid.tsx",
-      "bytes": 8030
+      "bytes": 7763
     },
     {
       "path": "src/components/discipline/SimulSaudeModule.tsx",
@@ -1800,6 +1800,10 @@
     {
       "path": "src/components/discipline/GroupPanel.tsx",
       "bytes": 16332
+    },
+    {
+      "path": "src/components/discipline/OnlineExamConfigDialog.tsx",
+      "bytes": 13573
     },
     {
       "path": "src/components/discipline/StudentsModule.tsx",
@@ -4678,10 +4682,6 @@
     {
       "source": "src/routes/disciplines.$disciplineId.tsx",
       "target": "@/components/discipline/AssessmentsModule"
-    },
-    {
-      "source": "src/routes/disciplines.$disciplineId.tsx",
-      "target": "@/components/discipline/OnlineExamsModule"
     },
     {
       "source": "src/routes/disciplines.$disciplineId.tsx",
@@ -8052,66 +8052,6 @@
       "target": "@/integrations/supabase/client"
     },
     {
-      "source": "src/components/discipline/OnlineExamsModule.tsx",
-      "target": "react"
-    },
-    {
-      "source": "src/components/discipline/OnlineExamsModule.tsx",
-      "target": "lucide-react"
-    },
-    {
-      "source": "src/components/discipline/OnlineExamsModule.tsx",
-      "target": "sonner"
-    },
-    {
-      "source": "src/components/discipline/OnlineExamsModule.tsx",
-      "target": "@/components/ui/button"
-    },
-    {
-      "source": "src/components/discipline/OnlineExamsModule.tsx",
-      "target": "@/components/ui/input"
-    },
-    {
-      "source": "src/components/discipline/OnlineExamsModule.tsx",
-      "target": "@/components/ui/label"
-    },
-    {
-      "source": "src/components/discipline/OnlineExamsModule.tsx",
-      "target": "@/components/ui/textarea"
-    },
-    {
-      "source": "src/components/discipline/OnlineExamsModule.tsx",
-      "target": "@/components/ui/badge"
-    },
-    {
-      "source": "src/components/discipline/OnlineExamsModule.tsx",
-      "target": "@/components/ui/switch"
-    },
-    {
-      "source": "src/components/discipline/OnlineExamsModule.tsx",
-      "target": "@/components/ui/dialog"
-    },
-    {
-      "source": "src/components/discipline/OnlineExamsModule.tsx",
-      "target": "@/components/ui/dropdown-menu"
-    },
-    {
-      "source": "src/components/discipline/OnlineExamsModule.tsx",
-      "target": "@/components/ui/select"
-    },
-    {
-      "source": "src/components/discipline/OnlineExamsModule.tsx",
-      "target": "@tanstack/react-start"
-    },
-    {
-      "source": "src/components/discipline/OnlineExamsModule.tsx",
-      "target": "@/backend/online-exams.functions"
-    },
-    {
-      "source": "src/components/discipline/OnlineExamsModule.tsx",
-      "target": "@/integrations/supabase/online-exams.types"
-    },
-    {
       "source": "src/components/discipline/WorksModule.tsx",
       "target": "react"
     },
@@ -8841,6 +8781,10 @@
     },
     {
       "source": "src/components/discipline/AssessmentsModule.tsx",
+      "target": "./OnlineExamConfigDialog"
+    },
+    {
+      "source": "src/components/discipline/AssessmentsModule.tsx",
       "target": "./AssessmentGraderDialog"
     },
     {
@@ -9418,6 +9362,58 @@
     {
       "source": "src/components/discipline/GroupPanel.tsx",
       "target": "sonner"
+    },
+    {
+      "source": "src/components/discipline/OnlineExamConfigDialog.tsx",
+      "target": "react"
+    },
+    {
+      "source": "src/components/discipline/OnlineExamConfigDialog.tsx",
+      "target": "lucide-react"
+    },
+    {
+      "source": "src/components/discipline/OnlineExamConfigDialog.tsx",
+      "target": "sonner"
+    },
+    {
+      "source": "src/components/discipline/OnlineExamConfigDialog.tsx",
+      "target": "@tanstack/react-start"
+    },
+    {
+      "source": "src/components/discipline/OnlineExamConfigDialog.tsx",
+      "target": "@/components/ui/button"
+    },
+    {
+      "source": "src/components/discipline/OnlineExamConfigDialog.tsx",
+      "target": "@/components/ui/input"
+    },
+    {
+      "source": "src/components/discipline/OnlineExamConfigDialog.tsx",
+      "target": "@/components/ui/label"
+    },
+    {
+      "source": "src/components/discipline/OnlineExamConfigDialog.tsx",
+      "target": "@/components/ui/textarea"
+    },
+    {
+      "source": "src/components/discipline/OnlineExamConfigDialog.tsx",
+      "target": "@/components/ui/switch"
+    },
+    {
+      "source": "src/components/discipline/OnlineExamConfigDialog.tsx",
+      "target": "@/components/ui/dialog"
+    },
+    {
+      "source": "src/components/discipline/OnlineExamConfigDialog.tsx",
+      "target": "@/components/ui/select"
+    },
+    {
+      "source": "src/components/discipline/OnlineExamConfigDialog.tsx",
+      "target": "@/backend/online-exams.functions"
+    },
+    {
+      "source": "src/components/discipline/OnlineExamConfigDialog.tsx",
+      "target": "@/integrations/supabase/online-exams.types"
     },
     {
       "source": "src/components/discipline/StudentsModule.tsx",
