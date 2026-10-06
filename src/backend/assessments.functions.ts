@@ -2936,6 +2936,19 @@ export const listStudentAssessmentResults = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((d) => z.object({ discipline_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    // ===== DIAGNÓSTICO TEMPORÁRIO =====
+    // Loga cada passo da cadeia para identificar onde a lista do aluno fica vazia.
+    // Remover em commit de limpeza depois do bug resolvido.
+    const diag = (msg: string, extra?: Record<string, unknown>) => {
+      console.log("[listStudentAssessmentResults]", msg, {
+        userId: context.userId,
+        disciplineId: data.discipline_id,
+        ...extra,
+      });
+    };
+    diag("inicio");
+    // ===== FIM DIAGNÓSTICO =====
+
     // Confirma matrícula do aluno na disciplina.
     const { data: enrol } = await supabaseAdmin
       .from("discipline_students")
@@ -2947,9 +2960,13 @@ export const listStudentAssessmentResults = createServerFn({ method: "GET" })
       // Professores/admin também podem visualizar (útil para conferência).
       try {
         await assertTeacherOrAdmin(data.discipline_id, context.userId);
+        diag("sem matricula, mas teacher/admin");
       } catch {
+        diag("sem acesso a disciplina");
         throw new Error("Sem acesso a esta disciplina.");
       }
+    } else {
+      diag("matricula confirmada");
     }
 
     // 1) Avaliações da disciplina.
@@ -2958,6 +2975,7 @@ export const listStudentAssessmentResults = createServerFn({ method: "GET" })
       .select("id, title, max_score, created_at, module_name")
       .eq("discipline_id", data.discipline_id);
     const asmtIds = (assessments ?? []).map((a) => a.id);
+    diag("avaliacoes da disciplina", { count: asmtIds.length });
     if (asmtIds.length === 0) return { items: [] };
 
     // 2) Folhas (assignments) atribuídas a este aluno.
@@ -2967,6 +2985,7 @@ export const listStudentAssessmentResults = createServerFn({ method: "GET" })
       .in("assessment_id", asmtIds)
       .eq("student_id", context.userId);
     const asgList = assignments ?? [];
+    diag("assignments do aluno", { count: asgList.length });
     if (asgList.length === 0) return { items: [] };
 
     const asgIds = asgList.map((a) => a.id);
@@ -2978,10 +2997,16 @@ export const listStudentAssessmentResults = createServerFn({ method: "GET" })
     // e "pending" continuam fora: esses ainda estão em revisão.
     const { data: subs } = await supabaseAdmin
       .from("assessment_submissions")
-      .select("id, assignment_id, objective_answers, essay_answers, per_question_scores, ai_feedback, teacher_comment, final_feedback, total_score, status, posted_at, graded_at")
+      .select(
+        "id, assignment_id, objective_answers, essay_answers, per_question_scores, ai_feedback, teacher_comment, final_feedback, total_score, status, posted_at, graded_at",
+      )
       .in("assignment_id", asgIds)
       .in("status", ["posted", "confirmed", "graded_objective"]);
     const subList = subs ?? [];
+    diag("submissoes retornadas", {
+      count: subList.length,
+      statuses: subList.map((s) => s.status),
+    });
     if (subList.length === 0) return { items: [] };
 
     // 4) Questões de todas as avaliações envolvidas.
