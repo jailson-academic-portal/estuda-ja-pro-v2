@@ -84,7 +84,19 @@ type AssessmentOption = {
   title: string;
   status: string;
   question_count: number;
+  created_at: string;
 };
+
+/** Títulos repetidos tornam o select ambíguo — sinalizamos para o professor. */
+function hasDuplicateTitles(list: AssessmentOption[]) {
+  const seen = new Set<string>();
+  let dup = false;
+  for (const a of list) {
+    if (seen.has(a.title)) dup = true;
+    seen.add(a.title);
+  }
+  return dup;
+}
 
 const STATUS_LABEL: Record<OnlineExamStatus, string> = {
   draft: "Rascunho",
@@ -474,7 +486,9 @@ function ExamFormDialog({
                 <SelectContent>
                   {options?.map((o) => (
                     <SelectItem key={o.id} value={o.id}>
-                      {o.title} ({o.question_count} questões)
+                      {o.title} · {o.question_count} questões ·{" "}
+                      {new Date(o.created_at).toLocaleDateString("pt-BR")}
+                      {o.status !== "published" ? ` (${o.status})` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -482,6 +496,12 @@ function ExamFormDialog({
               {options && options.length === 0 && (
                 <p className="text-xs text-muted-foreground">
                   Nenhuma avaliação nesta disciplina. Crie uma em Avaliações primeiro.
+                </p>
+              )}
+              {options && hasDuplicateTitles(options) && (
+                <p className="text-xs text-amber-600">
+                  Há avaliações com títulos repetidos. Diferencie pela data e pelo status exibidos
+                  no final de cada opção.
                 </p>
               )}
             </div>
