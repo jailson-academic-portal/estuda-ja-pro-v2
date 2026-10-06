@@ -106,6 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    console.log("[auth-diag] useEffect inicio");
     try {
       const stored = typeof window !== "undefined" ? localStorage.getItem(VIEW_AS_KEY) : null;
       if (stored === "teacher" || stored === "institution" || stored === "student" || stored === "gestor") {
@@ -117,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading((prev) => {
         if (prev) {
           console.warn("[auth] initial session check timed out after 8s");
+          console.log("[auth-diag] timeout 8s disparado, forçando loading=false");
           return false;
         }
         return prev;
@@ -124,25 +126,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, 8000);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      console.log("[auth-diag] onAuthStateChange", { event: _event, hasSession: !!newSession });
       setSession(newSession);
       setUser(newSession?.user ?? null);
       if (newSession?.user) {
         await loadProfile(newSession.user);
+        console.log("[auth-diag] onAuthStateChange: loadProfile done, setLoading(false)");
         setLoading(false);
       } else {
         setProfile(null);
+        console.log("[auth-diag] onAuthStateChange: sem usuario, setLoading(false)");
         setLoading(false);
       }
     });
 
     const getSessionWithTimeout = async () => {
+      console.log("[auth-diag] getSessionWithTimeout: iniciando");
       const sessionPromise = supabase.auth.getSession();
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Auth session timeout")), 8000)
+        setTimeout(() => reject(new Error("Auth session timeout")), 8000),
       );
 
       try {
         const { data: { session: storedSession } } = await (Promise.race([sessionPromise, timeoutPromise]) as any);
+        console.log("[auth-diag] getSession resolveu", { hasSession: !!storedSession });
         let s = storedSession;
         const now = Math.floor(Date.now() / 1000);
 
@@ -164,10 +171,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         setSession(s);
         setUser(s?.user ?? null);
-        if (s?.user) await loadProfile(s.user);
+        if (s?.user) {
+          console.log("[auth-diag] getSession: usuario presente, chamando loadProfile");
+          await loadProfile(s.user);
+          console.log("[auth-diag] getSession: loadProfile done");
+        } else {
+          console.log("[auth-diag] getSession: sem usuario");
+        }
       } catch (err) {
         console.error("[auth] session check failed or timed out", err);
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.log("[auth-diag] getSessionWithTimeout: catch", errMsg);
       } finally {
+        console.log("[auth-diag] getSessionWithTimeout: finally, setLoading(false)");
         setLoading(false);
       }
     };
