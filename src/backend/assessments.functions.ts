@@ -2971,12 +2971,16 @@ export const listStudentAssessmentResults = createServerFn({ method: "GET" })
 
     const asgIds = asgList.map((a) => a.id);
 
-    // 3) Submissões já lançadas no diário.
+    // 3) Submissões já corrigidas/lançadas. O fluxo do sistema só expõe
+    // avaliações ao aluno após a correção objetiva; "confirmed" e
+    // "graded_objective" entram para o caso de notas antigas que ficaram
+    // em estado intermediário (ex.: migração de projeto). "awaiting_review"
+    // e "pending" continuam fora: esses ainda estão em revisão.
     const { data: subs } = await supabaseAdmin
       .from("assessment_submissions")
       .select("id, assignment_id, objective_answers, essay_answers, per_question_scores, ai_feedback, teacher_comment, final_feedback, total_score, status, posted_at, graded_at")
       .in("assignment_id", asgIds)
-      .eq("status", "posted");
+      .in("status", ["posted", "confirmed", "graded_objective"]);
     const subList = subs ?? [];
     if (subList.length === 0) return { items: [] };
 
