@@ -33,6 +33,7 @@ import {
   ShieldAlert,
   Pencil,
   Globe,
+  ShieldCheck,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -53,6 +54,7 @@ import {
   generateAssessmentReport,
   updateAssessmentSettings,
 } from "@/backend/assessments.functions";
+import { saveOnlineExamConfig } from "@/backend/online-exams.functions";
 import { OnlineExamConfigDialog } from "./OnlineExamConfigDialog";
 import { AssessmentGraderDialog } from "./AssessmentGraderDialog";
 import { AssessmentReviewDialog } from "./AssessmentReviewDialog";
@@ -918,6 +920,16 @@ function AssessmentWizardDialog({
   // Modalidade da prova: regular (turma toda), segunda chamada, recuperação ou turma dividida.
   type Kind = "regular" | "second_call" | "recovery" | "turma_dividida";
   const [kind, setKind] = useState<Kind>("regular");
+
+  // Tipo de prova: presencial (apenas folha impressa) ou online (também habilita
+  // aplicação no navegador do aluno). Quando "online", exige data/hora de
+  // abertura e encerramento, e a configuração completa (biometria, duração,
+  // limite de trocas de aba etc.) pode ser refinada depois pelo botão Globe.
+  type ExamMode = "presencial" | "online";
+  const [examMode, setExamMode] = useState<ExamMode>("presencial");
+  const [onlineOpensAt, setOnlineOpensAt] = useState("");
+  const [onlineClosesAt, setOnlineClosesAt] = useState("");
+
   const [allStudents, setAllStudents] = useState<
     Array<{ id: string; name: string; enrollment_number: string | null }>
   >([]);
@@ -966,6 +978,9 @@ function AssessmentWizardDialog({
         setRecoveryIds([]);
       });
     setKind("regular");
+    setExamMode("presencial");
+    setOnlineOpensAt("");
+    setOnlineClosesAt("");
     setSelectedStudents([]);
     setStudentSearch("");
   }, [open, disciplineId]);
@@ -1073,6 +1088,23 @@ function AssessmentWizardDialog({
       );
     }
 
+    // Validação específica do modo "Online". As datas alimentam o UPSERT em
+    // online_exams chamado na sequência do generateAssessment (D6-alt-C:
+    // duas chamadas do client, sem refatorar o handler de IA).
+    if (examMode === "online") {
+      if (!onlineOpensAt || !onlineClosesAt) {
+        return toast.error("Informe a data/hora de abertura e encerramento da prova online.");
+      }
+      const opens = new Date(onlineOpensAt);
+      const closes = new Date(onlineClosesAt);
+      if (Number.isNaN(opens.getTime()) || Number.isNaN(closes.getTime())) {
+        return toast.error("Datas da prova online inválidas.");
+      }
+      if (closes <= opens) {
+        return toast.error("O encerramento da prova online deve ser após a abertura.");
+      }
+    }
+
     const safeTitle = title.trim().substring(0, 140);
     const safeTopics = topicsText
       .split(/[\n;]+/)
@@ -1127,6 +1159,39 @@ function AssessmentWizardDialog({
           },
         },
       );
+
+      // Se o professor marcou "Também aplicar como prova online", criamos a
+      // config online numa segunda chamada (D6-alt-C: evita refatorar 1700+
+      // linhas do handler de IA). Avaliação já foi persistida; se a config
+      // online falhar, o professor pode configurar depois pelo botão Globe.
+      if (examMode === "online" && gen.id) {
+        try {
+          await saveOnlineExamConfig({
+            data: {
+              assessmentId: gen.id,
+              disciplineId,
+              title: safeTitle,
+              opensAt: new Date(onlineOpensAt).toISOString(),
+              closesAt: new Date(onlineClosesAt).toISOString(),
+              timeLimitMinutes: 60,
+              maxScore: Number(maxScore) || 0,
+              maxAttempts: 1,
+              biometricRequired: false,
+              tabSwitchLimit: null,
+            },
+          });
+          toast.success("Prova online configurada para a janela informada.");
+        } catch (onlineErr) {
+          // Avaliação existe; só a config online falhou. Avisamos mas seguimos.
+          const aMsg =
+            onlineErr instanceof Error ? onlineErr.message : "Falha ao criar prova online";
+          toast.warning(
+            `Avaliação criada, mas a prova online não pôde ser configurada: ${aMsg}. Use o botão Globe para tentar de novo.`,
+            { duration: Infinity },
+          );
+        }
+      }
+
       const warns =
         (gen as { alignment_warnings?: Array<{ version: string; position: number }> })
           ?.alignment_warnings ?? [];
@@ -1179,6 +1244,62 @@ function AssessmentWizardDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
+          {/* Tipo de prova (Presencial / Online) — bloco enxuto, posicionado
+              antes da escolha de apostila para o professor definir o destino
+              da avaliação logo de início. O detalhamento da prova online
+              (biometria, limite de trocas de aba, etc.) é feito depois
+              pelo botão Globe na lista de avaliações. */}
+          <div className="rounded-md border bg-muted/20 p-3 space-y-3">
+            <div className="flex items-start justify-between gap-3 rounded-md border bg-background p-3">
+              <div className="space-y-0.5">
+                <Label className="text-sm flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4" /> Também aplicar como prova online?
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  A avaliação fica disponível para os alunos responderem no navegador, dentro da
+                  janela de abertura e encerramento.
+                </p>
+              </div>
+              <Switch
+                checked={examMode === "online"}
+                onCheckedChange={(v) => setExamMode(v ? "online" : "presencial")}
+              />
+            </div>
+
+            {examMode === "online" && (
+              <div className="space-y-3 rounded-md bg-muted/30 border border-dashed p-3 animate-in fade-in slide-in-from-top-1">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="oe-opens">Abertura</Label>
+                    <Input
+                      id="oe-opens"
+                      type="datetime-local"
+                      className="w-full"
+                      value={onlineOpensAt}
+                      onChange={(e) => setOnlineOpensAt(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="oe-closes">Encerramento</Label>
+                    <Input
+                      id="oe-closes"
+                      type="datetime-local"
+                      className="w-full"
+                      value={onlineClosesAt}
+                      onChange={(e) => setOnlineClosesAt(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Demais configurações (duração, tentativas, biometria, limite de trocas de aba)
+                  podem ser ajustadas depois pelo botão Globe na lista de avaliações.
+                </p>
+              </div>
+            )}
+          </div>
+
           <div>
             <Label>Apostila base</Label>
             <Select value={apostilaId} onValueChange={setApostilaId}>
