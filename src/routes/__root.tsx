@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAppBadge } from "@/hooks/use-app-badge";
 import { OwlLogo } from "@/components/OwlLogo";
 import { CustomErrorBoundary } from "@/components/CustomErrorBoundary";
+// force redeploy
 
 
 function NotFoundComponent() {
