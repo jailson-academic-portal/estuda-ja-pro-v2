@@ -352,6 +352,105 @@ export const deleteOnlineExam = createServerFn({ method: "POST" })
     return { deleted: true, sessions_removed: sessionCount ?? 0 };
   });
 
+/* ============================================================================
+ * CONFIGURACAO DE PROVA ONLINE a partir de uma avaliacao existente
+ *
+ * Usado pelo botao "Configurar Prova Online" na lista de avaliacoes.
+ * Faz UPSERT por assessment_id: uma avaliacao tem no maximo uma prova online.
+ * ========================================================================== */
+
+const configShape = z.object({
+  assessmentId: z.string().uuid(),
+  disciplineId: z.string().uuid(),
+  title: z.string().min(1).max(200),
+  instructions: z.string().max(4000).nullish(),
+  opensAt: z.string().nullish(),
+  closesAt: z.string().nullish(),
+  timeLimitMinutes: z.number().int().min(1).max(600).default(60),
+  maxScore: z.number().min(0).max(1000).default(10),
+  maxAttempts: z.number().int().min(1).max(20).default(1),
+  biometricRequired: z.boolean().default(false),
+  biometricKind: kindEnum.nullish(),
+  requireFaceMatch: z.boolean().default(false),
+  tabSwitchLimit: z.number().int().min(0).max(999).nullish(),
+});
+
+export const saveOnlineExamConfig = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d) => configShape.parse(d))
+  .handler(async ({ data, context }) => {
+    await assertTeacherOrAdmin(data.disciplineId, context.userId);
+
+    if (data.opensAt && data.closesAt && new Date(data.closesAt) <= new Date(data.opensAt)) {
+      throw new Error("O encerramento deve ser posterior a abertura");
+    }
+    if (data.requireFaceMatch && !data.biometricRequired) {
+      throw new Error("Exigir reconhecimento facial pressupoe biometria obrigatoria");
+    }
+    if (data.biometricRequired && !data.biometricKind) {
+      throw new Error("Selecione qual biometria sera exigida");
+    }
+
+    const { data: asms, error: aErr } = await (
+      await supabaseAdmin
+    )
+      .from("assessments")
+      .select("id, discipline_id")
+      .eq("id", data.assessmentId)
+      .maybeSingle();
+    if (aErr) throw new Error(aErr.message);
+    if (!asms) throw new Error("Avaliacao nao encontrada");
+    if (asms.discipline_id !== data.disciplineId) {
+      throw new Error("A avaliacao pertence a outra disciplina");
+    }
+
+    const payload = {
+      assessment_id: data.assessmentId,
+      discipline_id: data.disciplineId,
+      created_by: context.userId,
+      title: data.title.trim(),
+      instructions: data.instructions ?? null,
+      opens_at: data.opensAt ?? null,
+      closes_at: data.closesAt ?? null,
+      time_limit_minutes: data.timeLimitMinutes,
+      max_score: roundTwo(data.maxScore),
+      max_attempts: data.maxAttempts,
+      biometric_required: data.biometricRequired,
+      biometric_kind_required: data.biometricRequired ? (data.biometricKind ?? null) : null,
+      require_face_match: data.biometricRequired && data.requireFaceMatch,
+      tab_switch_limit: data.biometricRequired ? (data.tabSwitchLimit ?? null) : null,
+      status: "draft" as const,
+    };
+
+    const { data: saved, error } = await (
+      await supabaseAdmin
+    )
+      .from("online_exams")
+      .upsert(payload, { onConflict: "assessment_id" })
+      .select("id, title, status")
+      .single();
+    if (error) throw new Error(error.message);
+    return saved;
+  });
+
+/** Le a config existente de uma avaliacao, se houver. */
+export const getOnlineExamConfig = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d) => z.object({ assessmentId: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { data: row, error } = await (
+      await supabaseAdmin
+    )
+      .from("online_exams")
+      .select(
+        "id, title, opens_at, closes_at, time_limit_minutes, max_score, max_attempts, biometric_required, biometric_kind_required, require_face_match, tab_switch_limit",
+      )
+      .eq("assessment_id", data.assessmentId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return row ?? null;
+  });
+
 export type OnlineExamListItem = OnlineExamRow & {
   assessment_title: string;
   session_total: number;

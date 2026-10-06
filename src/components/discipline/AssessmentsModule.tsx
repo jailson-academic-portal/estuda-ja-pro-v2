@@ -13,13 +13,34 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Plus, Trash2, FileDown, ClipboardCheck, FileText, ScanLine, BarChart3, ShieldAlert, Pencil } from "lucide-react";
 import {
-  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
+  Loader2,
+  Plus,
+  Trash2,
+  FileDown,
+  ClipboardCheck,
+  FileText,
+  ScanLine,
+  BarChart3,
+  ShieldAlert,
+  Pencil,
+  Globe,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import {
@@ -32,6 +53,7 @@ import {
   generateAssessmentReport,
   updateAssessmentSettings,
 } from "@/backend/assessments.functions";
+import { OnlineExamConfigDialog } from "./OnlineExamConfigDialog";
 import { AssessmentGraderDialog } from "./AssessmentGraderDialog";
 import { AssessmentReviewDialog } from "./AssessmentReviewDialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -50,7 +72,10 @@ type Assessment = {
   assessment_date?: string | null;
   pending_audits?: number;
   kept_audits?: number;
-  config?: { kind?: "regular" | "second_call" | "recovery"; target_student_ids?: string[] | null } | null;
+  config?: {
+    kind?: "regular" | "second_call" | "recovery";
+    target_student_ids?: string[] | null;
+  } | null;
 };
 
 const KIND_LABELS: Record<string, string> = {
@@ -97,6 +122,7 @@ export function AssessmentsModule({ disciplineId }: { disciplineId: string }) {
   const [reviewFor, setReviewFor] = useState<any>(null);
   const [reportFor, setReportFor] = useState<Assessment | null>(null);
   const [editFor, setEditFor] = useState<Assessment | null>(null);
+  const [onlineExamFor, setOnlineExamFor] = useState<Assessment | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportText, setReportText] = useState("");
   const [reportFilename, setReportFilename] = useState("relatorio.md");
@@ -126,7 +152,10 @@ export function AssessmentsModule({ disciplineId }: { disciplineId: string }) {
     el.style.display = "none";
     document.body.appendChild(el);
     el.click();
-    setTimeout(() => { document.body.removeChild(el); URL.revokeObjectURL(url); }, 1500);
+    setTimeout(() => {
+      document.body.removeChild(el);
+      URL.revokeObjectURL(url);
+    }, 1500);
   };
 
   const refresh = async () => {
@@ -140,7 +169,9 @@ export function AssessmentsModule({ disciplineId }: { disciplineId: string }) {
       setLoading(false);
     }
   };
-  useEffect(() => { refresh(); }, [disciplineId]);
+  useEffect(() => {
+    refresh();
+  }, [disciplineId]);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Excluir esta avaliação? As versões e folhas geradas serão removidas.")) return;
@@ -153,10 +184,15 @@ export function AssessmentsModule({ disciplineId }: { disciplineId: string }) {
     }
   };
 
-  const handleExport = async (id: string, block: "all" | "questions" | "answers" | "keys" = "all") => {
+  const handleExport = async (
+    id: string,
+    block: "all" | "questions" | "answers" | "keys" = "all",
+  ) => {
     const target = items.find((i) => i.id === id);
     if (target && (target.pending_audits ?? 0) > 0) {
-      toast.error("Há questões marcadas como problemáticas. Escolha corrigir, editar ou manter conscientemente antes de gerar o PDF.");
+      toast.error(
+        "Há questões marcadas como problemáticas. Escolha corrigir, editar ou manter conscientemente antes de gerar o PDF.",
+      );
       setReviewFor(target);
       return;
     }
@@ -165,7 +201,9 @@ export function AssessmentsModule({ disciplineId }: { disciplineId: string }) {
     });
     try {
       const r = await exportAssessmentPDF({ data: { id, block } });
-      const blob = new Blob([Uint8Array.from(atob(r.base64), (c) => c.charCodeAt(0))], { type: "application/pdf" });
+      const blob = new Blob([Uint8Array.from(atob(r.base64), (c) => c.charCodeAt(0))], {
+        type: "application/pdf",
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -173,10 +211,10 @@ export function AssessmentsModule({ disciplineId }: { disciplineId: string }) {
       a.rel = "noopener";
       a.style.display = "none";
       document.body.appendChild(a);
-      
+
       // Delay de renderização para garantir recursos carregados no servidor (caso as sementes mudem)
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
       a.click();
 
       setTimeout(() => {
@@ -198,7 +236,7 @@ export function AssessmentsModule({ disciplineId }: { disciplineId: string }) {
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro ao gerar PDF";
       if (msg.includes("REVISAO_PENDENTE")) {
-        toast.error("Existem questões aguardando revisão. Abra a revisão da avaliação.", { 
+        toast.error("Existem questões aguardando revisão. Abra a revisão da avaliação.", {
           id: t,
           duration: Infinity,
           action: {
@@ -214,7 +252,6 @@ export function AssessmentsModule({ disciplineId }: { disciplineId: string }) {
         toast.error(msg, { id: t, duration: 8000 });
       }
     }
-
   };
 
   return (
@@ -226,7 +263,9 @@ export function AssessmentsModule({ disciplineId }: { disciplineId: string }) {
             Avaliações
           </h2>
           <p className="text-sm opacity-80">
-            Central de correção automática das avaliações criadas pelo Criador de Avaliações (Assistente de IA). Aqui você imprime as folhas com QR Code, faz a leitura óptica das respostas e acompanha os resultados.
+            Central de correção automática das avaliações criadas pelo Criador de Avaliações
+            (Assistente de IA). Aqui você imprime as folhas com QR Code, faz a leitura óptica das
+            respostas e acompanha os resultados.
           </p>
         </div>
       </div>
@@ -234,7 +273,10 @@ export function AssessmentsModule({ disciplineId }: { disciplineId: string }) {
       {loading ? (
         <div className="space-y-2">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="rounded-xl border bg-card/50 p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-pulse">
+            <div
+              key={i}
+              className="rounded-xl border bg-card/50 p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-pulse"
+            >
               <div className="flex-1 space-y-2">
                 <div className="h-5 w-1/3 bg-muted rounded" />
                 <div className="h-4 w-1/4 bg-muted/50 rounded" />
@@ -250,18 +292,26 @@ export function AssessmentsModule({ disciplineId }: { disciplineId: string }) {
       ) : (
         <ul className="space-y-2">
           {items.map((a) => (
-            <li key={a.id} className="rounded-xl border bg-card p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 min-w-0" style={{ boxShadow: "var(--shadow-card)" }}>
+            <li
+              key={a.id}
+              className="rounded-xl border bg-card p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 min-w-0"
+              style={{ boxShadow: "var(--shadow-card)" }}
+            >
               <div className="min-w-0 flex-1 w-full break-words whitespace-normal">
                 <div className="font-medium flex items-center gap-2 flex-wrap min-w-0">
                   <span className="break-words leading-tight">{a.title}</span>
                   {a.config?.kind && a.config.kind !== "regular" && (
-                    <span className={`text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full shrink-0 ${KIND_BADGE[a.config.kind as keyof typeof KIND_BADGE] || KIND_BADGE.regular}`}>
+                    <span
+                      className={`text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full shrink-0 ${KIND_BADGE[a.config.kind as keyof typeof KIND_BADGE] || KIND_BADGE.regular}`}
+                    >
                       {KIND_LABELS[a.config.kind as keyof typeof KIND_LABELS] || a.config.kind}
                     </span>
                   )}
                 </div>
                 <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-1.5 gap-y-0.5 break-words whitespace-normal leading-tight">
-                  <span className="whitespace-nowrap">Nota máx. {Number(a.max_score).toFixed(1)}</span>
+                  <span className="whitespace-nowrap">
+                    Nota máx. {Number(a.max_score).toFixed(1)}
+                  </span>
                   <span className="opacity-50">•</span>
                   <span className="whitespace-nowrap">{a.version_count} versão(ões)</span>
                   <span className="opacity-50">•</span>
@@ -269,12 +319,16 @@ export function AssessmentsModule({ disciplineId }: { disciplineId: string }) {
                   {a.config?.kind && a.config.kind !== "regular" && a.config.target_student_ids && (
                     <>
                       <span className="opacity-50">•</span>
-                      <span className="whitespace-nowrap">{a.config.target_student_ids.length} aluno(s)</span>
+                      <span className="whitespace-nowrap">
+                        {a.config.target_student_ids.length} aluno(s)
+                      </span>
                     </>
                   )}
                 </div>
                 {a.module_name && (
-                  <div className="text-xs text-muted-foreground mt-1 break-words whitespace-normal leading-tight">Módulo/aulas: {a.module_name}</div>
+                  <div className="text-xs text-muted-foreground mt-1 break-words whitespace-normal leading-tight">
+                    Módulo/aulas: {a.module_name}
+                  </div>
                 )}
                 <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
                   {a.diary_assessment_id && (
@@ -284,7 +338,8 @@ export function AssessmentsModule({ disciplineId }: { disciplineId: string }) {
                   )}
                   {a.assessment_date && (
                     <div className="text-xs text-muted-foreground leading-tight">
-                      Data: {a.assessment_date.split(" | ").map((dt, idx) => (
+                      Data:{" "}
+                      {a.assessment_date.split(" | ").map((dt, idx) => (
                         <span key={dt}>
                           {idx > 0 && " | "}
                           {formatAssessmentDateLabel(dt)}
@@ -309,14 +364,30 @@ export function AssessmentsModule({ disciplineId }: { disciplineId: string }) {
                 ) : null}
               </div>
               <div className="flex flex-wrap md:flex-nowrap gap-1.5 shrink-0 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 scrollbar-none">
-                <Button size="sm" variant="default" onClick={() => setGraderFor(a)} className="whitespace-nowrap" title="Abrir corretor (QR + objetivas)">
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={() => setGraderFor(a)}
+                  className="whitespace-nowrap"
+                  title="Abrir corretor (QR + objetivas)"
+                >
                   <ScanLine className="h-4 w-4 mr-1" /> Corretor
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setOnlineExamFor(a)}
+                  title="Configurar Prova Online"
+                >
+                  <Globe className="h-4 w-4" />
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => setEditFor(a)} title="Editar">
                   <Pencil className="h-4 w-4" />
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => setReviewFor(a)} title="Revisão">
-                  <ShieldAlert className={`h-4 w-4 ${(a.pending_audits ?? 0) > 0 ? "text-amber-600" : ""}`} />
+                  <ShieldAlert
+                    className={`h-4 w-4 ${(a.pending_audits ?? 0) > 0 ? "text-amber-600" : ""}`}
+                  />
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => openReport(a)} title="Relatório">
                   <BarChart3 className="h-4 w-4" />
@@ -344,7 +415,13 @@ export function AssessmentsModule({ disciplineId }: { disciplineId: string }) {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <Button size="sm" variant="ghost" onClick={() => handleDelete(a.id)} className="text-destructive hover:text-destructive hover:bg-destructive/10" title="Excluir">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleDelete(a.id)}
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  title="Excluir"
+                >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -353,14 +430,17 @@ export function AssessmentsModule({ disciplineId }: { disciplineId: string }) {
         </ul>
       )}
 
-        <AssessmentWizardDialog
-          open={wizardOpen}
-          onClose={() => setWizardOpen(false)}
-          disciplineId={disciplineId}
-          onCreated={() => { setWizardOpen(false); refresh(); }}
-          setReviewFor={setReviewFor}
-          handleExport={handleExport}
-        />
+      <AssessmentWizardDialog
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        disciplineId={disciplineId}
+        onCreated={() => {
+          setWizardOpen(false);
+          refresh();
+        }}
+        setReviewFor={setReviewFor}
+        handleExport={handleExport}
+      />
 
       {graderFor && (
         <AssessmentGraderDialog
@@ -376,27 +456,49 @@ export function AssessmentsModule({ disciplineId }: { disciplineId: string }) {
       {reviewFor && (
         <AssessmentReviewDialog
           open={!!reviewFor}
-          onClose={() => { setReviewFor(null); refresh(); }}
+          onClose={() => {
+            setReviewFor(null);
+            refresh();
+          }}
           assessmentId={reviewFor.id}
           onResolved={refresh}
         />
       )}
 
+      {onlineExamFor && (
+        <OnlineExamConfigDialog
+          assessmentId={onlineExamFor.id}
+          disciplineId={disciplineId}
+          defaultTitle={onlineExamFor.title}
+          defaultMaxScore={Number(onlineExamFor.max_score) || 10}
+          onClose={() => setOnlineExamFor(null)}
+          onSaved={() => refresh()}
+        />
+      )}
       {editFor && (
         <AssessmentEditDialog
           assessment={editFor}
           disciplineId={disciplineId}
           onClose={() => setEditFor(null)}
-          onSaved={() => { setEditFor(null); refresh(); }}
+          onSaved={() => {
+            setEditFor(null);
+            refresh();
+          }}
         />
       )}
 
-      <Dialog open={!!reportFor} onOpenChange={(o) => { if (!o) setReportFor(null); }}>
+      <Dialog
+        open={!!reportFor}
+        onOpenChange={(o) => {
+          if (!o) setReportFor(null);
+        }}
+      >
         <DialogContent className="max-w-3xl w-[92vw] sm:w-full overflow-x-hidden max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Relatório da avaliação</DialogTitle>
             <DialogDescription>
-              Análise pedagógica de {reportFor?.title} — visão geral, equilíbrio de conteúdo e dificuldade, ajustes e recomendações.
+              Análise pedagógica de {reportFor?.title} — visão geral, equilíbrio de conteúdo e
+              dificuldade, ajustes e recomendações.
             </DialogDescription>
           </DialogHeader>
           {reportLoading ? (
@@ -405,10 +507,14 @@ export function AssessmentsModule({ disciplineId }: { disciplineId: string }) {
               Analisando as questões...
             </div>
           ) : (
-            <pre className="whitespace-pre-wrap break-words text-sm leading-relaxed font-sans">{reportText}</pre>
+            <pre className="whitespace-pre-wrap break-words text-sm leading-relaxed font-sans">
+              {reportText}
+            </pre>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setReportFor(null)}>Fechar</Button>
+            <Button variant="outline" onClick={() => setReportFor(null)}>
+              Fechar
+            </Button>
             <Button onClick={downloadReport} disabled={!reportText}>
               <FileText className="h-4 w-4 mr-1" /> Baixar relatório
             </Button>
@@ -431,15 +537,30 @@ async function fetchDiaryColumns(disciplineId: string): Promise<DiaryColumn[]> {
   const cols: DiaryColumn[] = [];
   for (const raw of arr) {
     if (!raw || typeof raw !== "object") continue;
-    const a = raw as { id?: unknown; name?: unknown; weight?: unknown; max_score?: unknown; sub_items?: unknown };
+    const a = raw as {
+      id?: unknown;
+      name?: unknown;
+      weight?: unknown;
+      max_score?: unknown;
+      sub_items?: unknown;
+    };
     if (typeof a.id !== "string" || typeof a.name !== "string") continue;
-    const subs = Array.isArray(a.sub_items) ? (a.sub_items as Array<{ id?: unknown; name?: unknown }>) : [];
-    const validSubs = subs.filter((s) => s && typeof s.id === "string" && typeof s.name === "string") as Array<{ id: string; name: string }>;
+    const subs = Array.isArray(a.sub_items)
+      ? (a.sub_items as Array<{ id?: unknown; name?: unknown }>)
+      : [];
+    const validSubs = subs.filter(
+      (s) => s && typeof s.id === "string" && typeof s.name === "string",
+    ) as Array<{ id: string; name: string }>;
     const weight = typeof a.weight === "number" ? a.weight : 0;
     const maxScore = typeof a.max_score === "number" ? a.max_score : 10;
     if (validSubs.length > 0) {
       for (const sub of validSubs) {
-        cols.push({ id: `${a.id}#${sub.id}`, name: `${a.name} — ${sub.name}`, weight, max_score: maxScore });
+        cols.push({
+          id: `${a.id}#${sub.id}`,
+          name: `${a.name} — ${sub.name}`,
+          weight,
+          max_score: maxScore,
+        });
       }
     } else {
       cols.push({ id: a.id, name: a.name, weight, max_score: maxScore });
@@ -448,16 +569,28 @@ async function fetchDiaryColumns(disciplineId: string): Promise<DiaryColumn[]> {
   return cols;
 }
 
-function AssessmentEditDialog({ assessment, disciplineId, onClose, onSaved }: {
-  assessment: Assessment; disciplineId: string; onClose: () => void; onSaved: () => void;
+function AssessmentEditDialog({
+  assessment,
+  disciplineId,
+  onClose,
+  onSaved,
+}: {
+  assessment: Assessment;
+  disciplineId: string;
+  onClose: () => void;
+  onSaved: () => void;
 }) {
   const [cols, setCols] = useState<DiaryColumn[]>([]);
   const [title, setTitle] = useState(assessment.title);
   const [moduleName, setModuleName] = useState(assessment.module_name ?? "");
   const [diaryCol, setDiaryCol] = useState(assessment.diary_assessment_id ?? "");
   const [date, setDate] = useState(assessment.assessment_date?.split("T")[0] ?? "");
-  const [time, setTime] = useState(assessment.assessment_date?.includes("T") ? assessment.assessment_date.split("T")[1].slice(0, 5) : "");
-  
+  const [time, setTime] = useState(
+    assessment.assessment_date?.includes("T")
+      ? assessment.assessment_date.split("T")[1].slice(0, 5)
+      : "",
+  );
+
   // Modalidade e Data Secundária
   const [modalidade, setModalidade] = useState<string>("regular");
   const [date2, setDate2] = useState("");
@@ -470,10 +603,10 @@ function AssessmentEditDialog({ assessment, disciplineId, onClose, onSaved }: {
       if (parts.length > 1) {
         const p1 = parts[0];
         const p2 = parts[1];
-        
+
         setDate(p1.split("T")[0]);
         setTime(p1.includes("T") ? p1.split("T")[1].slice(0, 5) : "");
-        
+
         setDate2(p2.split("T")[0]);
         setTime2(p2.includes("T") ? p2.split("T")[1].slice(0, 5) : "");
         setModalidade("turma_dividida");
@@ -484,7 +617,9 @@ function AssessmentEditDialog({ assessment, disciplineId, onClose, onSaved }: {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchDiaryColumns(disciplineId).then(setCols).catch(() => setCols([]));
+    fetchDiaryColumns(disciplineId)
+      .then(setCols)
+      .catch(() => setCols([]));
   }, [disciplineId]);
 
   const save = async () => {
@@ -492,16 +627,16 @@ function AssessmentEditDialog({ assessment, disciplineId, onClose, onSaved }: {
     if (!diaryCol) return toast.error("Selecione a coluna do diário para lançamento da nota.");
     if (!date) return toast.error("Informe a data da avaliação.");
     if (!time) return toast.error("Informe o horário da avaliação.");
-    
+
     let isoDate = `${date}T${time}:00`;
     if (modalidade === "turma_dividida" && date2 && time2) {
       isoDate += ` | ${date2}T${time2}:00`;
     }
 
     if (!(maxScore > 0)) return toast.error("Informe o valor máximo da nota.");
-    
+
     const safeTitle = title.trim().substring(0, 140);
-    
+
     setSaving(true);
     try {
       await updateAssessmentSettings({
@@ -524,12 +659,18 @@ function AssessmentEditDialog({ assessment, disciplineId, onClose, onSaved }: {
   };
 
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog
+      open
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
       <DialogContent className="max-w-lg w-[92vw] sm:w-full max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar avaliação</DialogTitle>
           <DialogDescription>
-            Ajuste o título, o módulo vinculado, a coluna do diário, a data da prova e o valor máximo da nota.
+            Ajuste o título, o módulo vinculado, a coluna do diário, a data da prova e o valor
+            máximo da nota.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -539,10 +680,17 @@ function AssessmentEditDialog({ assessment, disciplineId, onClose, onSaved }: {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="edit-module">Módulo / aulas vinculadas</Label>
-            <Textarea id="edit-module" rows={2} value={moduleName} onChange={(e) => setModuleName(e.target.value)} />
+            <Textarea
+              id="edit-module"
+              rows={2}
+              value={moduleName}
+              onChange={(e) => setModuleName(e.target.value)}
+            />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="edit-diary">Coluna do Diário Digital <span className="text-destructive">*</span></Label>
+            <Label htmlFor="edit-diary">
+              Coluna do Diário Digital <span className="text-destructive">*</span>
+            </Label>
             <select
               id="edit-diary"
               className="h-9 w-full rounded-md border bg-background px-2 text-sm"
@@ -551,16 +699,22 @@ function AssessmentEditDialog({ assessment, disciplineId, onClose, onSaved }: {
             >
               <option value="">Selecione uma coluna do diário...</option>
               {cols.map((c) => (
-                <option key={c.id} value={c.id}>{c.name} (peso {c.weight} · máx {c.max_score})</option>
+                <option key={c.id} value={c.id}>
+                  {c.name} (peso {c.weight} · máx {c.max_score})
+                </option>
               ))}
             </select>
             {cols.length === 0 && (
-              <p className="text-xs text-muted-foreground">Nenhuma coluna cadastrada. Configure as avaliações em Notas &amp; Diário.</p>
+              <p className="text-xs text-muted-foreground">
+                Nenhuma coluna cadastrada. Configure as avaliações em Notas &amp; Diário.
+              </p>
             )}
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5 col-span-full">
-              <Label>Data e Horário da Avaliação <span className="text-destructive">*</span></Label>
+              <Label>
+                Data e Horário da Avaliação <span className="text-destructive">*</span>
+              </Label>
               <Input
                 type="datetime-local"
                 className="w-full"
@@ -587,10 +741,12 @@ function AssessmentEditDialog({ assessment, disciplineId, onClose, onSaved }: {
                 <option value="recuperacao">Recuperação</option>
                 <option value="turma_dividida">Turma Dividida — duas datas</option>
               </select>
-              
+
               {modalidade === "turma_dividida" && (
                 <div className="mt-2 space-y-1.5 p-3 rounded-md bg-muted/30 border border-dashed animate-in fade-in slide-in-from-top-1">
-                  <Label>2ª Data da Avaliação (Turma B) <span className="text-destructive">*</span></Label>
+                  <Label>
+                    2ª Data da Avaliação (Turma B) <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     type="datetime-local"
                     className="w-full"
@@ -620,7 +776,9 @@ function AssessmentEditDialog({ assessment, disciplineId, onClose, onSaved }: {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={saving}>Cancelar</Button>
+          <Button variant="outline" onClick={onClose} disabled={saving}>
+            Cancelar
+          </Button>
           <Button onClick={save} disabled={saving}>
             {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
             Salvar alterações
@@ -631,8 +789,20 @@ function AssessmentEditDialog({ assessment, disciplineId, onClose, onSaved }: {
   );
 }
 
-function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setReviewFor, handleExport }: {
-  open: boolean; onClose: () => void; disciplineId: string; onCreated: () => void; setReviewFor: (a: any) => void; handleExport: (id: string) => void;
+function AssessmentWizardDialog({
+  open,
+  onClose,
+  disciplineId,
+  onCreated,
+  setReviewFor,
+  handleExport,
+}: {
+  open: boolean;
+  onClose: () => void;
+  disciplineId: string;
+  onCreated: () => void;
+  setReviewFor: (a: any) => void;
+  handleExport: (id: string) => void;
 }) {
   const [apostilas, setApostilas] = useState<Array<{ id: string; title: string }>>([]);
   const [apostilaId, setApostilaId] = useState("");
@@ -700,7 +870,7 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
   const [wizardCols, setWizardCols] = useState<DiaryColumn[]>([]);
   const [assessmentDate, setAssessmentDate] = useState("");
   const [assessmentTime, setAssessmentTime] = useState("");
-  
+
   // Data secundária (Turma B)
   const [assessmentDate2, setAssessmentDate2] = useState("");
   const [assessmentTime2, setAssessmentTime2] = useState("");
@@ -716,7 +886,9 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
   const [diffTF, setDiffTF] = useState<DiffLevel>("medio");
   const [diffFB, setDiffFB] = useState<DiffLevel>("medio");
   const [diffES, setDiffES] = useState<DiffLevel>("medio");
-  const [layoutTemplate, setLayoutTemplate] = useState<"classic" | "compact" | "two_column" | "exam_board">("classic");
+  const [layoutTemplate, setLayoutTemplate] = useState<
+    "classic" | "compact" | "two_column" | "exam_board"
+  >("classic");
   const QUALITY_RULES: Array<{ id: string; label: string }> = [
     { id: "evitar_repeticao", label: "Evitar repetição de enunciados" },
     { id: "distratores_plausiveis", label: "Distratores plausíveis (múltipla escolha)" },
@@ -746,24 +918,31 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
   // Modalidade da prova: regular (turma toda), segunda chamada, recuperação ou turma dividida.
   type Kind = "regular" | "second_call" | "recovery" | "turma_dividida";
   const [kind, setKind] = useState<Kind>("regular");
-  const [allStudents, setAllStudents] = useState<Array<{ id: string; name: string; enrollment_number: string | null }>>([]);
+  const [allStudents, setAllStudents] = useState<
+    Array<{ id: string; name: string; enrollment_number: string | null }>
+  >([]);
   const [recoveryIds, setRecoveryIds] = useState<string[]>([]);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [studentSearch, setStudentSearch] = useState("");
 
   const toggleStudent = (id: string) =>
-    setSelectedStudents((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setSelectedStudents((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
 
   useEffect(() => {
     if (!open) return;
     listAssessmentApostilas({ data: { discipline_id: disciplineId } })
       .then((r) => {
-        const sorted = (r.items as Array<{ id: string; title: string; created_at: string }>)
-          .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        const sorted = (r.items as Array<{ id: string; title: string; created_at: string }>).sort(
+          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+        );
         setApostilas(sorted);
       })
       .catch(() => setApostilas([]));
-    fetchDiaryColumns(disciplineId).then(setWizardCols).catch(() => setWizardCols([]));
+    fetchDiaryColumns(disciplineId)
+      .then(setWizardCols)
+      .catch(() => setWizardCols([]));
     (async () => {
       try {
         const { count } = await supabase
@@ -859,18 +1038,18 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
       ? totalQ > 0
         ? Number((Number(maxScore) || 0).toFixed(4))
         : 0
-      : Number(
-          (mc * pesoMC + tf * pesoTF + fb * pesoFB + es * pesoES).toFixed(4),
-        );
+      : Number((mc * pesoMC + tf * pesoTF + fb * pesoFB + es * pesoES).toFixed(4));
   const pesoOK = totalQ === 0 || Math.abs(pesoSum - (Number(maxScore) || 0)) < 0.01;
 
   const submit = async () => {
     if (!apostilaId) return toast.error("Selecione uma apostila base.");
-    
+
     // Check if the selected apostila actually has content
-    const selectedApo = apostilas.find(a => a.id === apostilaId);
+    const selectedApo = apostilas.find((a) => a.id === apostilaId);
     if (selectedApo && !moduleLessons.trim()) {
-      return toast.error("Por favor, informe o módulo/aulas ou garanta que a ementa esteja cadastrada antes de gerar a prova.");
+      return toast.error(
+        "Por favor, informe o módulo/aulas ou garanta que a ementa esteja cadastrada antes de gerar a prova.",
+      );
     }
 
     if (!title.trim()) return toast.error("Defina um título.");
@@ -878,12 +1057,11 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
     if (!diaryCol) return toast.error("Selecione a coluna do diário para lançamento da nota.");
     if (!assessmentDate) return toast.error("Informe a data da avaliação.");
     if (!assessmentTime) return toast.error("Informe o horário da avaliação.");
-    
+
     let isoDate = `${assessmentDate}T${assessmentTime}:00`;
     if (kind === "turma_dividida" && assessmentDate2 && assessmentTime2) {
       isoDate += ` | ${assessmentDate2}T${assessmentTime2}:00`;
     }
-
 
     if (totalQ === 0) return toast.error("Defina ao menos uma questão.");
     if (!pesoOK) return toast.error("A soma dos pesos não corresponde à nota máxima.");
@@ -901,7 +1079,7 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
       .map((t) => t.trim())
       .filter(Boolean)
       .slice(0, 40)
-      .map(topic => topic.substring(0, 190));
+      .map((topic) => topic.substring(0, 190));
 
     setSubmitting(true);
     const t = toast.loading("Gerando avaliação com IA...");
@@ -935,24 +1113,34 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
           target_student_ids: kind === "regular" ? null : selectedStudents,
         },
       });
-      toast.success("🎉 Avaliação criada com sucesso! Acesse suas avaliações para visualizar ou baixar os PDFs.", { 
-        id: t,
-        duration: 5000,
-        action: { 
-          label: "Baixar Agora", 
-          onClick: () => {
-            handleExport(gen.id);
-            toast.dismiss(t);
-          } 
-        }
-      });
-      const warns = (gen as { alignment_warnings?: Array<{ version: string; position: number }> })?.alignment_warnings ?? [];
+      toast.success(
+        "🎉 Avaliação criada com sucesso! Acesse suas avaliações para visualizar ou baixar os PDFs.",
+        {
+          id: t,
+          duration: 5000,
+          action: {
+            label: "Baixar Agora",
+            onClick: () => {
+              handleExport(gen.id);
+              toast.dismiss(t);
+            },
+          },
+        },
+      );
+      const warns =
+        (gen as { alignment_warnings?: Array<{ version: string; position: number }> })
+          ?.alignment_warnings ?? [];
       if (warns.length > 0) {
         toast.warning(
           `${warns.length} questão(ões) podem estar desalinhadas com a apostila (ex.: versão ${warns[0].version}, questão ${warns[0].position}). Revise antes de aplicar.`,
-          { 
+          {
             duration: Infinity,
-            action: { label: "Abrir Revisão", onClick: () => { if (gen.id) setReviewFor(gen as any); } }
+            action: {
+              label: "Abrir Revisão",
+              onClick: () => {
+                if (gen.id) setReviewFor(gen as any);
+              },
+            },
           },
         );
       }
@@ -961,12 +1149,15 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
       console.error("Erro detalhado na geração da avaliação:", e);
       const msg = e instanceof Error ? e.message : "Erro";
       if (msg.includes("AI_CALL_TIMEOUT")) {
-        toast.error("O processamento da IA demorou muito. Tentando reprocessar em segundo plano...", { id: t });
+        toast.error(
+          "O processamento da IA demorou muito. Tentando reprocessar em segundo plano...",
+          { id: t },
+        );
       } else {
-        toast.error(msg, { 
-          id: t, 
+        toast.error(msg, {
+          id: t,
           duration: Infinity,
-          action: { label: "Entendido", onClick: () => toast.dismiss(t) }
+          action: { label: "Entendido", onClick: () => toast.dismiss(t) },
         });
       }
     } finally {
@@ -978,41 +1169,56 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>AVALIAÇÃO - {apostilas.find(a => a.id === apostilaId)?.title?.toUpperCase() || 'MÓDULO'}</DialogTitle>
+          <DialogTitle>
+            AVALIAÇÃO -{" "}
+            {apostilas.find((a) => a.id === apostilaId)?.title?.toUpperCase() || "MÓDULO"}
+          </DialogTitle>
           <DialogDescription>
-            A IA gera questões pedagogicamente conectadas à apostila escolhida. Você poderá baixar o PDF com versões embaralhadas e folhas de resposta com QR Code.
+            A IA gera questões pedagogicamente conectadas à apostila escolhida. Você poderá baixar o
+            PDF com versões embaralhadas e folhas de resposta com QR Code.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div>
             <Label>Apostila base</Label>
             <Select value={apostilaId} onValueChange={setApostilaId}>
-              <SelectTrigger><SelectValue placeholder="Selecione uma apostila desta disciplina" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma apostila desta disciplina" />
+              </SelectTrigger>
               <SelectContent>
                 {(() => {
-                  const getNome = (item: any) => String(item?.title || item?.titulo || item?.nome || item?.name || "").toLowerCase().trim();
-                  
-                  const apostilasFiltradas = (apostilas || [])
-                    .filter((item: any) => {
-                      const texto = getNome(item);
-                      // Permite APENAS o que contém a palavra 'apostila'
-                      const ehApostila = texto.includes('apostila');
-                      // Bloqueia explicitamente qualquer outro tipo
-                      const ehIndesejado = texto.includes('exercício') || 
-                                           texto.includes('exercicio') || 
-                                           texto.includes('slide') || 
-                                           texto.includes('plano') || 
-                                           texto.includes('ementa') || 
-                                           texto.includes('estudo de caso');
-                      return ehApostila && !ehIndesejado;
-                    });
+                  const getNome = (item: any) =>
+                    String(item?.title || item?.titulo || item?.nome || item?.name || "")
+                      .toLowerCase()
+                      .trim();
+
+                  const apostilasFiltradas = (apostilas || []).filter((item: any) => {
+                    const texto = getNome(item);
+                    // Permite APENAS o que contém a palavra 'apostila'
+                    const ehApostila = texto.includes("apostila");
+                    // Bloqueia explicitamente qualquer outro tipo
+                    const ehIndesejado =
+                      texto.includes("exercício") ||
+                      texto.includes("exercicio") ||
+                      texto.includes("slide") ||
+                      texto.includes("plano") ||
+                      texto.includes("ementa") ||
+                      texto.includes("estudo de caso");
+                    return ehApostila && !ehIndesejado;
+                  });
 
                   if (apostilasFiltradas.length === 0) {
-                    return <SelectItem value="none" disabled>Nenhuma apostila disponível</SelectItem>;
+                    return (
+                      <SelectItem value="none" disabled>
+                        Nenhuma apostila disponível
+                      </SelectItem>
+                    );
                   }
 
                   return apostilasFiltradas.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>{a.title}</SelectItem>
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.title}
+                    </SelectItem>
                   ));
                 })()}
               </SelectContent>
@@ -1026,10 +1232,13 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
                 setTitle(e.target.value);
                 setTitleEditado(true);
               }}
-              placeholder={moduloDaApostila ? `Avaliação: ${moduloDaApostila}` : "Avaliação: [Módulo]"}
+              placeholder={
+                moduloDaApostila ? `Avaliação: ${moduloDaApostila}` : "Avaliação: [Módulo]"
+              }
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Preenchido automaticamente a partir da apostila selecionada. Edite se quiser personalizar.
+              Preenchido automaticamente a partir da apostila selecionada. Edite se quiser
+              personalizar.
             </p>
           </div>
           {/* "Módulo / aulas a contemplar" e "Tópicos de Conteúdo" seguem no
@@ -1041,7 +1250,9 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
             <div>
               <Label>Modalidade</Label>
               <Select value={kind} onValueChange={(v) => setKind(v as Kind)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="regular">Regular — toda a turma</SelectItem>
                   <SelectItem value="second_call">Segunda chamada — alunos específicos</SelectItem>
@@ -1062,7 +1273,9 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
 
             {kind === "turma_dividida" && (
               <div className="mt-2 space-y-2 p-3 rounded-md bg-muted/30 border border-dashed animate-in fade-in slide-in-from-top-1">
-                <Label className="text-xs font-semibold">2ª Data da Avaliação (Turma B) <span className="text-destructive">*</span></Label>
+                <Label className="text-xs font-semibold">
+                  2ª Data da Avaliação (Turma B) <span className="text-destructive">*</span>
+                </Label>
                 <div className="flex gap-2 items-center">
                   <Input
                     type="datetime-local"
@@ -1084,7 +1297,9 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
                 <div className="flex items-center justify-between gap-2">
                   <Label className="text-xs">
                     {kind === "recovery" ? "Alunos em recuperação" : "Alunos"} —{" "}
-                    <span className="text-muted-foreground">{selectedStudents.length} selecionado(s)</span>
+                    <span className="text-muted-foreground">
+                      {selectedStudents.length} selecionado(s)
+                    </span>
                   </Label>
                   {kind === "recovery" && recoveryIds.length > 0 && (
                     <button
@@ -1104,13 +1319,18 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
                 <div className="max-h-52 overflow-y-auto rounded-md border bg-background divide-y">
                   {(() => {
                     const q = studentSearch.trim().toLowerCase();
-                    const base = kind === "recovery" && !q
-                      ? allStudents.filter((s) => recoveryIds.includes(s.id) || selectedStudents.includes(s.id))
-                      : allStudents;
+                    const base =
+                      kind === "recovery" && !q
+                        ? allStudents.filter(
+                            (s) => recoveryIds.includes(s.id) || selectedStudents.includes(s.id),
+                          )
+                        : allStudents;
                     const list = q
-                      ? base.filter((s) =>
-                          s.name.toLowerCase().includes(q) ||
-                          (s.enrollment_number ?? "").toLowerCase().includes(q))
+                      ? base.filter(
+                          (s) =>
+                            s.name.toLowerCase().includes(q) ||
+                            (s.enrollment_number ?? "").toLowerCase().includes(q),
+                        )
                       : base;
                     if (list.length === 0) {
                       return (
@@ -1125,16 +1345,23 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
                       const checked = selectedStudents.includes(s.id);
                       const inRecovery = recoveryIds.includes(s.id);
                       return (
-                        <label key={s.id} className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-muted/40">
+                        <label
+                          key={s.id}
+                          className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-muted/40"
+                        >
                           <Checkbox checked={checked} onCheckedChange={() => toggleStudent(s.id)} />
                           <div className="min-w-0 flex-1">
                             <div className="truncate">{s.name}</div>
                             {s.enrollment_number && (
-                              <div className="text-[11px] text-muted-foreground">Matrícula {s.enrollment_number}</div>
+                              <div className="text-[11px] text-muted-foreground">
+                                Matrícula {s.enrollment_number}
+                              </div>
                             )}
                           </div>
                           {inRecovery && kind === "second_call" && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">recuperação</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
+                              recuperação
+                            </span>
                           )}
                         </label>
                       );
@@ -1148,7 +1375,8 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
           <div className="rounded-md border bg-muted/20 p-3 space-y-3">
             <div className="text-sm font-medium">Distribuição por Tipo de Questão</div>
             <p className="text-xs text-muted-foreground">
-              Marque os tipos de questão que deseja incluir na prova e ajuste a quantidade de cada um.
+              Marque os tipos de questão que deseja incluir na prova e ajuste a quantidade de cada
+              um.
             </p>
 
             <div className="space-y-2">
@@ -1190,12 +1418,21 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div>
               <Label>Nota máxima</Label>
-              <Input type="number" min={1} max={100} step={0.5} value={maxScore} onChange={(e) => setMaxScore(Number(e.target.value || 10))} />
+              <Input
+                type="number"
+                min={1}
+                max={100}
+                step={0.5}
+                value={maxScore}
+                onChange={(e) => setMaxScore(Number(e.target.value || 10))}
+              />
             </div>
             <div>
               <Label>Versões</Label>
               <Select value={String(versions)} onValueChange={(v) => setVersions(Number(v))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="1">1 (sem embaralhar)</SelectItem>
                   <SelectItem value="2">2 versões (A, B)</SelectItem>
@@ -1213,7 +1450,9 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
             <div>
               <Label>Peso por Questão</Label>
               <Select value={pesoMode} onValueChange={(v) => setPesoMode(v as typeof pesoMode)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="igual">Igual para todas as questões</SelectItem>
                   <SelectItem value="personalizado">Personalizado por tipo</SelectItem>
@@ -1227,7 +1466,9 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
                   <NumField label="Peso Dissert." value={pesoES} onChange={setPesoES} max={100} />
                 </div>
               )}
-              <div className={`text-xs mt-2 ${pesoOK ? "text-muted-foreground" : "text-destructive"}`}>
+              <div
+                className={`text-xs mt-2 ${pesoOK ? "text-muted-foreground" : "text-destructive"}`}
+              >
                 {pesoMode === "igual"
                   ? `Cada questão valerá ${(totalQ > 0 ? (Number(maxScore) || 0) / totalQ : 0).toFixed(2)} ponto(s). Soma = ${pesoSum.toFixed(2)} / ${(Number(maxScore) || 0).toFixed(2)}.`
                   : `Soma dos pesos × quantidade = ${pesoSum.toFixed(2)} / ${(Number(maxScore) || 0).toFixed(2)}.`}
@@ -1251,7 +1492,8 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
               <div className="space-y-0.5">
                 <Label className="text-sm">Embaralhar questões e itens</Label>
                 <p className="text-xs text-muted-foreground">
-                  Reorganiza a ordem das questões e das alternativas dentro de cada versão para dificultar a cola.
+                  Reorganiza a ordem das questões e das alternativas dentro de cada versão para
+                  dificultar a cola.
                 </p>
               </div>
               <Switch checked={shuffleItems} onCheckedChange={setShuffleItems} />
@@ -1270,7 +1512,9 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
             <div>
               <Label>Rigor pedagógico</Label>
               <Select value={rigor} onValueChange={(v) => setRigor(v as typeof rigor)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="light">Leve — consolidação</SelectItem>
                   <SelectItem value="balanced">Equilibrado</SelectItem>
@@ -1279,7 +1523,9 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
               </Select>
             </div>
             <div>
-              <Label>Lançar nota no diário <span className="text-destructive">*</span></Label>
+              <Label>
+                Lançar nota no diário <span className="text-destructive">*</span>
+              </Label>
               <select
                 className="h-9 w-full rounded-md border bg-background px-2 text-sm"
                 value={diaryCol}
@@ -1287,12 +1533,16 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
               >
                 <option value="">Selecione uma coluna do diário...</option>
                 {wizardCols.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name} (peso {c.weight} · máx {c.max_score})</option>
+                  <option key={c.id} value={c.id}>
+                    {c.name} (peso {c.weight} · máx {c.max_score})
+                  </option>
                 ))}
               </select>
             </div>
             <div className="col-span-full">
-              <Label>Data e Horário da Avaliação <span className="text-destructive">*</span></Label>
+              <Label>
+                Data e Horário da Avaliação <span className="text-destructive">*</span>
+              </Label>
               <Input
                 type="datetime-local"
                 className="w-full"
@@ -1305,7 +1555,6 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
                 required
               />
             </div>
-
           </div>
 
           {/* Dificuldade e layout das folhas de questões. "Tópicos
@@ -1332,8 +1581,13 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
 
             <div>
               <Label>Layout das folhas de questões</Label>
-              <Select value={layoutTemplate} onValueChange={(v) => setLayoutTemplate(v as typeof layoutTemplate)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select
+                value={layoutTemplate}
+                onValueChange={(v) => setLayoutTemplate(v as typeof layoutTemplate)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="classic">Clássico (coluna única)</SelectItem>
                   <SelectItem value="compact">Compacto (misto)</SelectItem>
@@ -1346,14 +1600,24 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
 
           <div className="rounded-md bg-muted/40 p-3 text-xs text-muted-foreground flex gap-2">
             <FileText className="h-4 w-4 shrink-0 mt-0.5" />
-            <span>O PDF conterá <strong>{versions}</strong> versão(ões) com <strong>questões diferentes</strong> sobre o mesmo conteúdo + <strong>1 folha de resposta por aluno</strong>, com QR Code único usado pelo Corretor.</span>
+            <span>
+              O PDF conterá <strong>{versions}</strong> versão(ões) com{" "}
+              <strong>questões diferentes</strong> sobre o mesmo conteúdo +{" "}
+              <strong>1 folha de resposta por aluno</strong>, com QR Code único usado pelo Corretor.
+            </span>
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={submitting}>Cancelar</Button>
+          <Button variant="outline" onClick={onClose} disabled={submitting}>
+            Cancelar
+          </Button>
           <Button onClick={submit} disabled={submitting}>
-            {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+            {submitting ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4 mr-2" />
+            )}
             Gerar avaliação
           </Button>
         </DialogFooter>
@@ -1362,22 +1626,48 @@ function AssessmentWizardDialog({ open, onClose, disciplineId, onCreated, setRev
   );
 }
 
-function NumField({ label, value, onChange, max }: { label: string; value: number; onChange: (n: number) => void; max: number }) {
+function NumField({
+  label,
+  value,
+  onChange,
+  max,
+}: {
+  label: string;
+  value: number;
+  onChange: (n: number) => void;
+  max: number;
+}) {
   return (
     <div>
       <Label className="text-xs">{label}</Label>
-      <Input type="number" min={0} max={max} value={value} onChange={(e) => onChange(Math.max(0, Math.min(max, Number(e.target.value || 0))))} />
+      <Input
+        type="number"
+        min={0}
+        max={max}
+        value={value}
+        onChange={(e) => onChange(Math.max(0, Math.min(max, Number(e.target.value || 0))))}
+      />
     </div>
   );
 }
 
 type DiffLevelValue = "basico" | "medio" | "avancado" | "superior";
-function DifficultySelector({ label, value, onChange }: { label: string; value: DiffLevelValue; onChange: (v: DiffLevelValue) => void }) {
+function DifficultySelector({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: DiffLevelValue;
+  onChange: (v: DiffLevelValue) => void;
+}) {
   return (
     <div className="space-y-1.5">
       <Label className="text-xs">{label}</Label>
       <Select value={value} onValueChange={(v) => onChange(v as DiffLevelValue)}>
-        <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+        <SelectTrigger className="h-8">
+          <SelectValue />
+        </SelectTrigger>
         <SelectContent>
           <SelectItem value="basico">Básico</SelectItem>
           <SelectItem value="medio">Médio</SelectItem>
