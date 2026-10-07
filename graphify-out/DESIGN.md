@@ -1,6 +1,6 @@
 # Design system
 
-Generated: 2026-10-07T11:54:29.848719+00:00
+Generated: 2026-10-07T12:14:36.001213+00:00
 
 ## Tokens
 - --radius-sm: calc(var(--radius) - 4px) (src/styles.css)
@@ -253,7 +253,7 @@ Generated: 2026-10-07T11:54:29.848719+00:00
 - src/components/analytics/InstitutionAnalyticsTab.tsx
 - src/components/analytics/StudentAnalyticsCharts.tsx
 - src/components/assessment/AssessmentHeaderTemplates.tsx
-- src/components/assessment/PresenceCodeGate.tsx
+- src/components/assessment/PresenceGate.tsx
 - src/components/assessment/StudentOnlineExamRoom.tsx
 - src/components/dashboards/AdminDashboard.tsx
 - src/components/dashboards/InstitutionDashboard.tsx

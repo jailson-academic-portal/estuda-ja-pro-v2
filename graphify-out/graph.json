@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-07T11:54:29.848719+00:00",
+  "generated_at": "2026-10-07T12:14:36.001213+00:00",
   "files": [
     {
       "path": "roadmap.md",
@@ -678,6 +678,10 @@
       "bytes": 329
     },
     {
+      "path": "supabase/migrations/20261008000000_drop_presence_code_columns.sql",
+      "bytes": 1130
+    },
+    {
       "path": "supabase/migrations/20260429170947_5b3a4b0b-3c9b-45c9-bf80-f22670a5b40f.sql",
       "bytes": 424
     },
@@ -1131,7 +1135,7 @@
     },
     {
       "path": "src/backend/online-exams.student.functions.ts",
-      "bytes": 25400
+      "bytes": 28594
     },
     {
       "path": "src/backend/exercises.functions.ts",
@@ -1195,7 +1199,7 @@
     },
     {
       "path": "src/backend/online-exams.functions.ts",
-      "bytes": 22188
+      "bytes": 19570
     },
     {
       "path": "src/backend/calendar.functions.ts",
@@ -1287,7 +1291,7 @@
     },
     {
       "path": "src/routes/aluno.avaliacao.$examId.tsx",
-      "bytes": 11804
+      "bytes": 12741
     },
     {
       "path": "src/routes/invite.$token.tsx",
@@ -1343,7 +1347,7 @@
     },
     {
       "path": "src/integrations/supabase/online-exams.types.ts",
-      "bytes": 7543
+      "bytes": 8064
     },
     {
       "path": "src/integrations/supabase/auth-middleware.ts",
@@ -1355,7 +1359,7 @@
     },
     {
       "path": "src/integrations/supabase/types.ts",
-      "bytes": 116351
+      "bytes": 116089
     },
     {
       "path": "src/integrations/supabase/client.ts",
@@ -1386,12 +1390,12 @@
       "bytes": 13903
     },
     {
-      "path": "src/components/assessment/PresenceCodeGate.tsx",
-      "bytes": 5412
+      "path": "src/components/assessment/StudentOnlineExamRoom.tsx",
+      "bytes": 21693
     },
     {
-      "path": "src/components/assessment/StudentOnlineExamRoom.tsx",
-      "bytes": 21131
+      "path": "src/components/assessment/PresenceGate.tsx",
+      "bytes": 5098
     },
     {
       "path": "src/components/ui/dropdown-menu.tsx",
@@ -1659,7 +1663,7 @@
     },
     {
       "path": "src/components/dashboards/OnlineExamsStudentList.tsx",
-      "bytes": 9335
+      "bytes": 10287
     },
     {
       "path": "src/components/dashboards/AdminDashboard.tsx",
@@ -1787,7 +1791,7 @@
     },
     {
       "path": "src/components/discipline/AssessmentsModule.tsx",
-      "bytes": 71722
+      "bytes": 71679
     },
     {
       "path": "src/components/discipline/AssessmentGraderDialog.tsx",
@@ -1827,7 +1831,7 @@
     },
     {
       "path": "src/components/discipline/OnlineExamConfigDialog.tsx",
-      "bytes": 13492
+      "bytes": 10702
     },
     {
       "path": "src/components/discipline/StudentsModule.tsx",
@@ -3897,10 +3901,6 @@
     },
     {
       "source": "src/backend/online-exams.student.functions.ts",
-      "target": "./online-exams.functions"
-    },
-    {
-      "source": "src/backend/online-exams.student.functions.ts",
       "target": "@/integrations/supabase/online-exams.types"
     },
     {
@@ -4262,10 +4262,6 @@
     {
       "source": "src/backend/online-exams.functions.ts",
       "target": "@/integrations/supabase/online-exams.types"
-    },
-    {
-      "source": "src/backend/online-exams.functions.ts",
-      "target": "node:crypto"
     },
     {
       "source": "src/backend/calendar.functions.ts",
@@ -4805,7 +4801,7 @@
     },
     {
       "source": "src/routes/aluno.avaliacao.$examId.tsx",
-      "target": "@/components/assessment/PresenceCodeGate"
+      "target": "@/components/assessment/PresenceGate"
     },
     {
       "source": "src/routes/aluno.avaliacao.$examId.tsx",
@@ -5488,42 +5484,6 @@
       "target": "sonner"
     },
     {
-      "source": "src/components/assessment/PresenceCodeGate.tsx",
-      "target": "react"
-    },
-    {
-      "source": "src/components/assessment/PresenceCodeGate.tsx",
-      "target": "lucide-react"
-    },
-    {
-      "source": "src/components/assessment/PresenceCodeGate.tsx",
-      "target": "sonner"
-    },
-    {
-      "source": "src/components/assessment/PresenceCodeGate.tsx",
-      "target": "@tanstack/react-start"
-    },
-    {
-      "source": "src/components/assessment/PresenceCodeGate.tsx",
-      "target": "@/components/ui/button"
-    },
-    {
-      "source": "src/components/assessment/PresenceCodeGate.tsx",
-      "target": "@/components/ui/input"
-    },
-    {
-      "source": "src/components/assessment/PresenceCodeGate.tsx",
-      "target": "@/components/ui/label"
-    },
-    {
-      "source": "src/components/assessment/PresenceCodeGate.tsx",
-      "target": "@/components/ui/card"
-    },
-    {
-      "source": "src/components/assessment/PresenceCodeGate.tsx",
-      "target": "@/backend/online-exams.student.functions"
-    },
-    {
       "source": "src/components/assessment/StudentOnlineExamRoom.tsx",
       "target": "react"
     },
@@ -5558,6 +5518,26 @@
     {
       "source": "src/components/assessment/StudentOnlineExamRoom.tsx",
       "target": "@/lib/utils"
+    },
+    {
+      "source": "src/components/assessment/PresenceGate.tsx",
+      "target": "@tanstack/react-router"
+    },
+    {
+      "source": "src/components/assessment/PresenceGate.tsx",
+      "target": "lucide-react"
+    },
+    {
+      "source": "src/components/assessment/PresenceGate.tsx",
+      "target": "@/components/ui/button"
+    },
+    {
+      "source": "src/components/assessment/PresenceGate.tsx",
+      "target": "@/components/ui/card"
+    },
+    {
+      "source": "src/components/assessment/PresenceGate.tsx",
+      "target": "@/integrations/supabase/online-exams.types"
     },
     {
       "source": "src/components/ui/dropdown-menu.tsx",
