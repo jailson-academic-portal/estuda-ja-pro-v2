@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-07T12:14:36.001213+00:00",
+  "generated_at": "2026-10-07T12:55:28.396962+00:00",
   "files": [
     {
       "path": "roadmap.md",
@@ -356,6 +356,10 @@
     {
       "path": "supabase/migrations/20260630155659_0f8a3a17-34e8-4caf-b44c-6b0f7b042363.sql",
       "bytes": 1378
+    },
+    {
+      "path": "supabase/migrations/20261008120000_create_online_exams_tables.sql",
+      "bytes": 15018
     },
     {
       "path": "supabase/migrations/20261005120000_online_exams_biometrics.sql",
@@ -1347,7 +1351,7 @@
     },
     {
       "path": "src/integrations/supabase/online-exams.types.ts",
-      "bytes": 8064
+      "bytes": 7938
     },
     {
       "path": "src/integrations/supabase/auth-middleware.ts",
