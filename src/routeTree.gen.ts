@@ -18,6 +18,7 @@ import { Route as InicioRouteImport } from './routes/inicio'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as TesteProvaRouteImport } from './routes/teste-prova'
 import { Route as DisciplinesDisciplineIdRouteImport } from './routes/disciplines.$disciplineId'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as ApiPublicApplyUpdateRouteImport } from './routes/api/public/apply-update'
@@ -71,6 +72,11 @@ const LogoutRoute = LogoutRouteImport.update({
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TesteProvaRoute = TesteProvaRouteImport.update({
+  id: '/teste-prova',
+  path: '/teste-prova',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DisciplinesDisciplineIdRoute = DisciplinesDisciplineIdRouteImport.update({
@@ -132,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
+  '/teste-prova': typeof TesteProvaRoute
   '/disciplines/$disciplineId': typeof DisciplinesDisciplineIdRoute
   '/invite/$token': typeof InviteTokenRoute
   '/api/public/apply-update': typeof ApiPublicApplyUpdateRoute
@@ -152,6 +159,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
+  '/teste-prova': typeof TesteProvaRoute
   '/disciplines/$disciplineId': typeof DisciplinesDisciplineIdRoute
   '/invite/$token': typeof InviteTokenRoute
   '/api/public/apply-update': typeof ApiPublicApplyUpdateRoute
@@ -173,6 +181,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
+  '/teste-prova': typeof TesteProvaRoute
   '/disciplines/$disciplineId': typeof DisciplinesDisciplineIdRoute
   '/invite/$token': typeof InviteTokenRoute
   '/api/public/apply-update': typeof ApiPublicApplyUpdateRoute
@@ -195,6 +204,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/signup'
+    | '/teste-prova'
     | '/disciplines/$disciplineId'
     | '/invite/$token'
     | '/api/public/apply-update'
@@ -215,6 +225,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/signup'
+    | '/teste-prova'
     | '/disciplines/$disciplineId'
     | '/invite/$token'
     | '/api/public/apply-update'
@@ -235,6 +246,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/signup'
+    | '/teste-prova'
     | '/disciplines/$disciplineId'
     | '/invite/$token'
     | '/api/public/apply-update'
@@ -256,6 +268,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
   SignupRoute: typeof SignupRoute
+  TesteProvaRoute: typeof TesteProvaRoute
   DisciplinesDisciplineIdRoute: typeof DisciplinesDisciplineIdRoute
   InviteTokenRoute: typeof InviteTokenRoute
   ApiPublicApplyUpdateRoute: typeof ApiPublicApplyUpdateRoute
@@ -330,6 +343,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/teste-prova': {
+      id: '/teste-prova'
+      path: '/teste-prova'
+      fullPath: '/teste-prova'
+      preLoaderRoute: typeof TesteProvaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/disciplines/$disciplineId': {
@@ -408,6 +428,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
   SignupRoute: SignupRoute,
+  TesteProvaRoute: TesteProvaRoute,
   DisciplinesDisciplineIdRoute: DisciplinesDisciplineIdRoute,
   InviteTokenRoute: InviteTokenRoute,
   ApiPublicApplyUpdateRoute: ApiPublicApplyUpdateRoute,
