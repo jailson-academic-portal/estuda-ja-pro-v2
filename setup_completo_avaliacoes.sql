@@ -109,6 +109,28 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 
 -- ============================================================
+-- 0.5 DEFESA: garante que a coluna attendance_session_id existe
+-- em online_exams ANTES de qualquer CREATE INDEX / POLICY / VIEW /
+-- FUNCTION que a referencia. Se a tabela ja foi criada em uma
+-- rodada anterior sem essa coluna, este ALTER TABLE resolve.
+-- (Idempotente: ADD COLUMN IF NOT EXISTS nao falha se a coluna
+-- ja existir.)
+--
+-- Atencao: nesta fase do script public.attendance_sessions ainda
+-- NAO existe (e criada na secao 6), entao adicionamos a coluna
+-- SEM FK primeiro. A FK sera adicionada abaixo, na secao 15.5,
+-- apos a tabela referenciada existir.
+-- ============================================================
+
+ALTER TABLE public.online_exams
+  ADD COLUMN IF NOT EXISTS attendance_session_id uuid;
+
+CREATE INDEX IF NOT EXISTS idx_online_exams_attendance_session
+  ON public.online_exams (attendance_session_id)
+  WHERE attendance_session_id IS NOT NULL;
+
+
+-- ============================================================
 -- 1. public.institutions (BASELINE)
 -- ============================================================
 
@@ -504,9 +526,21 @@ CREATE INDEX IF NOT EXISTS idx_online_exams_attendance_session
 -- Defesa: se a tabela ja existia (sem a coluna nova), garante
 -- que attendance_session_id existe antes de qualquer policy ou
 -- funcao que a referencia.
-ALTER TABLE public.online_exams
-  ADD COLUMN IF NOT EXISTS attendance_session_id uuid
-  REFERENCES public.attendance_sessions(id) ON DELETE SET NULL;
+-- (Ja adicionada na secao 0.5. Aqui garantimos a FK constraint
+-- porque agora public.attendance_sessions ja existe.)
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'online_exams_attendance_session_id_fkey'
+      AND conrelid = 'public.online_exams'::regclass
+  ) THEN
+    ALTER TABLE public.online_exams
+      ADD CONSTRAINT online_exams_attendance_session_id_fkey
+      FOREIGN KEY (attendance_session_id)
+      REFERENCES public.attendance_sessions(id)
+      ON DELETE SET NULL;
+  END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_online_exams_attendance_session
   ON public.online_exams (attendance_session_id)
   WHERE attendance_session_id IS NOT NULL;
