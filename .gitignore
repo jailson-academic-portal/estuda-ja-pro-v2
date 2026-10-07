@@ -31,11 +31,9 @@ dist-ssr
 *.sln
 *.sw?
 
-# Secrets e artefatos locais do projeto
-.env
+# Artefatos locais do projeto
+# .env contém apenas chaves públicas e é necessário para publicar o site.
 .env.local
-.env.development
-.env.production
 tmp-*.cjs
 scripts/
 
