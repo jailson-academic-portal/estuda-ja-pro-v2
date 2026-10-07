@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-07T00:00:46.408964+00:00",
+  "generated_at": "2026-10-07T00:25:52.772004+00:00",
   "files": [
     {
       "path": "roadmap.md",
@@ -1372,6 +1372,10 @@
     {
       "path": "src/components/assessment/AssessmentHeaderTemplates.tsx",
       "bytes": 13903
+    },
+    {
+      "path": "src/components/assessment/StudentOnlineExamRoom.tsx",
+      "bytes": 16868
     },
     {
       "path": "src/components/ui/dropdown-menu.tsx",
@@ -5378,6 +5382,42 @@
     {
       "source": "src/components/assessment/AssessmentHeaderTemplates.tsx",
       "target": "sonner"
+    },
+    {
+      "source": "src/components/assessment/StudentOnlineExamRoom.tsx",
+      "target": "react"
+    },
+    {
+      "source": "src/components/assessment/StudentOnlineExamRoom.tsx",
+      "target": "lucide-react"
+    },
+    {
+      "source": "src/components/assessment/StudentOnlineExamRoom.tsx",
+      "target": "@/components/ui/button"
+    },
+    {
+      "source": "src/components/assessment/StudentOnlineExamRoom.tsx",
+      "target": "@/components/ui/card"
+    },
+    {
+      "source": "src/components/assessment/StudentOnlineExamRoom.tsx",
+      "target": "@/components/ui/badge"
+    },
+    {
+      "source": "src/components/assessment/StudentOnlineExamRoom.tsx",
+      "target": "@/components/ui/progress"
+    },
+    {
+      "source": "src/components/assessment/StudentOnlineExamRoom.tsx",
+      "target": "@/components/ui/separator"
+    },
+    {
+      "source": "src/components/assessment/StudentOnlineExamRoom.tsx",
+      "target": "@/components/ui/tooltip"
+    },
+    {
+      "source": "src/components/assessment/StudentOnlineExamRoom.tsx",
+      "target": "@/lib/utils"
     },
     {
       "source": "src/components/ui/dropdown-menu.tsx",
