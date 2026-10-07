@@ -1176,7 +1176,6 @@ function AssessmentWizardDialog({
               timeLimitMinutes: 60,
               maxScore: Number(maxScore) || 0,
               maxAttempts: 1,
-              presenceCodeRequired: false,
               tabSwitchLimit: null,
             },
           });

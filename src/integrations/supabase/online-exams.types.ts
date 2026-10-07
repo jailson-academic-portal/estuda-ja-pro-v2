@@ -1,5 +1,5 @@
 /**
- * Tipos PROVISÓRIOS das tabelas de avaliação online com biometria.
+ * Tipos PROVISÓRIOS das tabelas de avaliação online.
  *
  * POR QUE ESTE ARQUIVO EXISTE
  * `src/integrations/supabase/types.ts` é gerado a partir do banco real, e as
@@ -11,6 +11,11 @@
  * (entre os marcadores "blocos manuais"). Este arquivo guarda apenas os tipos
  * nominalmente uteis no app. Quando o types.ts for regenerado do banco, os
  * blocos manuais somem e este arquivo pode ser removido.
+ *
+ * LIBERACAO: a sala de prova exige que o aluno tenha PRESENCA confirmada
+ * no Diario Digital (attendance_records.status='present') em uma aula
+ * (attendance_session) da mesma disciplina dentro do periodo da prova.
+ * A biometria e o PIN foram descartados.
  *
  * As permissões de escrita ficam em `src/backend/online-exams.functions.ts`,
  * que usa `supabaseAdmin` + `assertTeacherOrAdmin` — o mesmo padrão de
@@ -64,13 +69,6 @@ export interface OnlineExamRow {
   proctoring_enabled: boolean;
   tab_switch_limit: number | null;
   allow_resume: boolean;
-  /**
-   * Código de Presença — substitui a checagem biométrica na UI.
-   * O hash NUNCA volta para o cliente (ler via SECURITY DEFINER
-   * ou não expor em SELECT do navegador).
-   */
-  presence_code_required: boolean;
-  presence_code_hash: string | null;
   config: Json;
   created_at: string;
   updated_at: string;
@@ -97,8 +95,6 @@ export interface OnlineExamInsert {
   proctoring_enabled?: boolean;
   tab_switch_limit?: number | null;
   allow_resume?: boolean;
-  presence_code_required?: boolean;
-  presence_code_hash?: string | null;
   config?: Json;
 }
 
@@ -158,6 +154,19 @@ export interface ExamAnswerRow {
  *    e nada de correct_answer / rubric / explanation.
  * ------------------------------------------------------------------------- */
 
+/**
+ * Sessão do Diário Digital que libera a prova online.
+ * Retornada pelo `getOnlineExamAccess` para que a UI mostre ao aluno qual
+ * aula/turno liberou a prova (ou indique que a presença ainda não foi
+ * confirmada).
+ */
+export interface AttendanceSessionRef {
+  id: string;
+  topic: string | null;
+  session_date: string;
+  starts_at: string;
+}
+
 export interface OnlineExamForStudentListItem {
   id: string;
   title: string;
@@ -175,8 +184,13 @@ export interface OnlineExamForStudentListItem {
   in_window: boolean;
   /** Texto humano explicando por que o botão está/ficará disponível. */
   availability_label: string | null;
-  /** Indica se o professor exige Código de Presença para iniciar. */
-  presence_code_required: boolean;
+  /**
+   * Se true, o aluno tem presença confirmada em uma aula (attendance_session)
+   * da mesma disciplina dentro do período da prova. Quando false, a sala
+   * fica travada até que a presença seja marcada pelo Diário Digital.
+   * Já é `true` automaticamente para provas já submetidas/graded.
+   */
+  has_attendance: boolean;
 }
 
 export interface OnlineExamQuestionForStudent {
@@ -215,11 +229,11 @@ export interface OnlineExamForStudentSession {
     opens_at: string | null;
     closes_at: string | null;
     /**
-     * Se true, a sala de prova só é liberada após o aluno digitar o
-     * Código de Presença correto (verificado por server fn).
-     * O hash NUNCA é retornado para o cliente.
+     * Limite absoluto (UTC) para a entrega das respostas. Quando o cronômetro
+     * visual zera, o cliente dispara o auto-submit. Se a janela da prova
+     * (closes_at) for anterior a este valor, ela prevalece.
      */
-    presence_code_required: boolean;
+    expires_at: string | null;
   };
   session: OnlineExamSessionForStudent;
   questions: OnlineExamQuestionForStudent[];

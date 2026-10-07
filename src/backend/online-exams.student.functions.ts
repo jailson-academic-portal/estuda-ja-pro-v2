@@ -2,8 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { verifyPresenceCodeHash } from "./online-exams.functions";
 import type {
+  AttendanceSessionRef,
   ExamSessionStatus,
   OnlineExamForStudentListItem,
   OnlineExamForStudentSession,
@@ -98,6 +98,67 @@ async function getActiveOrSubmittedSession(examId: string, userId: string) {
   return data;
 }
 
+/**
+ * Procura uma sessao do Diario Digital (attendance_sessions) da disciplina
+ * da prova em que o aluno tem `attendance_records.status='present'`, e cujo
+ * `starts_at` cai dentro da janela da prova.
+ *
+ * Retorna o resumo da aula que liberou a prova, ou null se nao houver.
+ * Usada para a trava de "presenca requerida" antes de abrir a sala.
+ */
+async function findAttendanceReleaseForExam(
+  examId: string,
+  disciplineId: string,
+  studentId: string,
+  opensAt: string | null,
+  closesAt: string | null,
+  now: Date,
+): Promise<AttendanceSessionRef | null> {
+  // Janela efetiva para localizar aulas validas. Se a prova nao tem
+  // opens_at/closes_at, aceitamos aulas a partir de created_at-1 dia ate
+  // agora+30 dias (margem generosa para prova sem prazo).
+  const floor = opensAt
+    ? new Date(opensAt).toISOString()
+    : new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+  const ceiling = closesAt
+    ? new Date(closesAt).toISOString()
+    : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  // 1) Carrega sessoes do Diario Digital da disciplina dentro da janela
+  const { data: sessions, error: sErr } = await supabaseAdmin
+    .from("attendance_sessions")
+    .select("id, topic, session_date, starts_at")
+    .eq("discipline_id", disciplineId)
+    .gte("starts_at", floor)
+    .lte("starts_at", ceiling)
+    .order("starts_at", { ascending: false })
+    .limit(20);
+  if (sErr) throw new Error(sErr.message);
+  if (!sessions || sessions.length === 0) return null;
+
+  // 2) Filtra pelas que o aluno marcou 'present'
+  const sessionIds = sessions.map((s) => s.id as string);
+  const { data: records, error: rErr } = await supabaseAdmin
+    .from("attendance_records")
+    .select("session_id")
+    .eq("student_id", studentId)
+    .eq("status", "present")
+    .in("session_id", sessionIds);
+  if (rErr) throw new Error(rErr.message);
+  const presentIds = new Set((records ?? []).map((r) => r.session_id as string));
+  if (presentIds.size === 0) return null;
+
+  // 3) Pega a aula mais recente que satisfaz (ja ordenada desc acima)
+  const match = sessions.find((s) => presentIds.has(s.id as string));
+  if (!match) return null;
+  return {
+    id: match.id as string,
+    topic: (match.topic as string | null) ?? null,
+    session_date: match.session_date as string,
+    starts_at: match.starts_at as string,
+  };
+}
+
 /* ============================================================================
  * LISTAR — avaliações disponíveis para o aluno
  *
@@ -105,7 +166,9 @@ async function getActiveOrSubmittedSession(examId: string, userId: string) {
  *  - status = 'open'
  *  - aluno matriculado na disciplina
  *  - dentro da janela opens_at..closes_at (status dinâmico)
- * Retorna também sessões existentes (para diferenciar "Iniciar" vs "Retomar").
+ * Retorna também sessões existentes (para diferenciar "Iniciar" vs "Retomar")
+ * e, para cada prova, se o aluno tem presenca no Diario Digital dentro da
+ * janela — pre-requisito para liberar a sala.
  * ========================================================================== */
 export const listOnlineExamsForStudent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -128,7 +191,7 @@ export const listOnlineExamsForStudent = createServerFn({ method: "POST" })
     const { data: exams, error: exErr } = await supabaseAdmin
       .from("online_exams")
       .select(
-        "id, title, discipline_id, status, opens_at, closes_at, time_limit_minutes, max_score, assessment_id, presence_code_required",
+        "id, title, discipline_id, status, opens_at, closes_at, time_limit_minutes, max_score, assessment_id",
       )
       .in("discipline_id", disciplineIds)
       .eq("status", "open")
@@ -180,7 +243,53 @@ export const listOnlineExamsForStudent = createServerFn({ method: "POST" })
       if (d) disciplineName.set(d.id, d.name);
     }
 
+    // 6) Presenca por disciplina: carrega TODAS as aulas dessas disciplinas
+    //    em que o aluno marcou 'present', e deixa a funcao `hasAttendanceIn`
+    //    checar contra a janela de cada prova (em memoria). Custo: 1 query
+    //    por disciplina em vez de N por prova.
     const now = new Date();
+    const attendanceSessionsByDiscipline = new Map<
+      string,
+      Array<{ id: string; starts_at: string }>
+    >();
+    if (disciplineIds.length) {
+      const { data: recs, error: rErr } = await supabaseAdmin
+        .from("attendance_records")
+        .select("session_id, status, attendance_sessions:session_id(id, discipline_id, starts_at)")
+        .eq("student_id", userId)
+        .eq("status", "present");
+      if (rErr) throw new Error(rErr.message);
+      for (const r of recs ?? []) {
+        const sess = (
+          r as {
+            attendance_sessions?: { id: string; discipline_id: string; starts_at: string } | null;
+          }
+        ).attendance_sessions;
+        if (!sess) continue;
+        const arr = attendanceSessionsByDiscipline.get(sess.discipline_id) ?? [];
+        arr.push({ id: sess.id, starts_at: sess.starts_at });
+        attendanceSessionsByDiscipline.set(sess.discipline_id, arr);
+      }
+    }
+
+    const hasAttendanceIn = (
+      disciplineId: string,
+      opensAt: string | null,
+      closesAt: string | null,
+    ): boolean => {
+      const list = attendanceSessionsByDiscipline.get(disciplineId);
+      if (!list || list.length === 0) return false;
+      const floor = opensAt ? new Date(opensAt).getTime() : now.getTime() - 24 * 60 * 60 * 1000;
+      const ceiling = closesAt
+        ? new Date(closesAt).getTime()
+        : now.getTime() + 30 * 24 * 60 * 60 * 1000;
+      for (const s of list) {
+        const t = new Date(s.starts_at).getTime();
+        if (t >= floor && t <= ceiling) return true;
+      }
+      return false;
+    };
+
     const out: OnlineExamForStudentListItem[] = (
       exams as unknown as Array<{
         id: string;
@@ -192,10 +301,14 @@ export const listOnlineExamsForStudent = createServerFn({ method: "POST" })
         time_limit_minutes: number;
         max_score: string;
         assessment_id: string;
-        presence_code_required: boolean;
       }>
     ).map((e) => {
       const win = computeInWindow(e.opens_at, e.closes_at, e.status, now);
+      const sessStatus = sessionByExam.get(e.id) ?? null;
+      const isClosed = sessStatus === "submitted" || sessStatus === "graded";
+      // Provas ja submetidas/graded nao exigem nova presenca: o aluno ja
+      // passou pelo gate, e a exibicao e' so de resultado.
+      const hasAtt = isClosed ? true : hasAttendanceIn(e.discipline_id, e.opens_at, e.closes_at);
       return {
         id: e.id,
         title: e.title,
@@ -207,10 +320,10 @@ export const listOnlineExamsForStudent = createServerFn({ method: "POST" })
         time_limit_minutes: e.time_limit_minutes,
         max_score: e.max_score,
         question_count: questionCount.get(e.assessment_id) ?? 0,
-        session_status: sessionByExam.get(e.id) ?? null,
+        session_status: sessStatus,
         in_window: win.inWindow,
         availability_label: win.label,
-        presence_code_required: !!e.presence_code_required,
+        has_attendance: hasAtt,
       };
     });
 
@@ -282,7 +395,7 @@ export const getOnlineExamForStudent = createServerFn({ method: "POST" })
     const { data: fullExam, error: fErr } = await supabaseAdmin
       .from("online_exams")
       .select(
-        "id, title, instructions, assessment_id, discipline_id, time_limit_minutes, max_score, opens_at, closes_at, allow_resume, presence_code_required",
+        "id, title, instructions, assessment_id, discipline_id, time_limit_minutes, max_score, opens_at, closes_at, allow_resume",
       )
       .eq("id", exam.id)
       .maybeSingle();
@@ -299,7 +412,6 @@ export const getOnlineExamForStudent = createServerFn({ method: "POST" })
       opens_at: string | null;
       closes_at: string | null;
       allow_resume: boolean;
-      presence_code_required: boolean;
     };
     const disc = discRow as { name?: string } | null;
 
@@ -439,7 +551,7 @@ export const getOnlineExamForStudent = createServerFn({ method: "POST" })
         max_score: String(fullExamRow.max_score),
         opens_at: fullExamRow.opens_at,
         closes_at: fullExamRow.closes_at,
-        presence_code_required: !!fullExamRow.presence_code_required,
+        expires_at: sessionRow.expires_at,
       },
       session: {
         session_id: sessionRow.id,
@@ -588,55 +700,22 @@ export const submitOnlineExamForStudent = createServerFn({ method: "POST" })
   });
 
 /* ============================================================================
- * VERIFICAR CODIGO DE PRESENCA
+ * INSPECAO LEVE + GATE DE PRESENCA
  *
- * Chamado pela UI antes de carregar a sala de prova. Se a prova NAO exige
- * codigo, retorna { required:false, ok:true } sem checar nada. Se exige,
- * compara o PIN plain enviado com o hash armazenado em tempo constante.
+ * Usado pela rota /aluno/avaliacao/$examId ANTES de criar exam_session.
+ * Devolve:
+ *  - dados minimos para renderizar a sala / o gate;
+ *  - a aula do Diario Digital (attendance_sessions) que libera a prova
+ *    (caso exista), ou null se a presenca ainda nao foi confirmada.
  *
- * O hash NUNCA volta no payload (defesa em profundidade: a funcao le
- * direto do banco, compara, e retorna apenas ok/required).
+ * Regras:
+ *  - Sessao ja submetida/graded/invalidated: libera a sala direto, sem
+ *    exigir nova presenca (a checagem original ja foi feita quando o
+ *    aluno entrou pela primeira vez).
+ *  - Caso contrario, exige presenca confirmada em uma aula cuja
+ *    `starts_at` cai dentro da janela `opens_at..closes_at` da prova.
  * ========================================================================== */
-export const verifyPresenceCode = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .validator((d) =>
-    z
-      .object({
-        examId: z.string().uuid(),
-        code: z.string().min(1).max(32),
-      })
-      .parse(d),
-  )
-  .handler(async ({ data, context }) => {
-    const userId = context.userId;
-    const exam = await assertStudentOwnsExam(data.examId, userId);
-
-    const { data: row, error } = await supabaseAdmin
-      .from("online_exams")
-      .select("presence_code_required, presence_code_hash")
-      .eq("id", exam.id)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-
-    const required = !!(row as { presence_code_required?: boolean } | null)?.presence_code_required;
-    if (!required) {
-      return { ok: true, required: false };
-    }
-
-    const hash = (row as { presence_code_hash?: string | null } | null)?.presence_code_hash ?? null;
-    const ok = verifyPresenceCodeHash(data.code, hash);
-    // Mensagem generica para nao dar dica ao aluno. O front mostra "Codigo
-    // incorreto" em ambos os casos.
-    return { ok, required: true };
-  });
-
-/* ============================================================================
- * INSPECAO LEVE — usado pela rota /aluno/avaliacao/$examId antes do gate.
- *
- * Devolve apenas o minimo necessario para decidir se mostra o gate do
- * Codigo de Presenca. NAO cria exam_sessions e NAO retorna questoes.
- * ========================================================================== */
-export const getOnlineExamAccessRequirement = createServerFn({ method: "POST" })
+export const getOnlineExamAccess = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d) => z.object({ examId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
@@ -646,7 +725,7 @@ export const getOnlineExamAccessRequirement = createServerFn({ method: "POST" })
     const now = new Date();
     const win = computeInWindow(exam.opens_at, exam.closes_at, exam.status, now);
 
-    // Permite carregar prova ja submetida (visualizacao) mesmo fora da janela.
+    // Permite carregar prova ja submetida (visualizacao) mesmo fora dela.
     const existing = await getActiveOrSubmittedSession(exam.id, userId);
     const closedForStudent =
       existing &&
@@ -658,25 +737,31 @@ export const getOnlineExamAccessRequirement = createServerFn({ method: "POST" })
       throw new Error(win.label ?? "A prova nao esta disponivel no momento");
     }
 
-    // Sem hash — apenas a flag. Cliente usa para decidir se renderiza o gate.
-    const { data: row, error } = await supabaseAdmin
-      .from("online_exams")
-      .select("presence_code_required")
-      .eq("id", exam.id)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
+    let attendanceSession: AttendanceSessionRef | null = null;
+    if (closedForStudent) {
+      attendanceSession = null;
+    } else {
+      attendanceSession = await findAttendanceReleaseForExam(
+        exam.id,
+        exam.discipline_id,
+        userId,
+        exam.opens_at,
+        exam.closes_at,
+        now,
+      );
+    }
 
     return {
       exam_id: exam.id,
       title: exam.title,
-      presence_code_required: !!(row as { presence_code_required?: boolean } | null)
-        ?.presence_code_required,
-      // Sabendo se ja passou pelo gate, a UI pode pular o input e ir direto.
+      has_attendance: !!attendanceSession,
+      attendance_session: attendanceSession,
       session_status: existing?.status ?? null,
     } as {
       exam_id: string;
       title: string;
-      presence_code_required: boolean;
+      has_attendance: boolean;
+      attendance_session: AttendanceSessionRef | null;
       session_status: string | null;
     };
   });

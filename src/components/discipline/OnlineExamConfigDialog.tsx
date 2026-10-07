@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { KeyRound, Loader2, ShieldCheck } from "lucide-react";
+import { Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
@@ -24,11 +24,11 @@ import { getOnlineExamConfig, saveOnlineExamConfig } from "@/backend/online-exam
  * aplicar a prova no navegador. As questoes vem da propria avaliacao e o
  * gabarito permanece no servidor.
  *
- * CONTROLE DE INTEGRIDADE: o campo "Codigo de Presenca" substituiu a
- * checagem biometrica (em pausa). O professor define um PIN curto (4-6
- * caracteres) que ditara na lousa; o aluno precisa digitar o PIN antes
- * de a sala abrir. O codigo plain-text NUNCA volta ao cliente (so o hash
- * e persistido no servidor).
+ * CONTROLE DE INTEGRIDADE: nao ha mais PIN nem codigo. A sala de prova
+ * so e liberada se o aluno tiver PRESENCA confirmada no Diario Digital
+ * (attendance_records.status='present') em uma aula cuja `starts_at`
+ * cai dentro da janela `opens_at..closes_at` da prova. Ver
+ * `getOnlineExamAccess` em online-exams.student.functions.ts.
  * ========================================================================== */
 
 function toLocalInput(iso: string | null | undefined) {
@@ -69,11 +69,6 @@ export function OnlineExamConfigDialog({
   const [timeLimit, setTimeLimit] = useState("60");
   const [maxScore, setMaxScore] = useState(String(defaultMaxScore || 10));
   const [maxAttempts, setMaxAttempts] = useState("1");
-  const [presenceCodeRequired, setPresenceCodeRequired] = useState(false);
-  /** PIN plain enviado apenas ao trocar/criar. Vazio = manter hash atual. */
-  const [presenceCode, setPresenceCode] = useState("");
-  /** Flag para sabermos se a prova ja tem codigo gravado (afecta copy/UX). */
-  const [hasStoredPresenceCode, setHasStoredPresenceCode] = useState(false);
 
   // Carrega a config existente para o formulario ja abrir preenchido.
   useEffect(() => {
@@ -87,8 +82,6 @@ export function OnlineExamConfigDialog({
           time_limit_minutes: number;
           max_score: number;
           max_attempts: number;
-          presence_code_required: boolean;
-          // presence_code_hash NAO vem (ver saveOnlineExamConfig/getOnlineExamConfig).
           biometric_required: boolean;
           biometric_kind_required: string | null;
           require_face_match: boolean;
@@ -102,12 +95,6 @@ export function OnlineExamConfigDialog({
         setTimeLimit(String(cfg.time_limit_minutes));
         setMaxScore(String(cfg.max_score));
         setMaxAttempts(String(cfg.max_attempts));
-        setPresenceCodeRequired(cfg.presence_code_required);
-        // Como o hash NAO e exposto, usamos a flag presence_code_required
-        // como proxy de "tem codigo gravado". O placeholder do input
-        // instrui o professor a deixar em branco para manter o atual.
-        setHasStoredPresenceCode(cfg.presence_code_required);
-        setPresenceCode(""); // nunca preenchemos com hash/plain
       } catch (e) {
         // Config inexistente ainda e o caso normal: segue com o formulario vazio.
         if (alive) {
@@ -128,12 +115,6 @@ export function OnlineExamConfigDialog({
       toast.error("Informe o título da prova online");
       return;
     }
-    if (presenceCodeRequired && presenceCode) {
-      if (!/^[A-Za-z0-9]{4,6}$/.test(presenceCode)) {
-        toast.error("O Codigo de Presenca deve ter 4 a 6 caracteres alfanumericos");
-        return;
-      }
-    }
     setSaving(true);
     const t = toast.loading("Salvando configuração...");
     try {
@@ -148,8 +129,6 @@ export function OnlineExamConfigDialog({
           timeLimitMinutes: Number(timeLimit) || 60,
           maxScore: Number(maxScore) || 0,
           maxAttempts: Number(maxAttempts) || 1,
-          presenceCodeRequired,
-          presenceCode: presenceCode || undefined,
           biometricRequired: false,
           tabSwitchLimit: null,
         },
@@ -277,50 +256,17 @@ export function OnlineExamConfigDialog({
                   </div>
                 </div>
 
-                <div className="flex items-start justify-between gap-3 rounded-md border bg-background p-3">
-                  <div className="space-y-0.5">
-                    <Label className="text-sm flex items-center gap-2">
-                      <KeyRound className="h-4 w-4" /> Exigir Código de Presença
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      O aluno só inicia a prova após digitar o PIN que você informar na lousa.
-                    </p>
-                  </div>
-                  <Switch
-                    checked={presenceCodeRequired}
-                    onCheckedChange={setPresenceCodeRequired}
-                  />
+                <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground space-y-1">
+                  <p className="font-medium text-foreground">
+                    Liberação automática pela presença no Diário Digital
+                  </p>
+                  <p>
+                    O aluno só conseguirá abrir a sala de prova se tiver a presença confirmada em
+                    uma aula (chamada do Diário Digital) da mesma disciplina que aconteça dentro da
+                    janela acima (<em>Início</em> a <em>Término</em>). Não há código ou PIN para
+                    configurar.
+                  </p>
                 </div>
-
-                {presenceCodeRequired && (
-                  <div className="space-y-2 rounded-md bg-muted/30 border border-dashed p-3 animate-in fade-in slide-in-from-top-1">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="oe-cfg-pin">PIN da prova</Label>
-                      <Input
-                        id="oe-cfg-pin"
-                        type="password"
-                        inputMode="text"
-                        autoComplete="off"
-                        pattern="[A-Za-z0-9]{4,6}"
-                        minLength={4}
-                        maxLength={6}
-                        value={presenceCode}
-                        onChange={(e) => setPresenceCode(e.target.value)}
-                        placeholder={
-                          hasStoredPresenceCode
-                            ? "Deixe em branco para manter o código atual"
-                            : "4 a 6 caracteres (letras ou números)"
-                        }
-                        className="font-mono tracking-widest"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Defina um código curto (4 a 6 caracteres alfanuméricos) que você ditará na
-                        lousa no momento da aplicação. O código será salvo de forma segura (hash) e{" "}
-                        <strong>não</strong> poderá ser recuperado depois.
-                      </p>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </div>

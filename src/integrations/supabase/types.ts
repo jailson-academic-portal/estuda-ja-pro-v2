@@ -2681,8 +2681,6 @@ export type Database = {
           max_attempts: number
           max_score: number
           opens_at: string | null
-          presence_code_hash: string | null
-          presence_code_required: boolean
           proctoring_enabled: boolean
           randomize_options: boolean
           randomize_questions: boolean
@@ -2710,8 +2708,6 @@ export type Database = {
           max_attempts?: number
           max_score?: number
           opens_at?: string | null
-          presence_code_hash?: string | null
-          presence_code_required?: boolean
           proctoring_enabled?: boolean
           randomize_options?: boolean
           randomize_questions?: boolean
@@ -2739,8 +2735,6 @@ export type Database = {
           max_attempts?: number
           max_score?: number
           opens_at?: string | null
-          presence_code_hash?: string | null
-          presence_code_required?: boolean
           proctoring_enabled?: boolean
           randomize_options?: boolean
           randomize_questions?: boolean

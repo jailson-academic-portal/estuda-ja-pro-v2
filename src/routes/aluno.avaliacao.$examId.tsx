@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Clock, Loader2, ShieldAlert } from "lucide-react";
@@ -12,13 +12,14 @@ import {
   type ExamAnswerState,
   type ExamQuestionView,
 } from "@/components/assessment/StudentOnlineExamRoom";
-import { PresenceCodeGate } from "@/components/assessment/PresenceCodeGate";
+import { PresenceGate } from "@/components/assessment/PresenceGate";
 import {
-  getOnlineExamAccessRequirement,
+  getOnlineExamAccess,
   getOnlineExamForStudent,
   submitOnlineExamForStudent,
 } from "@/backend/online-exams.student.functions";
 import type {
+  AttendanceSessionRef,
   OnlineExamForStudentSession,
   OnlineExamQuestionForStudent,
 } from "@/integrations/supabase/online-exams.types";
@@ -27,19 +28,28 @@ import type {
  * Rota dinâmica `/aluno/avaliacao/$examId` — sala de prova real.
  *
  * Fluxo:
- *  1. Inspeção leve (`getOnlineExamAccessRequirement`) para descobrir se a
- *     prova exige Código de Presença, sem ainda criar sessão.
- *  2. Se exige e a prova ainda não foi concluída, mostra o
- *     `PresenceCodeGate` (PIN verificado server-side, constant-time).
- *  3. Quando liberado, carrega `exam + session + questions` via
- *     `getOnlineExamForStudent` (este sim cria/retoma a sessão).
- *  4. Mostra sala de prova (modo controlado: respostas persistidas aqui).
- *  5. Ao finalizar, envia respostas em batch e fecha a sessão no servidor.
- *  6. Após envio, mostra a tela de sucesso (controlada via prop `finished`).
+ *  1. Inspeção leve (`getOnlineExamAccess`) para decidir se a sala pode
+ *     ser liberada. Verifica três coisas:
+ *      - matrícula do aluno na disciplina;
+ *      - janela de horário (server-side defense in depth);
+ *      - PRESENÇA confirmada no Diário Digital (attendance_records com
+ *        status='present') em uma aula cuja `starts_at` cai dentro da
+ *        janela da prova. Se a sessão já foi submetida/graded/invalidated
+ *        antes, a presença original é suficiente e a sala é liberada
+ *        direto para visualização.
+ *  2. Se a presença está OK (ou prova já concluída), carrega
+ *     `exam + session + questions` via `getOnlineExamForStudent`
+ *     (que cria/retoma a sessão).
+ *  3. Mostra sala de prova (modo controlado: respostas persistidas aqui).
+ *  4. Auto-envio: quando o cronômetro visual zera OU o `expires_at` da
+ *     sessão já passou, o `StudentOnlineExamRoom` dispara `onAutoSubmit`,
+ *     que envia as respostas marcadas ao servidor e mostra a tela de
+ *     conclusão — sem perder o que já foi marcado.
+ *  5. Ao finalizar manualmente (botão "Finalizar"), o mesmo envio
+ *     acontece, idêntico ao auto-submit.
  *
  * Importante: o gabarito NUNCA é retornado pelo servidor (`correct_answer`
- * é filtrado em `getOnlineExamForStudent`). O hash do PIN nunca volta ao
- * cliente (ver `verifyPresenceCode` em online-exams.student.functions.ts).
+ * é filtrado em `getOnlineExamForStudent`).
  */
 export const Route = createFileRoute("/aluno/avaliacao/$examId")({
   head: () => ({
@@ -61,24 +71,24 @@ function OnlineExamRoomRoute() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const accessFn = useServerFn(getOnlineExamAccessRequirement);
+  const accessFn = useServerFn(getOnlineExamAccess);
   const loadFn = useServerFn(getOnlineExamForStudent);
   const submitFn = useServerFn(submitOnlineExamForStudent);
 
   const [answers, setAnswers] = useState<Record<string, ExamAnswerState>>({});
   const [submitting, setSubmitting] = useState(false);
   const [finished, setFinished] = useState(false);
-  /** Se a prova exige PIN e o aluno ainda não desbloqueou nesta sessão. */
-  const [unlocked, setUnlocked] = useState(false);
+  /** True apos o aluno clicar "Finalizar" ou o cronometro zerar (auto-submit). */
+  const submittedRef = useRef(false);
 
-  // Guard de auth — mesmo padrão do resto do app.
+  // Guard de auth — mesmo padrao do resto do app.
   useEffect(() => {
     if (!authLoading && (!user || !profile)) {
       void navigate({ to: "/login", search: { tab: "matricula" } });
     }
   }, [user, profile, authLoading, navigate]);
 
-  // Passo 1: inspeção leve. NÃO cria sessão ainda.
+  // Passo 1: inspeção leve. NAO cria sessao ainda.
   const accessQuery = useQuery({
     queryKey: ["online-exam-access", examId, user?.id],
     enabled: Boolean(user?.id && examId),
@@ -88,35 +98,27 @@ function OnlineExamRoomRoute() {
       const res = (await accessFn({ data: { examId } })) as {
         exam_id: string;
         title: string;
-        presence_code_required: boolean;
+        has_attendance: boolean;
+        attendance_session: AttendanceSessionRef | null;
         session_status: string | null;
       };
-      // Provas ja submetidas/graded/invalidated NAO exigem codigo de novo.
-      const closedSession =
-        res.session_status === "submitted" ||
-        res.session_status === "graded" ||
-        res.session_status === "invalidated";
-      if (!res.presence_code_required || closedSession) {
-        setUnlocked(true);
-      }
       return res;
     },
   });
 
-  // Passo 2: gate de Codigo de Presenca (se exigido).
-  const showGate =
-    !!accessQuery.data?.presence_code_required &&
-    !unlocked &&
-    !(
-      accessQuery.data?.session_status === "submitted" ||
-      accessQuery.data?.session_status === "graded" ||
-      accessQuery.data?.session_status === "invalidated"
-    );
+  // Sessao ja fechada (submetida/graded/invalidated) -> libera sala direto.
+  const sessionClosedForReview =
+    accessQuery.data?.session_status === "submitted" ||
+    accessQuery.data?.session_status === "graded" ||
+    accessQuery.data?.session_status === "invalidated";
 
-  // Passo 3: carregar prova so apos unlock.
+  // Decisao: carrega a prova (sala) ou trava na PresenceGate.
+  const canLoadRoom = sessionClosedForReview || accessQuery.data?.has_attendance === true;
+
+  // Passo 2: carregar prova (cria/retoma a sessao) somente com sala liberada.
   const { data, isPending, error } = useQuery({
     queryKey: ["online-exam-student", examId, user?.id],
-    enabled: Boolean(user?.id && examId && unlocked && !showGate),
+    enabled: Boolean(user?.id && examId && canLoadRoom),
     staleTime: 0,
     retry: 1,
     queryFn: async (): Promise<OnlineExamForStudentSession> => {
@@ -142,6 +144,41 @@ function OnlineExamRoomRoute() {
       return result;
     },
   });
+
+  // Envia as respostas marcadas ate o momento. Usado tanto pelo
+  // "Finalizar" manual quanto pelo auto-submit. Idempotente: se ja
+  // submetido, nao faz nada.
+  const submitNow = async () => {
+    if (submittedRef.current) return;
+    if (!data) return;
+    submittedRef.current = true;
+    setSubmitting(true);
+    const t = toast.loading("Enviando respostas...");
+    try {
+      const payload = data.questions.map((q) => ({
+        questionId: q.id,
+        selectedOptionId: answers[q.id]?.selectedOptionId ?? null,
+        flagged: answers[q.id]?.flagged ?? false,
+      }));
+      await submitFn({
+        data: {
+          sessionId: data.session.session_id,
+          examId: data.exam.id,
+          answers: payload,
+        },
+      });
+      toast.success("Avaliação enviada com sucesso!", { id: t });
+      setFinished(true);
+      void queryClient.invalidateQueries({ queryKey: ["online-exam-student"] });
+      void queryClient.invalidateQueries({ queryKey: ["online-exams-for-student"] });
+      void queryClient.invalidateQueries({ queryKey: ["online-exam-access"] });
+    } catch (e) {
+      submittedRef.current = false; // permite tentar de novo
+      toast.error(e instanceof Error ? e.message : "Falha ao enviar", { id: t });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const onSelectOption = (questionId: string, optionId: string) => {
     setAnswers((prev) => ({
@@ -169,35 +206,6 @@ function OnlineExamRoomRoute() {
     });
   };
 
-  const onFinishAttempt = async () => {
-    if (!data) return;
-    setSubmitting(true);
-    const t = toast.loading("Enviando respostas...");
-    try {
-      const payload = data.questions.map((q) => ({
-        questionId: q.id,
-        selectedOptionId: answers[q.id]?.selectedOptionId ?? null,
-        flagged: answers[q.id]?.flagged ?? false,
-      }));
-      await submitFn({
-        data: {
-          sessionId: data.session.session_id,
-          examId: data.exam.id,
-          answers: payload,
-        },
-      });
-      toast.success("Avaliação enviada com sucesso!", { id: t });
-      setFinished(true);
-      void queryClient.invalidateQueries({ queryKey: ["online-exam-student"] });
-      void queryClient.invalidateQueries({ queryKey: ["online-exams-for-student"] });
-      void queryClient.invalidateQueries({ queryKey: ["online-exam-access"] });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha ao enviar", { id: t });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   if (authLoading || accessQuery.isPending) {
     return (
       <div className="min-h-screen academic-bg flex items-center justify-center">
@@ -222,23 +230,26 @@ function OnlineExamRoomRoute() {
     );
   }
 
-  // Gate do Codigo de Presenca (passo 2).
-  if (showGate && accessQuery.data) {
+  // Gate de presenca (passo 2). Soma-se ao caso de prova ja fechada,
+  // que e' liberada direto (canLoadRoom == true via sessionClosedForReview).
+  if (!canLoadRoom && accessQuery.data) {
     return (
       <div className="min-h-screen academic-bg flex items-center justify-center px-4 py-10">
-        <PresenceCodeGate
+        <PresenceGate
           examId={accessQuery.data.exam_id}
           examTitle={accessQuery.data.title}
-          onUnlocked={() => {
-            setUnlocked(true);
-            toast.success("Acesso liberado. Boa prova!");
+          disciplineId={data?.exam.discipline_id ?? ""}
+          attendanceSession={accessQuery.data.attendance_session}
+          refreshing={accessQuery.isFetching}
+          onRefresh={() => {
+            void accessQuery.refetch();
           }}
         />
       </div>
     );
   }
 
-  // Carregamento da prova apos unlock.
+  // Carregamento da prova apos liberar a sala.
   if (isPending) {
     return (
       <div className="min-h-screen academic-bg flex items-center justify-center">
@@ -319,7 +330,10 @@ function OnlineExamRoomRoute() {
           onSelectOption={onSelectOption}
           onToggleFlag={onToggleFlag}
           onFinishAttempt={() => {
-            if (!submitting) void onFinishAttempt();
+            if (!submitting && !submittedRef.current) void submitNow();
+          }}
+          onAutoSubmit={() => {
+            if (!submitting && !submittedRef.current) void submitNow();
           }}
         />
       </div>

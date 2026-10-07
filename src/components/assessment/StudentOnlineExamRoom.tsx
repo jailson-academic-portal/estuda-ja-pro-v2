@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -11,21 +11,11 @@ import {
   Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-} from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 /**
@@ -95,6 +85,14 @@ export type StudentOnlineExamRoomProps = {
   onToggleFlag?: (questionId: string) => void;
   /** Disparado quando o aluno clica em Finalizar e confirma. */
   onFinishAttempt?: () => void;
+  /**
+   * Disparado AUTOMATICAMENTE quando o cronômetro visual chega a zero.
+   * O pai (rota) é responsável por submeter as respostas ao servidor
+   * e mostrar a tela de conclusão. Disparado no máximo uma vez por
+   * montagem do componente. Se não for fornecido, nada acontece
+   * (mantém o comportamento original de cronômetro puramente visual).
+   */
+  onAutoSubmit?: () => void;
 };
 
 function formatRemaining(totalSeconds: number): string {
@@ -119,6 +117,7 @@ export function StudentOnlineExamRoom({
   onSelectOption,
   onToggleFlag,
   onFinishAttempt,
+  onAutoSubmit,
 }: StudentOnlineExamRoomProps) {
   const safeQuestions = useMemo(() => questions ?? [], [questions]);
   const total = safeQuestions.length;
@@ -149,6 +148,20 @@ export function StudentOnlineExamRoom({
     }, 1000);
     return () => window.clearInterval(id);
   }, [remainingSeconds > 0, isFinished]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-submit: quando o cronômetro visual zera, dispara o callback
+  // uma unica vez. O pai cuida de persistir e fechar a sessao. Guardado
+  // por uma ref para sobreviver a renders e nao disparar de novo em
+  // caso de StrictMode double-effect.
+  const autoSubmittedRef = useRef(false);
+  useEffect(() => {
+    if (!onAutoSubmit) return;
+    if (isFinished) return;
+    if (remainingSeconds > 0) return;
+    if (autoSubmittedRef.current) return;
+    autoSubmittedRef.current = true;
+    onAutoSubmit();
+  }, [remainingSeconds, isFinished, onAutoSubmit]);
 
   const current = safeQuestions[index];
 
@@ -223,13 +236,9 @@ export function StudentOnlineExamRoom({
                   <ListChecks className="mr-1 h-3.5 w-3.5" />
                   Avaliação Online
                 </Badge>
-                {exam.disciplineName && (
-                  <Badge variant="outline">{exam.disciplineName}</Badge>
-                )}
+                {exam.disciplineName && <Badge variant="outline">{exam.disciplineName}</Badge>}
               </div>
-              <h1 className="text-xl font-semibold leading-tight md:text-2xl">
-                {exam.title}
-              </h1>
+              <h1 className="text-xl font-semibold leading-tight md:text-2xl">{exam.title}</h1>
             </div>
 
             <div className="flex items-center gap-3">
@@ -271,10 +280,7 @@ export function StudentOnlineExamRoom({
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span>
-                  Respondidas{" "}
-                  <span className="font-medium text-foreground">
-                    {answeredCount}
-                  </span>{" "}
+                  Respondidas <span className="font-medium text-foreground">{answeredCount}</span>{" "}
                   de <span className="font-medium text-foreground">{total}</span>
                 </span>
                 {flaggedCount > 0 && (
@@ -311,8 +317,8 @@ export function StudentOnlineExamRoom({
                   Avaliação enviada com sucesso!
                 </h2>
                 <p className="mx-auto max-w-md text-sm text-muted-foreground md:text-base">
-                  Suas respostas foram registradas. A nota e o gabarito serão
-                  disponibilizados após a liberação pelo professor.
+                  Suas respostas foram registradas. A nota e o gabarito serão disponibilizados após
+                  a liberação pelo professor.
                 </p>
               </div>
 
@@ -322,8 +328,8 @@ export function StudentOnlineExamRoom({
                 className="w-full max-w-xl rounded-xl border border-amber-300/70 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm"
               >
                 <p className="font-medium">
-                  Sua nota e o gabarito estarão disponíveis assim que o professor
-                  realizar a liberação.
+                  Sua nota e o gabarito estarão disponíveis assim que o professor realizar a
+                  liberação.
                 </p>
               </div>
 
@@ -340,8 +346,8 @@ export function StudentOnlineExamRoom({
             </CardContent>
           </Card>
         ) : (
-            <div className="grid flex-1 gap-4 lg:grid-cols-[1fr_18rem]">
-              {/* Leitura da questão */}
+          <div className="grid flex-1 gap-4 lg:grid-cols-[1fr_18rem]">
+            {/* Leitura da questão */}
             <Card className="border-border/70 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
                 <div className="flex items-center gap-2">
@@ -372,27 +378,24 @@ export function StudentOnlineExamRoom({
                   {current && effectiveFlag(current) ? "Desmarcar" : "Marcar para revisão"}
                 </Button>
               </CardHeader>
-  
+
               <Separator />
-  
+
               <CardContent className="space-y-5 py-6">
                 {current ? (
                   <>
                     <p className="whitespace-pre-line text-base leading-relaxed md:text-lg">
                       {current.prompt}
                     </p>
-  
+
                     <fieldset
                       className="space-y-2"
                       aria-label={`Alternativas da questão ${current.number}`}
                     >
-                      <legend className="sr-only">
-                        Alternativas da questão {current.number}
-                      </legend>
+                      <legend className="sr-only">Alternativas da questão {current.number}</legend>
                       {current.options.length === 0 && (
                         <p className="text-sm italic text-muted-foreground">
-                          Esta questão ainda não possui alternativas
-                          (esqueleto visual).
+                          Esta questão ainda não possui alternativas (esqueleto visual).
                         </p>
                       )}
                       {current.options.map((opt, optIdx) => {
@@ -413,9 +416,7 @@ export function StudentOnlineExamRoom({
                               name={`q-${current.id}`}
                               value={opt.id}
                               checked={checked}
-                              onChange={() =>
-                                handleSelectOption(current.id, opt.id)
-                              }
+                              onChange={() => handleSelectOption(current.id, opt.id)}
                               className="mt-1 h-4 w-4 accent-primary"
                             />
                             <span className="flex w-full items-start gap-3">
@@ -445,9 +446,9 @@ export function StudentOnlineExamRoom({
                   </div>
                 )}
               </CardContent>
-  
+
               <Separator />
-  
+
               <CardFooter className="flex items-center justify-between gap-2 py-4">
                 <Button
                   type="button"
@@ -458,22 +459,18 @@ export function StudentOnlineExamRoom({
                   <ChevronLeft className="mr-1 h-4 w-4" />
                   Anterior
                 </Button>
-  
+
                 <div className="hidden text-xs text-muted-foreground sm:block">
                   Use Próxima para avançar; Finalizar encerra a tentativa.
                 </div>
-  
-                <Button
-                  type="button"
-                  onClick={() => goTo(index + 1)}
-                  disabled={index >= total - 1}
-                >
+
+                <Button type="button" onClick={() => goTo(index + 1)} disabled={index >= total - 1}>
                   Próxima
                   <ChevronRight className="ml-1 h-4 w-4" />
                 </Button>
               </CardFooter>
             </Card>
-  
+
             {/* Mapa lateral de navegação */}
             <Card className="border-border/70 shadow-sm lg:sticky lg:top-4 lg:h-fit">
               <CardHeader className="pb-3">
@@ -485,9 +482,7 @@ export function StudentOnlineExamRoom({
               <Separator />
               <CardContent className="py-4">
                 {total === 0 ? (
-                  <p className="text-xs italic text-muted-foreground">
-                    Sem questões no esqueleto.
-                  </p>
+                  <p className="text-xs italic text-muted-foreground">Sem questões no esqueleto.</p>
                 ) : (
                   <div className="grid grid-cols-5 gap-2">
                     {safeQuestions.map((q, i) => {
@@ -523,7 +518,7 @@ export function StudentOnlineExamRoom({
                     })}
                   </div>
                 )}
-  
+
                 <div className="mt-4 space-y-1.5 text-xs text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <span className="inline-block h-3 w-3 rounded-sm border border-emerald-500/60 bg-emerald-50" />

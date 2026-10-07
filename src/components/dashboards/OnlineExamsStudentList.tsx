@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Calendar, KeyRound, PlayCircle, RefreshCcw, Clock } from "lucide-react";
+import { Calendar, UserCheck, PlayCircle, RefreshCcw, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -179,32 +179,47 @@ function ExamRow({
   const canResume = isInProgress && item.in_window && variant === "pending";
 
   let button: React.ReactNode;
-  if (canStart || canResume) {
-    button = (
-      <Button size="sm" onClick={onStart}>
-        {canResume ? (
-          <>
-            <RefreshCcw className="h-4 w-4 mr-1.5" />
-            Retomar
-          </>
-        ) : (
-          <>
-            <PlayCircle className="h-4 w-4 mr-1.5" />
-            Iniciar Avaliação
-          </>
-        )}
-      </Button>
-    );
-  } else if (variant === "done") {
+  if (variant === "done") {
     button = (
       <Button size="sm" variant="outline" onClick={onStart}>
         Ver resultado
       </Button>
     );
+  } else if (canStart || canResume) {
+    if (!item.has_attendance) {
+      // Dentro da janela, mas o aluno ainda nao confirmou presenca no
+      // Diario Digital. Mantemos o botao ativo para abrir a sala — la,
+      // o gate de presenca informa o que falta. Aqui, desabilitamos e
+      // mostramos um label claro para evitar clique confuso.
+      button = (
+        <Button
+          size="sm"
+          variant="outline"
+          disabled
+          title="Voce precisa confirmar presenca no Diario Digital para iniciar esta prova"
+        >
+          Sem presenca
+        </Button>
+      );
+    } else if (canResume) {
+      button = (
+        <Button size="sm" onClick={onStart}>
+          <RefreshCcw className="h-4 w-4 mr-1.5" />
+          Retomar
+        </Button>
+      );
+    } else {
+      button = (
+        <Button size="sm" onClick={onStart}>
+          <PlayCircle className="h-4 w-4 mr-1.5" />
+          Iniciar Avaliacao
+        </Button>
+      );
+    }
   } else {
     button = (
       <Button size="sm" variant="outline" disabled>
-        {item.availability_label ?? "Indisponível"}
+        {item.availability_label ?? "Indisponivel"}
       </Button>
     );
   }
@@ -219,14 +234,23 @@ function ExamRow({
               {item.discipline_name}
             </Badge>
           )}
-          {item.presence_code_required && (
+          {item.has_attendance ? (
+            <Badge
+              variant="outline"
+              className="border-emerald-300/60 text-emerald-200"
+              title="Você tem presença confirmada no Diário Digital — pode iniciar a prova"
+            >
+              <UserCheck className="h-3 w-3 mr-1" />
+              Presença confirmada
+            </Badge>
+          ) : (
             <Badge
               variant="outline"
               className="border-amber-300/60 text-amber-200"
-              title="O professor exige Código de Presença para iniciar esta prova"
+              title="Você precisa confirmar presença no Diário Digital para iniciar esta prova"
             >
-              <KeyRound className="h-3 w-3 mr-1" />
-              Código de Presença
+              <UserCheck className="h-3 w-3 mr-1" />
+              Aguardando presença
             </Badge>
           )}
           {variant === "done" && (
