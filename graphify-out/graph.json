@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-07T00:25:52.772004+00:00",
+  "generated_at": "2026-10-07T00:33:21.568413+00:00",
   "files": [
     {
       "path": "roadmap.md",
@@ -1268,6 +1268,10 @@
     {
       "path": "src/assets/estudaja-institucional.mp4.asset.json",
       "bytes": 499
+    },
+    {
+      "path": "src/routes/teste-prova.tsx",
+      "bytes": 4284
     },
     {
       "path": "src/routes/logout.tsx",
@@ -4566,6 +4570,14 @@
     {
       "source": "src/backend/works.functions.ts",
       "target": "@/lib/document-header"
+    },
+    {
+      "source": "src/routes/teste-prova.tsx",
+      "target": "@tanstack/react-router"
+    },
+    {
+      "source": "src/routes/teste-prova.tsx",
+      "target": "@/components/assessment/StudentOnlineExamRoom"
     },
     {
       "source": "src/routes/logout.tsx",
