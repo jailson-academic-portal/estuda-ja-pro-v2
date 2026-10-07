@@ -354,12 +354,15 @@ export const deleteOnlineExam = createServerFn({ method: "POST" })
  * Usado pelo botao "Configurar Prova Online" na lista de avaliacoes.
  * Faz UPSERT por assessment_id: uma avaliacao tem no maximo uma prova online.
  *
- * LIBERACAO: a sala de prova nao exige mais PIN nem biometria. A regra
- * passou a ser: o aluno so inicia a prova se a PRESENCA dele estiver
- * marcada no Diario Digital (attendance_records.status='present') em
- * uma aula (attendance_session) da mesma disciplina dentro do periodo
- * da prova. Essa checagem acontece em `getOnlineExamAccess` no fluxo
- * do aluno, nao aqui.
+ * LIBERACAO: a sala de prova NAO exige mais PIN nem biometria. A
+ * regra e a seguinte: o professor vincula a prova a UMA chamada
+ * especifica do Diario Digital (attendance_sessions). O aluno
+ * registra presenca NESTA chamada (via QR Code ou codigo de 6
+ * letras, pelo proprio sistema), e a sala e destravada
+ * automaticamente. Sem vinculo, a prova fica bloqueada (fallback
+ * para busca por janela temporal existe apenas para provas
+ * legadas). Ver `getOnlineExamAccess` em
+ * online-exams.student.functions.ts.
  * ========================================================================== */
 
 const configShape = z.object({
@@ -372,6 +375,14 @@ const configShape = z.object({
   timeLimitMinutes: z.number().int().min(1).max(600).default(60),
   maxScore: z.number().min(0).max(1000).default(10),
   maxAttempts: z.number().int().min(1).max(20).default(1),
+  /**
+   * ID da chamada do Diario Digital (attendance_sessions) que
+   * libera esta prova. Quando definido, a presenca NESTA chamada
+   * e o que destrava a sala para o aluno (via QR Code ou codigo
+   * de 6 letras). Quando null, o sistema usa o fallback de
+   * "qualquer chamada da disciplina dentro da janela da prova".
+   */
+  attendanceSessionId: z.string().uuid().nullish(),
   biometricRequired: z.boolean().default(false),
   biometricKind: kindEnum.nullish(),
   requireFaceMatch: z.boolean().default(false),
@@ -419,6 +430,23 @@ export const saveOnlineExamConfig = createServerFn({ method: "POST" })
       throw new Error("A avaliacao pertence a outra disciplina");
     }
 
+    // Se o professor passou um ID de chamada, confere que ela existe
+    // e pertence a mesma disciplina. Sem isso, um professor poderia
+    // vincular a chamada de outra disciplina e liberar alunos
+    // errados.
+    if (data.attendanceSessionId) {
+      const { data: att, error: aErr2 } = await supabaseAdmin
+        .from("attendance_sessions")
+        .select("id, discipline_id")
+        .eq("id", data.attendanceSessionId)
+        .maybeSingle();
+      if (aErr2) throw new Error(aErr2.message);
+      if (!att) throw new Error("Chamada do Diario Digital nao encontrada");
+      if (att.discipline_id !== data.disciplineId) {
+        throw new Error("A chamada do Diario Digital pertence a outra disciplina");
+      }
+    }
+
     // Descobre o status atual para respeitar transicoes manuais.
     const { data: existing, error: eErr } = await (
       await supabaseAdmin
@@ -449,6 +477,7 @@ export const saveOnlineExamConfig = createServerFn({ method: "POST" })
       time_limit_minutes: data.timeLimitMinutes,
       max_score: roundTwo(data.maxScore),
       max_attempts: data.maxAttempts,
+      attendance_session_id: data.attendanceSessionId ?? null,
       // Biometric columns mantidas por compat (UI nao oferece mais).
       biometric_required: data.biometricRequired,
       biometric_kind_required: data.biometricRequired ? (data.biometricKind ?? null) : null,
@@ -478,12 +507,56 @@ export const getOnlineExamConfig = createServerFn({ method: "POST" })
     )
       .from("online_exams")
       .select(
-        "id, title, opens_at, closes_at, time_limit_minutes, max_score, max_attempts, biometric_required, biometric_kind_required, require_face_match, tab_switch_limit",
+        "id, title, opens_at, closes_at, time_limit_minutes, max_score, max_attempts, attendance_session_id, biometric_required, biometric_kind_required, require_face_match, tab_switch_limit",
       )
       .eq("assessment_id", data.assessmentId)
       .maybeSingle();
     if (error) throw new Error(error.message);
     return row ?? null;
+  });
+
+/**
+ * Lista as chamadas do Diario Digital (attendance_sessions) da
+ * disciplina, para que o professor escolha qual vincular a prova.
+ * Retorna as 30 mais recentes (filtradas para a janela da prova
+ * se a prova tem opens_at/closes_at; caso contrario, qualquer
+ * uma recente). Apenas autenticados que tem permissao na
+ * disciplina (assertTeacherOrAdmin).
+ */
+export const listAttendanceSessionsForExam = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d) =>
+    z
+      .object({
+        disciplineId: z.string().uuid(),
+        opensAt: z.string().nullish(),
+        closesAt: z.string().nullish(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertTeacherOrAdmin(data.disciplineId, context.userId);
+
+    // Janela: a prova abre nesse intervalo. Sem janela, aceitamos
+    // chamadas dos ultimos 60 dias.
+    const now = Date.now();
+    const floor = data.opensAt ? new Date(data.opensAt).getTime() : now - 60 * 24 * 60 * 60 * 1000;
+    const ceiling = data.closesAt
+      ? new Date(data.closesAt).getTime()
+      : now + 60 * 24 * 60 * 60 * 1000;
+
+    const { data: rows, error } = await supabaseAdmin
+      .from("attendance_sessions")
+      .select(
+        "id, topic, session_date, starts_at, code, closed_at, code_window_minutes, created_at",
+      )
+      .eq("discipline_id", data.disciplineId)
+      .gte("starts_at", new Date(floor).toISOString())
+      .lte("starts_at", new Date(ceiling).toISOString())
+      .order("starts_at", { ascending: false })
+      .limit(30);
+    if (error) throw new Error(error.message);
+    return rows ?? [];
   });
 
 export type OnlineExamListItem = OnlineExamRow & {

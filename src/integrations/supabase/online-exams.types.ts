@@ -53,6 +53,15 @@ export interface OnlineExamRow {
   biometric_required: boolean;
   biometric_kind_required: BiometricKind | null;
   require_face_match: boolean;
+  /**
+   * ID da chamada do Diário Digital (attendance_sessions) que
+   * libera esta prova. Quando definido, a presença do aluno NESTA
+   * chamada (registrada via QR Code ou código de 6 letras) é o que
+   * destrava a sala. Quando null, o sistema cai no fallback de
+   * "qualquer chamada da disciplina dentro da janela da prova"
+   * (legado).
+   */
+  attendance_session_id: string | null;
   max_attempts: number;
   proctoring_enabled: boolean;
   tab_switch_limit: number | null;
@@ -79,6 +88,7 @@ export interface OnlineExamInsert {
   biometric_required?: boolean;
   biometric_kind_required?: BiometricKind | null;
   require_face_match?: boolean;
+  attendance_session_id?: string | null;
   max_attempts?: number;
   proctoring_enabled?: boolean;
   tab_switch_limit?: number | null;

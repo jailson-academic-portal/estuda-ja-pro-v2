@@ -100,13 +100,19 @@ export function PresenceGate({
         <CardDescription className="text-white/70">
           Para iniciar a prova <strong className="text-white">{examTitle}</strong>, é preciso que
           sua presença esteja confirmada no <strong className="text-white">Diário Digital</strong>{" "}
-          em uma aula (chamada) desta disciplina.
+          {attendanceSession ? (
+            <>na chamada vinculada abaixo</>
+          ) : (
+            <>em uma aula (chamada) desta disciplina</>
+          )}
+          .
         </CardDescription>
       </CardHeader>
       <CardContent className="text-sm text-white/80 space-y-2">
         <p>
-          O professor precisa abrir a chamada na sala (via QR Code ou código de 6 letras) e você
-          confirma a presença. Depois, é só voltar aqui e atualizar.
+          {attendanceSession
+            ? "O professor vinculou esta prova a uma chamada específica. Vá até o Diário Digital, leia o QR Code ou digite o código de 6 letras mostrado no quadro para registrar sua presença. A prova será destravada automaticamente assim que o banco confirmar a sua presença nesta chamada."
+            : "O professor precisa abrir a chamada na sala (via QR Code ou código de 6 letras) e você confirma a presença. Depois, é só voltar aqui e atualizar."}
         </p>
       </CardContent>
       <CardFooter className="flex flex-col gap-2 sm:flex-row">

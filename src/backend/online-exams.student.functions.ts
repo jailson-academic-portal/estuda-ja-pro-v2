@@ -99,14 +99,23 @@ async function getActiveOrSubmittedSession(examId: string, userId: string) {
 }
 
 /**
- * Procura uma sessao do Diario Digital (attendance_sessions) da disciplina
- * da prova em que o aluno tem `attendance_records.status='present'`, e cujo
- * `starts_at` cai dentro da janela da prova.
+ * Verifica se o aluno tem presenca confirmada ('present') no
+ * Diario Digital para liberar uma prova. Duas estrategias:
  *
- * Retorna o resumo da aula que liberou a prova, ou null se nao houver.
- * Usada para a trava de "presenca requerida" antes de abrir a sala.
+ *  1. **Vinculo explicito** (regra atual, preferida): se a prova
+ *     tem `attendance_session_id` preenchido, basta o aluno ter
+ *     presenca NESTA chamada especifica. O proprio aluno
+ *     registra a presenca via QR Code ou codigo de 6 letras no
+ *     proprio sistema, e a sala e destravada automaticamente.
+ *
+ *  2. **Fallback por janela** (legado, provas sem vinculo): se a
+ *     prova nao tem `attendance_session_id`, procuramos qualquer
+ *     chamada da disciplina dentro da janela opens_at..closes_at
+ *     em que o aluno tenha presenca marcada.
+ *
+ * Retorna o resumo da aula que liberou a prova, ou null.
  */
-async function findAttendanceReleaseForExam(
+async function findAttendanceRecordForExam(
   examId: string,
   disciplineId: string,
   studentId: string,
@@ -114,9 +123,48 @@ async function findAttendanceReleaseForExam(
   closesAt: string | null,
   now: Date,
 ): Promise<AttendanceSessionRef | null> {
-  // Janela efetiva para localizar aulas validas. Se a prova nao tem
-  // opens_at/closes_at, aceitamos aulas a partir de created_at-1 dia ate
-  // agora+30 dias (margem generosa para prova sem prazo).
+  // 1) Carrega a prova com o vinculo de chamada (se houver)
+  const { data: exam, error: eErr } = await supabaseAdmin
+    .from("online_exams")
+    .select("attendance_session_id")
+    .eq("id", examId)
+    .maybeSingle();
+  if (eErr) throw new Error(eErr.message);
+
+  const linkedSessionId =
+    (exam as { attendance_session_id?: string | null } | null)?.attendance_session_id ?? null;
+
+  if (linkedSessionId) {
+    // Estrategia principal: presenca NESTA chamada
+    const { data: sess, error: sErr } = await supabaseAdmin
+      .from("attendance_sessions")
+      .select("id, topic, session_date, starts_at, discipline_id")
+      .eq("id", linkedSessionId)
+      .maybeSingle();
+    if (sErr) throw new Error(sErr.message);
+    if (!sess) return null;
+    if ((sess as { discipline_id: string }).discipline_id !== disciplineId) {
+      // Defesa em profundidade: o id nao pode apontar para outra disciplina
+      return null;
+    }
+    const { data: rec, error: rErr } = await supabaseAdmin
+      .from("attendance_records")
+      .select("status")
+      .eq("session_id", linkedSessionId)
+      .eq("student_id", studentId)
+      .maybeSingle();
+    if (rErr) throw new Error(rErr.message);
+    if (!rec || (rec as { status: string }).status !== "present") return null;
+    return {
+      id: sess.id as string,
+      topic: (sess.topic as string | null) ?? null,
+      session_date: sess.session_date as string,
+      starts_at: sess.starts_at as string,
+    };
+  }
+
+  // 2) Fallback (legado): qualquer chamada da disciplina dentro
+  //    da janela opens_at..closes_at em que o aluno marcou 'present'.
   const floor = opensAt
     ? new Date(opensAt).toISOString()
     : new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
@@ -124,8 +172,7 @@ async function findAttendanceReleaseForExam(
     ? new Date(closesAt).toISOString()
     : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  // 1) Carrega sessoes do Diario Digital da disciplina dentro da janela
-  const { data: sessions, error: sErr } = await supabaseAdmin
+  const { data: sessions, error: sErr2 } = await supabaseAdmin
     .from("attendance_sessions")
     .select("id, topic, session_date, starts_at")
     .eq("discipline_id", disciplineId)
@@ -133,22 +180,20 @@ async function findAttendanceReleaseForExam(
     .lte("starts_at", ceiling)
     .order("starts_at", { ascending: false })
     .limit(20);
-  if (sErr) throw new Error(sErr.message);
+  if (sErr2) throw new Error(sErr2.message);
   if (!sessions || sessions.length === 0) return null;
 
-  // 2) Filtra pelas que o aluno marcou 'present'
   const sessionIds = sessions.map((s) => s.id as string);
-  const { data: records, error: rErr } = await supabaseAdmin
+  const { data: records, error: rErr2 } = await supabaseAdmin
     .from("attendance_records")
     .select("session_id")
     .eq("student_id", studentId)
     .eq("status", "present")
     .in("session_id", sessionIds);
-  if (rErr) throw new Error(rErr.message);
+  if (rErr2) throw new Error(rErr2.message);
   const presentIds = new Set((records ?? []).map((r) => r.session_id as string));
   if (presentIds.size === 0) return null;
 
-  // 3) Pega a aula mais recente que satisfaz (ja ordenada desc acima)
   const match = sessions.find((s) => presentIds.has(s.id as string));
   if (!match) return null;
   return {
@@ -191,7 +236,7 @@ export const listOnlineExamsForStudent = createServerFn({ method: "POST" })
     const { data: exams, error: exErr } = await supabaseAdmin
       .from("online_exams")
       .select(
-        "id, title, discipline_id, status, opens_at, closes_at, time_limit_minutes, max_score, assessment_id",
+        "id, title, discipline_id, status, opens_at, closes_at, time_limit_minutes, max_score, assessment_id, attendance_session_id",
       )
       .in("discipline_id", disciplineIds)
       .eq("status", "open")
@@ -290,6 +335,31 @@ export const listOnlineExamsForStudent = createServerFn({ method: "POST" })
       return false;
     };
 
+    // 6b) Presenca por sessao vinculada: para cada prova com
+    //     attendance_session_id preenchido, checa direto em
+    //     attendance_records. Custo: 1 query para todas as provas
+    //     com vinculo, em vez de N por prova.
+    const linkedSessionIds = Array.from(
+      new Set(
+        (exams as Array<{ attendance_session_id: string | null }>)
+          .map((e) => e.attendance_session_id)
+          .filter((v): v is string => !!v),
+      ),
+    );
+    const hasPresentInLinkedSession = new Set<string>();
+    if (linkedSessionIds.length) {
+      const { data: recs, error: rErr2 } = await supabaseAdmin
+        .from("attendance_records")
+        .select("session_id")
+        .eq("student_id", userId)
+        .eq("status", "present")
+        .in("session_id", linkedSessionIds);
+      if (rErr2) throw new Error(rErr2.message);
+      for (const r of recs ?? []) {
+        hasPresentInLinkedSession.add(r.session_id as string);
+      }
+    }
+
     const out: OnlineExamForStudentListItem[] = (
       exams as unknown as Array<{
         id: string;
@@ -301,6 +371,7 @@ export const listOnlineExamsForStudent = createServerFn({ method: "POST" })
         time_limit_minutes: number;
         max_score: string;
         assessment_id: string;
+        attendance_session_id: string | null;
       }>
     ).map((e) => {
       const win = computeInWindow(e.opens_at, e.closes_at, e.status, now);
@@ -308,7 +379,16 @@ export const listOnlineExamsForStudent = createServerFn({ method: "POST" })
       const isClosed = sessStatus === "submitted" || sessStatus === "graded";
       // Provas ja submetidas/graded nao exigem nova presenca: o aluno ja
       // passou pelo gate, e a exibicao e' so de resultado.
-      const hasAtt = isClosed ? true : hasAttendanceIn(e.discipline_id, e.opens_at, e.closes_at);
+      let hasAtt: boolean;
+      if (isClosed) {
+        hasAtt = true;
+      } else if (e.attendance_session_id) {
+        // Regra principal: presenca NESTA chamada especifica
+        hasAtt = hasPresentInLinkedSession.has(e.attendance_session_id);
+      } else {
+        // Fallback (legado, prova sem vinculo)
+        hasAtt = hasAttendanceIn(e.discipline_id, e.opens_at, e.closes_at);
+      }
       return {
         id: e.id,
         title: e.title,
@@ -741,7 +821,7 @@ export const getOnlineExamAccess = createServerFn({ method: "POST" })
     if (closedForStudent) {
       attendanceSession = null;
     } else {
-      attendanceSession = await findAttendanceReleaseForExam(
+      attendanceSession = await findAttendanceRecordForExam(
         exam.id,
         exam.discipline_id,
         userId,

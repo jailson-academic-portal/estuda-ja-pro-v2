@@ -61,6 +61,12 @@ CREATE TABLE IF NOT EXISTS public.online_exams (
   biometric_kind_required public.biometric_kind,
   require_face_match      boolean NOT NULL DEFAULT false,
 
+  -- Vínculo explícito com uma chamada do Diário Digital. Quando
+  -- preenchida, a presença NESTA chamada (status='present') é o
+  -- que libera a prova. Quando nula, fallback para a busca por
+  -- janela temporal (provas legadas).
+  attendance_session_id   uuid REFERENCES public.attendance_sessions(id) ON DELETE SET NULL,
+
   max_attempts          integer NOT NULL DEFAULT 1 CHECK (max_attempts >= 1),
   proctoring_enabled    boolean NOT NULL DEFAULT false,
   tab_switch_limit      integer,

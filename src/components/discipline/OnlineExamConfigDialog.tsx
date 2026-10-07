@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { CalendarCheck2, Link2, Link2Off, Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getOnlineExamConfig, saveOnlineExamConfig } from "@/backend/online-exams.functions";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  getOnlineExamConfig,
+  listAttendanceSessionsForExam,
+  saveOnlineExamConfig,
+} from "@/backend/online-exams.functions";
 
 /* ============================================================================
  * "Configurar Prova Online" — chamado pela lista de avaliacoes.
@@ -24,12 +36,22 @@ import { getOnlineExamConfig, saveOnlineExamConfig } from "@/backend/online-exam
  * aplicar a prova no navegador. As questoes vem da propria avaliacao e o
  * gabarito permanece no servidor.
  *
- * CONTROLE DE INTEGRIDADE: nao ha mais PIN nem codigo. A sala de prova
- * so e liberada se o aluno tiver PRESENCA confirmada no Diario Digital
- * (attendance_records.status='present') em uma aula cuja `starts_at`
- * cai dentro da janela `opens_at..closes_at` da prova. Ver
+ * CONTROLE DE INTEGRIDADE: a sala de prova so e liberada se o aluno
+ * tiver PRESENCA confirmada no Diario Digital na CHAMADA especifica
+ * vinculada a esta prova (attendance_session_id). O proprio aluno
+ * registra a presenca (via QR Code ou codigo de 6 letras), e a sala
+ * e destravada automaticamente. Se nenhuma chamada for vinculada,
+ * a prova fica bloqueada ate o professor vincular. Ver
  * `getOnlineExamAccess` em online-exams.student.functions.ts.
  * ========================================================================== */
+
+type AttendanceOption = {
+  id: string;
+  topic: string | null;
+  session_date: string;
+  starts_at: string;
+  closed_at: string | null;
+};
 
 function toLocalInput(iso: string | null | undefined) {
   if (!iso) return "";
@@ -58,6 +80,7 @@ export function OnlineExamConfigDialog({
 }) {
   const loadFn = useServerFn(getOnlineExamConfig);
   const saveFn = useServerFn(saveOnlineExamConfig);
+  const listAttendanceFn = useServerFn(listAttendanceSessionsForExam);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -69,8 +92,13 @@ export function OnlineExamConfigDialog({
   const [timeLimit, setTimeLimit] = useState("60");
   const [maxScore, setMaxScore] = useState(String(defaultMaxScore || 10));
   const [maxAttempts, setMaxAttempts] = useState("1");
+  const [attendanceSessionId, setAttendanceSessionId] = useState<string>("");
+  const [attendanceOptions, setAttendanceOptions] = useState<AttendanceOption[]>([]);
+  const [loadingAttendance, setLoadingAttendance] = useState(false);
+  /** Flag visual: alerta o professor se a prova vai ficar bloqueada. */
+  const attendanceRequired = !!attendanceSessionId;
 
-  // Carrega a config existente para o formulario ja abrir preenchido.
+  // Carrega a config existente e as chamadas da disciplina.
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -82,10 +110,7 @@ export function OnlineExamConfigDialog({
           time_limit_minutes: number;
           max_score: number;
           max_attempts: number;
-          biometric_required: boolean;
-          biometric_kind_required: string | null;
-          require_face_match: boolean;
-          tab_switch_limit: number | null;
+          attendance_session_id: string | null;
         } | null;
         if (!alive || !cfg) return;
         setEnabled(true);
@@ -95,6 +120,7 @@ export function OnlineExamConfigDialog({
         setTimeLimit(String(cfg.time_limit_minutes));
         setMaxScore(String(cfg.max_score));
         setMaxAttempts(String(cfg.max_attempts));
+        setAttendanceSessionId(cfg.attendance_session_id ?? "");
       } catch (e) {
         // Config inexistente ainda e o caso normal: segue com o formulario vazio.
         if (alive) {
@@ -110,9 +136,39 @@ export function OnlineExamConfigDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assessmentId]);
 
+  // Recarrega a lista de chamadas quando a janela da prova muda.
+  useEffect(() => {
+    let alive = true;
+    setLoadingAttendance(true);
+    (async () => {
+      try {
+        const opts = (await listAttendanceFn({
+          data: {
+            disciplineId,
+            opensAt: opensAt ? new Date(opensAt).toISOString() : null,
+            closesAt: closesAt ? new Date(closesAt).toISOString() : null,
+          },
+        })) as AttendanceOption[];
+        if (alive) setAttendanceOptions(opts ?? []);
+      } catch {
+        if (alive) setAttendanceOptions([]);
+      } finally {
+        if (alive) setLoadingAttendance(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disciplineId, opensAt, closesAt]);
+
   async function save() {
     if (!title.trim()) {
       toast.error("Informe o título da prova online");
+      return;
+    }
+    if (!attendanceSessionId) {
+      toast.error("Vincule a prova a uma chamada do Diário Digital antes de salvar");
       return;
     }
     setSaving(true);
@@ -129,6 +185,7 @@ export function OnlineExamConfigDialog({
           timeLimitMinutes: Number(timeLimit) || 60,
           maxScore: Number(maxScore) || 0,
           maxAttempts: Number(maxAttempts) || 1,
+          attendanceSessionId,
           biometricRequired: false,
           tabSwitchLimit: null,
         },
@@ -256,16 +313,78 @@ export function OnlineExamConfigDialog({
                   </div>
                 </div>
 
-                <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground space-y-1">
-                  <p className="font-medium text-foreground">
-                    Liberação automática pela presença no Diário Digital
-                  </p>
-                  <p>
-                    O aluno só conseguirá abrir a sala de prova se tiver a presença confirmada em
-                    uma aula (chamada do Diário Digital) da mesma disciplina que aconteça dentro da
-                    janela acima (<em>Início</em> a <em>Término</em>). Não há código ou PIN para
-                    configurar.
-                  </p>
+                <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm flex items-center gap-2">
+                        {attendanceRequired ? (
+                          <Link2 className="h-4 w-4 text-emerald-600" />
+                        ) : (
+                          <Link2Off className="h-4 w-4 text-amber-600" />
+                        )}
+                        Vincular a uma chamada do Diário Digital
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        A sala só é liberada para o aluno depois que ele registrar presença (via QR
+                        Code ou código de 6 letras) na chamada vinculada.
+                      </p>
+                    </div>
+                    {attendanceRequired ? (
+                      <Badge
+                        variant="outline"
+                        className="border-emerald-300/60 text-emerald-200 bg-emerald-50"
+                      >
+                        <CalendarCheck2 className="h-3 w-3 mr-1" /> Vinculada
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="border-amber-300/60 text-amber-200 bg-amber-50"
+                      >
+                        Sem chamada vinculada
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="oe-cfg-attendance-session">Chamada do Diário Digital</Label>
+                    <Select
+                      value={attendanceSessionId || undefined}
+                      onValueChange={(v) => setAttendanceSessionId(v)}
+                    >
+                      <SelectTrigger id="oe-cfg-attendance-session" disabled={loadingAttendance}>
+                        <SelectValue
+                          placeholder={
+                            loadingAttendance
+                              ? "Carregando..."
+                              : "Selecione a chamada que libera a prova"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {attendanceOptions.length === 0 && !loadingAttendance && (
+                          <SelectItem value="__none__" disabled>
+                            Nenhuma chamada encontrada na janela da prova
+                          </SelectItem>
+                        )}
+                        {attendanceOptions.map((opt) => {
+                          const dt = new Date(opt.starts_at);
+                          const label = `${dt.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })} — ${
+                            opt.topic || "Aula sem tópico"
+                          }${opt.closed_at ? " (encerrada)" : ""}`;
+                          return (
+                            <SelectItem key={opt.id} value={opt.id}>
+                              {label}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      A lista mostra as chamadas dentro da janela da prova (ou das últimas 60 dias,
+                      se a prova não tiver janela). Para vincular uma chamada de outro período,
+                      ajuste a janela acima.
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
@@ -277,7 +396,7 @@ export function OnlineExamConfigDialog({
             Fechar
           </Button>
           {enabled && (
-            <Button onClick={save} disabled={saving || loading}>
+            <Button onClick={save} disabled={saving || loading || !attendanceSessionId}>
               {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Salvar configuração
             </Button>

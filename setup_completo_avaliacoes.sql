@@ -25,7 +25,8 @@
 --     13. assessment_question_audits
 --     14. assessment_control_counters
 --   PROVAS ONLINE
---     15. online_exams
+--     15. online_exams  (inclui attendance_session_id para vincular
+--                         à chamada do Diário Digital)
 --     16. exam_sessions
 --     17. exam_answers
 --
@@ -35,10 +36,12 @@
 -- mas o módulo de avaliações online vai funcionar.
 --
 -- Regras de negócio:
---   - Provas: sala só abre se o aluno tiver presença confirmada no
---     Diário Digital (attendance_records.status='present') em uma
---     aula (attendance_session) da mesma disciplina dentro da
---     janela opens_at..closes_at da prova.
+--   - Provas: a sala só abre se o aluno tiver presença confirmada
+--     na CHAMADA ESPECÍFICA do Diário Digital (attendance_session)
+--     vinculada à prova via online_exams.attendance_session_id. O
+--     próprio aluno registra a presença via QR Code ou código de
+--     6 letras no próprio sistema, e a sala é destravada
+--     automaticamente.
 --   - Troca de respostas: upsert por (session_id, question_id).
 --   - Auto-envio: quando o cronômetro zera, dispara submitNow().
 --
@@ -466,6 +469,12 @@ CREATE TABLE IF NOT EXISTS public.online_exams (
   biometric_kind_required public.biometric_kind,
   require_face_match      boolean NOT NULL DEFAULT false,
 
+  -- Vínculo explícito com uma chamada do Diário Digital. Quando
+  -- preenchida, a presença NESTA chamada (status='present') é o
+  -- que libera a prova. Quando nula, fallback para a busca por
+  -- janela temporal (provas legadas).
+  attendance_session_id   uuid REFERENCES public.attendance_sessions(id) ON DELETE SET NULL,
+
   max_attempts          integer NOT NULL DEFAULT 1 CHECK (max_attempts >= 1),
   proctoring_enabled    boolean NOT NULL DEFAULT false,
   tab_switch_limit      integer,
@@ -488,6 +497,9 @@ CREATE INDEX IF NOT EXISTS idx_online_exams_status
 CREATE INDEX IF NOT EXISTS idx_online_exams_open_window
   ON public.online_exams (opens_at, closes_at)
   WHERE status IN ('scheduled','open');
+CREATE INDEX IF NOT EXISTS idx_online_exams_attendance_session
+  ON public.online_exams (attendance_session_id)
+  WHERE attendance_session_id IS NOT NULL;
 
 
 -- ============================================================
