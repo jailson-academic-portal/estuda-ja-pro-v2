@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-07T14:05:14.558757+00:00",
+  "generated_at": "2026-10-07T16:48:43.342415+00:00",
   "files": [
     {
       "path": "roadmap.md",
@@ -15,11 +15,11 @@
     },
     {
       "path": "setup_banco_provas.sql",
-      "bytes": 13229
+      "bytes": 13561
     },
     {
       "path": "setup_completo_avaliacoes.sql",
-      "bytes": 53244
+      "bytes": 53949
     },
     {
       "path": "AGENTS.md",
@@ -248,6 +248,10 @@
     {
       "path": "supabase/migrations/20260706124640_8e26ee2f-7b0f-4994-b915-6ee6ba60d6dd.sql",
       "bytes": 569
+    },
+    {
+      "path": "supabase/migrations/20261008130000_link_online_exam_to_attendance.sql",
+      "bytes": 1479
     },
     {
       "path": "supabase/migrations/20260806142459_94e381c9-2ab9-40ba-b7ec-27697f81a96b.sql",
@@ -1147,7 +1151,7 @@
     },
     {
       "path": "src/backend/online-exams.student.functions.ts",
-      "bytes": 28594
+      "bytes": 31550
     },
     {
       "path": "src/backend/exercises.functions.ts",
@@ -1211,7 +1215,7 @@
     },
     {
       "path": "src/backend/online-exams.functions.ts",
-      "bytes": 19570
+      "bytes": 22558
     },
     {
       "path": "src/backend/calendar.functions.ts",
@@ -1359,7 +1363,7 @@
     },
     {
       "path": "src/integrations/supabase/online-exams.types.ts",
-      "bytes": 7938
+      "bytes": 8376
     },
     {
       "path": "src/integrations/supabase/auth-middleware.ts",
@@ -1371,7 +1375,7 @@
     },
     {
       "path": "src/integrations/supabase/types.ts",
-      "bytes": 116089
+      "bytes": 119199
     },
     {
       "path": "src/integrations/supabase/client.ts",
@@ -1407,7 +1411,7 @@
     },
     {
       "path": "src/components/assessment/PresenceGate.tsx",
-      "bytes": 5098
+      "bytes": 5548
     },
     {
       "path": "src/components/ui/dropdown-menu.tsx",
@@ -1843,7 +1847,7 @@
     },
     {
       "path": "src/components/discipline/OnlineExamConfigDialog.tsx",
-      "bytes": 10702
+      "bytes": 15628
     },
     {
       "path": "src/components/discipline/StudentsModule.tsx",
@@ -9626,6 +9630,14 @@
     {
       "source": "src/components/discipline/OnlineExamConfigDialog.tsx",
       "target": "@/components/ui/dialog"
+    },
+    {
+      "source": "src/components/discipline/OnlineExamConfigDialog.tsx",
+      "target": "@/components/ui/badge"
+    },
+    {
+      "source": "src/components/discipline/OnlineExamConfigDialog.tsx",
+      "target": "@/components/ui/select"
     },
     {
       "source": "src/components/discipline/OnlineExamConfigDialog.tsx",
