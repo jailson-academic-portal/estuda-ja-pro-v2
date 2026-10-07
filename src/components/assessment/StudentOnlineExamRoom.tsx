@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
+  CheckCircle2,
   Clock,
   Flag,
+  Home,
   ListChecks,
   Loader2,
   Send,
@@ -110,17 +112,24 @@ export function StudentOnlineExamRoom({
     () => Math.max(exam.durationMinutes, 0) * 60,
   );
 
+  // Marca quando o aluno finalizou a tentativa. Quando true:
+  //  - cronômetro congela no valor atual;
+  //  - área da questão é substituída pela tela de sucesso.
+  const [isFinished, setIsFinished] = useState(false);
+
   useEffect(() => {
     setRemainingSeconds(Math.max(exam.durationMinutes, 0) * 60);
+    setIsFinished(false);
   }, [exam.durationMinutes]);
 
   useEffect(() => {
-    if (remainingSeconds <= 0) return;
+    // Para o tick ao finalizar ou quando o tempo já acabou.
+    if (isFinished || remainingSeconds <= 0) return;
     const id = window.setInterval(() => {
       setRemainingSeconds((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
     return () => window.clearInterval(id);
-  }, [remainingSeconds > 0]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [remainingSeconds > 0, isFinished]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const current = safeQuestions[index];
 
@@ -137,6 +146,16 @@ export function StudentOnlineExamRoom({
 
   const handleToggleFlag = (questionId: string) => {
     onToggleFlag?.(questionId);
+  };
+
+  const confirmFinish = () => {
+    setIsFinished(true);
+    onFinish?.();
+  };
+
+  const goToDashboard = () => {
+    // Apenas visual por enquanto — o redirecionamento real será
+    // conectado pelo backend/integração em outro passo.
   };
 
   const answeredCount = safeQuestions.filter(
@@ -195,8 +214,8 @@ export function StudentOnlineExamRoom({
                   <Button
                     type="button"
                     variant="destructive"
-                    onClick={() => onFinish?.()}
-                    disabled={total === 0}
+                    onClick={confirmFinish}
+                    disabled={total === 0 || isFinished}
                   >
                     <Send className="mr-2 h-4 w-4" />
                     Finalizar
@@ -239,207 +258,252 @@ export function StudentOnlineExamRoom({
           </CardContent>
         </Card>
 
-        {/* Área principal: questão + navegação */}
-        <div className="grid flex-1 gap-4 lg:grid-cols-[1fr_18rem]">
-          {/* Leitura da questão */}
-          <Card className="border-border/70 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="font-mono">
-                  Questão {total === 0 ? 0 : index + 1} / {total}
-                </Badge>
-                {current?.flagged && (
-                  <Badge variant="secondary" className="bg-amber-100 text-amber-800">
-                    <Flag className="mr-1 h-3.5 w-3.5" />
-                    Marcada
-                  </Badge>
-                )}
+        {/* Área principal: tela de sucesso OU questão + mapa lateral */}
+        {isFinished ? (
+          <Card
+            className="border-emerald-200/60 bg-emerald-50/30 shadow-sm"
+            aria-label="Avaliação finalizada"
+          >
+            <CardContent className="flex flex-col items-center justify-center gap-6 py-16 text-center">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 shadow-inner">
+                <CheckCircle2 className="h-12 w-12" aria-hidden />
               </div>
+
+              <div className="space-y-2">
+                <h2 className="text-2xl font-semibold text-foreground md:text-3xl">
+                  Avaliação enviada com sucesso!
+                </h2>
+                <p className="mx-auto max-w-md text-sm text-muted-foreground md:text-base">
+                  Suas respostas foram registradas. A nota e o gabarito serão
+                  disponibilizados após a liberação pelo professor.
+                </p>
+              </div>
+
+              <div
+                role="status"
+                aria-live="polite"
+                className="w-full max-w-xl rounded-xl border border-amber-300/70 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm"
+              >
+                <p className="font-medium">
+                  Sua nota e o gabarito estarão disponíveis assim que o professor
+                  realizar a liberação.
+                </p>
+              </div>
+
               <Button
                 type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => current && handleToggleFlag(current.id)}
-                disabled={!current}
-                aria-pressed={current?.flagged ?? false}
+                variant="default"
+                size="lg"
+                onClick={goToDashboard}
+                className="mt-2"
               >
-                <Flag
-                  className={cn(
-                    "mr-1.5 h-4 w-4",
-                    current?.flagged && "fill-amber-500 text-amber-500",
-                  )}
-                />
-                {current?.flagged ? "Desmarcar" : "Marcar para revisão"}
+                <Home className="mr-2 h-4 w-4" />
+                Voltar ao Painel
               </Button>
-            </CardHeader>
-
-            <Separator />
-
-            <CardContent className="space-y-5 py-6">
-              {current ? (
-                <>
-                  <p className="whitespace-pre-line text-base leading-relaxed md:text-lg">
-                    {current.prompt}
-                  </p>
-
-                  <fieldset
-                    className="space-y-2"
-                    aria-label={`Alternativas da questão ${current.number}`}
-                  >
-                    <legend className="sr-only">
-                      Alternativas da questão {current.number}
-                    </legend>
-                    {current.options.length === 0 && (
-                      <p className="text-sm italic text-muted-foreground">
-                        Esta questão ainda não possui alternativas
-                        (esqueleto visual).
-                      </p>
+            </CardContent>
+          </Card>
+        ) : (
+            <div className="grid flex-1 gap-4 lg:grid-cols-[1fr_18rem]">
+              {/* Leitura da questão */}
+            <Card className="border-border/70 shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="font-mono">
+                    Questão {total === 0 ? 0 : index + 1} / {total}
+                  </Badge>
+                  {current?.flagged && (
+                    <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+                      <Flag className="mr-1 h-3.5 w-3.5" />
+                      Marcada
+                    </Badge>
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => current && handleToggleFlag(current.id)}
+                  disabled={!current}
+                  aria-pressed={current?.flagged ?? false}
+                >
+                  <Flag
+                    className={cn(
+                      "mr-1.5 h-4 w-4",
+                      current?.flagged && "fill-amber-500 text-amber-500",
                     )}
-                    {current.options.map((opt, optIdx) => {
-                      const checked = current.selectedOptionId === opt.id;
-                      const letter = String.fromCharCode(65 + optIdx);
+                  />
+                  {current?.flagged ? "Desmarcar" : "Marcar para revisão"}
+                </Button>
+              </CardHeader>
+  
+              <Separator />
+  
+              <CardContent className="space-y-5 py-6">
+                {current ? (
+                  <>
+                    <p className="whitespace-pre-line text-base leading-relaxed md:text-lg">
+                      {current.prompt}
+                    </p>
+  
+                    <fieldset
+                      className="space-y-2"
+                      aria-label={`Alternativas da questão ${current.number}`}
+                    >
+                      <legend className="sr-only">
+                        Alternativas da questão {current.number}
+                      </legend>
+                      {current.options.length === 0 && (
+                        <p className="text-sm italic text-muted-foreground">
+                          Esta questão ainda não possui alternativas
+                          (esqueleto visual).
+                        </p>
+                      )}
+                      {current.options.map((opt, optIdx) => {
+                        const checked = current.selectedOptionId === opt.id;
+                        const letter = String.fromCharCode(65 + optIdx);
+                        return (
+                          <label
+                            key={opt.id}
+                            className={cn(
+                              "flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors",
+                              checked
+                                ? "border-primary bg-primary/5"
+                                : "border-border hover:border-primary/50 hover:bg-muted/40",
+                            )}
+                          >
+                            <input
+                              type="radio"
+                              name={`q-${current.id}`}
+                              value={opt.id}
+                              checked={checked}
+                              onChange={() =>
+                                handleSelectOption(current.id, opt.id)
+                              }
+                              className="mt-1 h-4 w-4 accent-primary"
+                            />
+                            <span className="flex w-full items-start gap-3">
+                              <span
+                                className={cn(
+                                  "mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
+                                  checked
+                                    ? "border-primary bg-primary text-primary-foreground"
+                                    : "border-border bg-background text-muted-foreground",
+                                )}
+                              >
+                                {letter}
+                              </span>
+                              <span className="text-sm leading-relaxed md:text-base">
+                                {opt.label}
+                              </span>
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </fieldset>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center gap-2 py-10 text-center text-muted-foreground">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <p>Nenhuma questão disponível (esqueleto visual).</p>
+                  </div>
+                )}
+              </CardContent>
+  
+              <Separator />
+  
+              <CardFooter className="flex items-center justify-between gap-2 py-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => goTo(index - 1)}
+                  disabled={index <= 0}
+                >
+                  <ChevronLeft className="mr-1 h-4 w-4" />
+                  Anterior
+                </Button>
+  
+                <div className="hidden text-xs text-muted-foreground sm:block">
+                  Use Próxima para avançar; Finalizar encerra a tentativa.
+                </div>
+  
+                <Button
+                  type="button"
+                  onClick={() => goTo(index + 1)}
+                  disabled={index >= total - 1}
+                >
+                  Próxima
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
+              </CardFooter>
+            </Card>
+  
+            {/* Mapa lateral de navegação */}
+            <Card className="border-border/70 shadow-sm lg:sticky lg:top-4 lg:h-fit">
+              <CardHeader className="pb-3">
+                <h2 className="text-sm font-semibold">Mapa de questões</h2>
+                <p className="text-xs text-muted-foreground">
+                  Clique para ir direto a uma questão.
+                </p>
+              </CardHeader>
+              <Separator />
+              <CardContent className="py-4">
+                {total === 0 ? (
+                  <p className="text-xs italic text-muted-foreground">
+                    Sem questões no esqueleto.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-5 gap-2">
+                    {safeQuestions.map((q, i) => {
+                      const isCurrent = i === index;
+                      const answered =
+                        q.selectedOptionId != null && q.selectedOptionId !== "";
                       return (
-                        <label
-                          key={opt.id}
+                        <button
+                          key={q.id}
+                          type="button"
+                          onClick={() => goTo(i)}
                           className={cn(
-                            "flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors",
-                            checked
-                              ? "border-primary bg-primary/5"
-                              : "border-border hover:border-primary/50 hover:bg-muted/40",
+                            "relative flex h-9 w-9 items-center justify-center rounded-md border text-xs font-medium transition-colors",
+                            isCurrent
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : answered
+                                ? "border-emerald-500/60 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                : "border-border bg-background text-muted-foreground hover:bg-muted",
                           )}
+                          aria-current={isCurrent ? "true" : undefined}
+                          aria-label={`Ir para questão ${i + 1}${answered ? " (respondida)" : ""}${q.flagged ? " (marcada)" : ""}`}
                         >
-                          <input
-                            type="radio"
-                            name={`q-${current.id}`}
-                            value={opt.id}
-                            checked={checked}
-                            onChange={() =>
-                              handleSelectOption(current.id, opt.id)
-                            }
-                            className="mt-1 h-4 w-4 accent-primary"
-                          />
-                          <span className="flex w-full items-start gap-3">
-                            <span
-                              className={cn(
-                                "mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
-                                checked
-                                  ? "border-primary bg-primary text-primary-foreground"
-                                  : "border-border bg-background text-muted-foreground",
-                              )}
-                            >
-                              {letter}
-                            </span>
-                            <span className="text-sm leading-relaxed md:text-base">
-                              {opt.label}
-                            </span>
-                          </span>
-                        </label>
+                          {i + 1}
+                          {q.flagged && (
+                            <Flag
+                              className="absolute -right-1 -top-1 h-3 w-3 fill-amber-500 text-amber-500"
+                              aria-hidden
+                            />
+                          )}
+                        </button>
                       );
                     })}
-                  </fieldset>
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center gap-2 py-10 text-center text-muted-foreground">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                  <p>Nenhuma questão disponível (esqueleto visual).</p>
+                  </div>
+                )}
+  
+                <div className="mt-4 space-y-1.5 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block h-3 w-3 rounded-sm border border-emerald-500/60 bg-emerald-50" />
+                    Respondida
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block h-3 w-3 rounded-sm border border-border bg-background" />
+                    Não respondida
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block h-3 w-3 rounded-sm border border-primary bg-primary" />
+                    Atual
+                  </div>
                 </div>
-              )}
-            </CardContent>
-
-            <Separator />
-
-            <CardFooter className="flex items-center justify-between gap-2 py-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => goTo(index - 1)}
-                disabled={index <= 0}
-              >
-                <ChevronLeft className="mr-1 h-4 w-4" />
-                Anterior
-              </Button>
-
-              <div className="hidden text-xs text-muted-foreground sm:block">
-                Use Próxima para avançar; Finalizar encerra a tentativa.
-              </div>
-
-              <Button
-                type="button"
-                onClick={() => goTo(index + 1)}
-                disabled={index >= total - 1}
-              >
-                Próxima
-                <ChevronRight className="ml-1 h-4 w-4" />
-              </Button>
-            </CardFooter>
-          </Card>
-
-          {/* Mapa lateral de navegação */}
-          <Card className="border-border/70 shadow-sm lg:sticky lg:top-4 lg:h-fit">
-            <CardHeader className="pb-3">
-              <h2 className="text-sm font-semibold">Mapa de questões</h2>
-              <p className="text-xs text-muted-foreground">
-                Clique para ir direto a uma questão.
-              </p>
-            </CardHeader>
-            <Separator />
-            <CardContent className="py-4">
-              {total === 0 ? (
-                <p className="text-xs italic text-muted-foreground">
-                  Sem questões no esqueleto.
-                </p>
-              ) : (
-                <div className="grid grid-cols-5 gap-2">
-                  {safeQuestions.map((q, i) => {
-                    const isCurrent = i === index;
-                    const answered =
-                      q.selectedOptionId != null && q.selectedOptionId !== "";
-                    return (
-                      <button
-                        key={q.id}
-                        type="button"
-                        onClick={() => goTo(i)}
-                        className={cn(
-                          "relative flex h-9 w-9 items-center justify-center rounded-md border text-xs font-medium transition-colors",
-                          isCurrent
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : answered
-                              ? "border-emerald-500/60 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                              : "border-border bg-background text-muted-foreground hover:bg-muted",
-                        )}
-                        aria-current={isCurrent ? "true" : undefined}
-                        aria-label={`Ir para questão ${i + 1}${answered ? " (respondida)" : ""}${q.flagged ? " (marcada)" : ""}`}
-                      >
-                        {i + 1}
-                        {q.flagged && (
-                          <Flag
-                            className="absolute -right-1 -top-1 h-3 w-3 fill-amber-500 text-amber-500"
-                            aria-hidden
-                          />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              <div className="mt-4 space-y-1.5 text-xs text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <span className="inline-block h-3 w-3 rounded-sm border border-emerald-500/60 bg-emerald-50" />
-                  Respondida
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="inline-block h-3 w-3 rounded-sm border border-border bg-background" />
-                  Não respondida
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="inline-block h-3 w-3 rounded-sm border border-primary bg-primary" />
-                  Atual
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </TooltipProvider>
   );
