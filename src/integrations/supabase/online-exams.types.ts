@@ -140,6 +140,75 @@ export interface ExamAnswerRow {
 }
 
 /* ---------------------------------------------------------------------------
+ * Tipos públicos usados pelas rotas do aluno.
+ *
+ *  - OnlineExamForStudentListItem: o que o dashboard do aluno lista para
+ *    decidir se mostra o botão "Iniciar Avaliação". NÃO inclui gabarito.
+ *  - OnlineExamForStudentSession: o payload completo que a rota dinâmica
+ *    passa para <StudentOnlineExamRoom>. Traz as questões (prompt + options)
+ *    e nada de correct_answer / rubric / explanation.
+ * ------------------------------------------------------------------------- */
+
+export interface OnlineExamForStudentListItem {
+  id: string;
+  title: string;
+  discipline_id: string;
+  discipline_name: string | null;
+  status: OnlineExamStatus;
+  opens_at: string | null;
+  closes_at: string | null;
+  time_limit_minutes: number;
+  max_score: string;
+  question_count: number;
+  /** Sessão ativa (not_started/in_progress) ou já submetida pelo aluno. */
+  session_status: ExamSessionStatus | null;
+  /** Janela aberta para o aluno neste instante (computed no servidor). */
+  in_window: boolean;
+  /** Texto humano explicando por que o botão está/ficará disponível. */
+  availability_label: string | null;
+}
+
+export interface OnlineExamQuestionForStudent {
+  id: string;
+  position: number;
+  qtype: string;
+  prompt: string;
+  /** Opções sem o gabarito: cada item tem só id + label. */
+  options: Array<{ id: string; label: string }>;
+  weight: string;
+}
+
+export interface OnlineExamSessionForStudent {
+  session_id: string;
+  exam_id: string;
+  status: ExamSessionStatus;
+  started_at: string | null;
+  expires_at: string | null;
+  /** Para carregar respostas já marcadas se allow_resume=true. */
+  existing_answers: Array<{
+    question_id: string;
+    selected_option_id: string | null;
+    flagged: boolean;
+  }>;
+}
+
+export interface OnlineExamForStudentSession {
+  exam: {
+    id: string;
+    title: string;
+    instructions: string | null;
+    discipline_id: string;
+    discipline_name: string | null;
+    time_limit_minutes: number;
+    max_score: string;
+    opens_at: string | null;
+    closes_at: string | null;
+  };
+  session: OnlineExamSessionForStudent;
+  questions: OnlineExamQuestionForStudent[];
+}
+
+/* ---------------------------------------------------------------------------
  * Client tipado para as tabelas novas.
  *
  * O `supabaseAdmin` é tipado pelo `Database` gerado, que ainda não conhece estas

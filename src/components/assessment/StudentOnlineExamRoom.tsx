@@ -65,19 +65,36 @@ export type ExamHeaderView = {
   instructions?: string | null;
 };
 
+/** Resposta atual persistida (uma por questão). */
+export type ExamAnswerState = {
+  questionId: string;
+  selectedOptionId: string | null;
+  flagged: boolean;
+};
+
 export type StudentOnlineExamRoomProps = {
   exam: ExamHeaderView;
   questions: ExamQuestionView[];
   initialIndex?: number;
   className?: string;
+  /**
+   * Respostas iniciais (usado para retomar uma prova em progresso ou
+   * visualizar uma prova já enviada). Se omitido, o componente parte em branco.
+   */
+  initialAnswers?: ExamAnswerState[];
+  /**
+   * Quando fornecido, o pai assume controle do estado de "finalizado".
+   * Útil para mostrar a tela de sucesso em provas já submetidas após reload.
+   */
+  finished?: boolean;
   /** Callback puramente visual — não persiste nada. */
   onNavigate?: (nextIndex: number) => void;
-  /** Callback puramente visual — não persiste nada. */
-  onToggleFlag?: (questionId: string) => void;
-  /** Callback puramente visual — não persiste nada. */
+  /** Disparado quando uma alternativa é escolhida. */
   onSelectOption?: (questionId: string, optionId: string) => void;
-  /** Callback puramente visual — não persiste nada. */
-  onFinish?: () => void;
+  /** Disparado quando o aluno marca/desmarca para revisão. */
+  onToggleFlag?: (questionId: string) => void;
+  /** Disparado quando o aluno clica em Finalizar e confirma. */
+  onFinishAttempt?: () => void;
 };
 
 function formatRemaining(totalSeconds: number): string {
@@ -96,10 +113,12 @@ export function StudentOnlineExamRoom({
   questions,
   initialIndex = 0,
   className,
+  initialAnswers,
+  finished,
   onNavigate,
-  onToggleFlag,
   onSelectOption,
-  onFinish,
+  onToggleFlag,
+  onFinishAttempt,
 }: StudentOnlineExamRoomProps) {
   const safeQuestions = useMemo(() => questions ?? [], [questions]);
   const total = safeQuestions.length;
@@ -112,14 +131,14 @@ export function StudentOnlineExamRoom({
     () => Math.max(exam.durationMinutes, 0) * 60,
   );
 
-  // Marca quando o aluno finalizou a tentativa. Quando true:
-  //  - cronômetro congela no valor atual;
-  //  - área da questão é substituída pela tela de sucesso.
-  const [isFinished, setIsFinished] = useState(false);
+  // Modo "controlado" para finished: se a prop vier, ela prevalece.
+  // Caso contrário, o componente tem estado interno.
+  const [localFinished, setLocalFinished] = useState(false);
+  const isFinished = finished ?? localFinished;
 
   useEffect(() => {
     setRemainingSeconds(Math.max(exam.durationMinutes, 0) * 60);
-    setIsFinished(false);
+    setLocalFinished(false);
   }, [exam.durationMinutes]);
 
   useEffect(() => {
@@ -149,8 +168,8 @@ export function StudentOnlineExamRoom({
   };
 
   const confirmFinish = () => {
-    setIsFinished(true);
-    onFinish?.();
+    setLocalFinished(true);
+    onFinishAttempt?.();
   };
 
   const goToDashboard = () => {
@@ -158,11 +177,29 @@ export function StudentOnlineExamRoom({
     // conectado pelo backend/integração em outro passo.
   };
 
-  const answeredCount = safeQuestions.filter(
-    (q) => q.selectedOptionId != null && q.selectedOptionId !== "",
-  ).length;
+  // Calcula respostas/flags efetivas: prioriza initialAnswers (controlado),
+  // depois cai pra `selectedOptionId`/`flagged` injetados em cada questão.
+  const effectiveSelection = (q: ExamQuestionView): string | null => {
+    if (initialAnswers) {
+      const a = initialAnswers.find((x) => x.questionId === q.id);
+      if (a) return a.selectedOptionId;
+    }
+    return q.selectedOptionId ?? null;
+  };
+  const effectiveFlag = (q: ExamQuestionView): boolean => {
+    if (initialAnswers) {
+      const a = initialAnswers.find((x) => x.questionId === q.id);
+      if (a) return a.flagged;
+    }
+    return q.flagged ?? false;
+  };
 
-  const flaggedCount = safeQuestions.filter((q) => q.flagged).length;
+  const answeredCount = safeQuestions.filter((q) => {
+    const s = effectiveSelection(q);
+    return s != null && s !== "";
+  }).length;
+
+  const flaggedCount = safeQuestions.filter((q) => effectiveFlag(q)).length;
 
   const progressPct = total === 0 ? 0 : Math.round((answeredCount / total) * 100);
 
@@ -311,7 +348,7 @@ export function StudentOnlineExamRoom({
                   <Badge variant="outline" className="font-mono">
                     Questão {total === 0 ? 0 : index + 1} / {total}
                   </Badge>
-                  {current?.flagged && (
+                  {current && effectiveFlag(current) && (
                     <Badge variant="secondary" className="bg-amber-100 text-amber-800">
                       <Flag className="mr-1 h-3.5 w-3.5" />
                       Marcada
@@ -324,15 +361,15 @@ export function StudentOnlineExamRoom({
                   size="sm"
                   onClick={() => current && handleToggleFlag(current.id)}
                   disabled={!current}
-                  aria-pressed={current?.flagged ?? false}
+                  aria-pressed={current ? effectiveFlag(current) : false}
                 >
                   <Flag
                     className={cn(
                       "mr-1.5 h-4 w-4",
-                      current?.flagged && "fill-amber-500 text-amber-500",
+                      current && effectiveFlag(current) && "fill-amber-500 text-amber-500",
                     )}
                   />
-                  {current?.flagged ? "Desmarcar" : "Marcar para revisão"}
+                  {current && effectiveFlag(current) ? "Desmarcar" : "Marcar para revisão"}
                 </Button>
               </CardHeader>
   
@@ -359,7 +396,7 @@ export function StudentOnlineExamRoom({
                         </p>
                       )}
                       {current.options.map((opt, optIdx) => {
-                        const checked = current.selectedOptionId === opt.id;
+                        const checked = effectiveSelection(current) === opt.id;
                         const letter = String.fromCharCode(65 + optIdx);
                         return (
                           <label
@@ -456,7 +493,8 @@ export function StudentOnlineExamRoom({
                     {safeQuestions.map((q, i) => {
                       const isCurrent = i === index;
                       const answered =
-                        q.selectedOptionId != null && q.selectedOptionId !== "";
+                        effectiveSelection(q) != null && effectiveSelection(q) !== "";
+                      const flagged = effectiveFlag(q);
                       return (
                         <button
                           key={q.id}
@@ -471,10 +509,10 @@ export function StudentOnlineExamRoom({
                                 : "border-border bg-background text-muted-foreground hover:bg-muted",
                           )}
                           aria-current={isCurrent ? "true" : undefined}
-                          aria-label={`Ir para questão ${i + 1}${answered ? " (respondida)" : ""}${q.flagged ? " (marcada)" : ""}`}
+                          aria-label={`Ir para questão ${i + 1}${answered ? " (respondida)" : ""}${flagged ? " (marcada)" : ""}`}
                         >
                           {i + 1}
-                          {q.flagged && (
+                          {flagged && (
                             <Flag
                               className="absolute -right-1 -top-1 h-3 w-3 fill-amber-500 text-amber-500"
                               aria-hidden

@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { QuickAttendanceDialog } from "@/components/QuickAttendanceDialog";
+import { OnlineExamsStudentList } from "@/components/dashboards/OnlineExamsStudentList";
 
 interface EnrollTeacher {
   id: string;
@@ -229,6 +230,7 @@ export function StudentDashboard() {
           <StatCard label="Exercícios pendentes" value={stats.pendingExercises} icon={PencilRuler} tone="pink" />
         </div>
       )}
+      <OnlineExamsStudentList />
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
