@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-07T12:55:28.396962+00:00",
+  "generated_at": "2026-10-07T14:05:14.558757+00:00",
   "files": [
     {
       "path": "roadmap.md",
@@ -12,6 +12,14 @@
     {
       "path": "package-lock.json",
       "bytes": 713769
+    },
+    {
+      "path": "setup_banco_provas.sql",
+      "bytes": 13229
+    },
+    {
+      "path": "setup_completo_avaliacoes.sql",
+      "bytes": 53244
     },
     {
       "path": "AGENTS.md",
