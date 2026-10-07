@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-07T01:38:10.173909+00:00",
+  "generated_at": "2026-10-07T02:14:33.575852+00:00",
   "files": [
     {
       "path": "roadmap.md",
@@ -63,7 +63,7 @@
     },
     {
       "path": "src/routeTree.gen.ts",
-      "bytes": 16125
+      "bytes": 16403
     },
     {
       "path": "src/styles.css",
@@ -1126,6 +1126,10 @@
       "bytes": 4716
     },
     {
+      "path": "src/backend/online-exams.student.functions.ts",
+      "bytes": 21320
+    },
+    {
       "path": "src/backend/exercises.functions.ts",
       "bytes": 26974
     },
@@ -1270,16 +1274,16 @@
       "bytes": 499
     },
     {
-      "path": "src/routes/teste-prova.tsx",
-      "bytes": 3479
-    },
-    {
       "path": "src/routes/logout.tsx",
       "bytes": 652
     },
     {
       "path": "src/routes/disciplines.$disciplineId.tsx",
       "bytes": 15394
+    },
+    {
+      "path": "src/routes/aluno.avaliacao.$examId.tsx",
+      "bytes": 8476
     },
     {
       "path": "src/routes/invite.$token.tsx",
@@ -1335,7 +1339,7 @@
     },
     {
       "path": "src/integrations/supabase/online-exams.types.ts",
-      "bytes": 4643
+      "bytes": 6861
     },
     {
       "path": "src/integrations/supabase/auth-middleware.ts",
@@ -1379,7 +1383,7 @@
     },
     {
       "path": "src/components/assessment/StudentOnlineExamRoom.tsx",
-      "bytes": 19722
+      "bytes": 21131
     },
     {
       "path": "src/components/ui/dropdown-menu.tsx",
@@ -1635,7 +1639,7 @@
     },
     {
       "path": "src/components/dashboards/StudentDashboard.tsx",
-      "bytes": 16153
+      "bytes": 16275
     },
     {
       "path": "src/components/dashboards/TeacherDashboard.tsx",
@@ -1644,6 +1648,10 @@
     {
       "path": "src/components/dashboards/InstitutionDashboard.tsx",
       "bytes": 6541
+    },
+    {
+      "path": "src/components/dashboards/OnlineExamsStudentList.tsx",
+      "bytes": 6354
     },
     {
       "path": "src/components/dashboards/AdminDashboard.tsx",
@@ -2233,11 +2241,11 @@
     },
     {
       "source": "src/routeTree.gen.ts",
-      "target": "./routes/teste-prova"
+      "target": "./routes/disciplines.$disciplineId"
     },
     {
       "source": "src/routeTree.gen.ts",
-      "target": "./routes/disciplines.$disciplineId"
+      "target": "./routes/aluno.avaliacao.$examId"
     },
     {
       "source": "src/routeTree.gen.ts",
@@ -3864,6 +3872,26 @@
       "target": "./institution.server"
     },
     {
+      "source": "src/backend/online-exams.student.functions.ts",
+      "target": "@tanstack/react-start"
+    },
+    {
+      "source": "src/backend/online-exams.student.functions.ts",
+      "target": "zod"
+    },
+    {
+      "source": "src/backend/online-exams.student.functions.ts",
+      "target": "@/integrations/supabase/auth-middleware"
+    },
+    {
+      "source": "src/backend/online-exams.student.functions.ts",
+      "target": "@/integrations/supabase/client.server"
+    },
+    {
+      "source": "src/backend/online-exams.student.functions.ts",
+      "target": "@/integrations/supabase/online-exams.types"
+    },
+    {
       "source": "src/backend/exercises.functions.ts",
       "target": "@tanstack/react-start"
     },
@@ -4576,14 +4604,6 @@
       "target": "@/lib/document-header"
     },
     {
-      "source": "src/routes/teste-prova.tsx",
-      "target": "@tanstack/react-router"
-    },
-    {
-      "source": "src/routes/teste-prova.tsx",
-      "target": "@/components/assessment/StudentOnlineExamRoom"
-    },
-    {
       "source": "src/routes/logout.tsx",
       "target": "@tanstack/react-router"
     },
@@ -4726,6 +4746,54 @@
     {
       "source": "src/routes/disciplines.$disciplineId.tsx",
       "target": "zod"
+    },
+    {
+      "source": "src/routes/aluno.avaliacao.$examId.tsx",
+      "target": "@tanstack/react-router"
+    },
+    {
+      "source": "src/routes/aluno.avaliacao.$examId.tsx",
+      "target": "react"
+    },
+    {
+      "source": "src/routes/aluno.avaliacao.$examId.tsx",
+      "target": "@tanstack/react-start"
+    },
+    {
+      "source": "src/routes/aluno.avaliacao.$examId.tsx",
+      "target": "@tanstack/react-query"
+    },
+    {
+      "source": "src/routes/aluno.avaliacao.$examId.tsx",
+      "target": "lucide-react"
+    },
+    {
+      "source": "src/routes/aluno.avaliacao.$examId.tsx",
+      "target": "sonner"
+    },
+    {
+      "source": "src/routes/aluno.avaliacao.$examId.tsx",
+      "target": "@/lib/auth-context"
+    },
+    {
+      "source": "src/routes/aluno.avaliacao.$examId.tsx",
+      "target": "@/components/ui/button"
+    },
+    {
+      "source": "src/routes/aluno.avaliacao.$examId.tsx",
+      "target": "@/components/ui/badge"
+    },
+    {
+      "source": "src/routes/aluno.avaliacao.$examId.tsx",
+      "target": "@/components/assessment/StudentOnlineExamRoom"
+    },
+    {
+      "source": "src/routes/aluno.avaliacao.$examId.tsx",
+      "target": "@/backend/online-exams.student.functions"
+    },
+    {
+      "source": "src/routes/aluno.avaliacao.$examId.tsx",
+      "target": "@/integrations/supabase/online-exams.types"
     },
     {
       "source": "src/routes/invite.$token.tsx",
@@ -6928,6 +6996,10 @@
       "target": "@/components/QuickAttendanceDialog"
     },
     {
+      "source": "src/components/dashboards/StudentDashboard.tsx",
+      "target": "@/components/dashboards/OnlineExamsStudentList"
+    },
+    {
       "source": "src/components/dashboards/TeacherDashboard.tsx",
       "target": "@/lib/auth-context"
     },
@@ -7006,6 +7078,46 @@
     {
       "source": "src/components/dashboards/InstitutionDashboard.tsx",
       "target": "@/components/ui/skeleton"
+    },
+    {
+      "source": "src/components/dashboards/OnlineExamsStudentList.tsx",
+      "target": "react"
+    },
+    {
+      "source": "src/components/dashboards/OnlineExamsStudentList.tsx",
+      "target": "@tanstack/react-router"
+    },
+    {
+      "source": "src/components/dashboards/OnlineExamsStudentList.tsx",
+      "target": "@tanstack/react-start"
+    },
+    {
+      "source": "src/components/dashboards/OnlineExamsStudentList.tsx",
+      "target": "lucide-react"
+    },
+    {
+      "source": "src/components/dashboards/OnlineExamsStudentList.tsx",
+      "target": "@/components/ui/card"
+    },
+    {
+      "source": "src/components/dashboards/OnlineExamsStudentList.tsx",
+      "target": "@/components/ui/button"
+    },
+    {
+      "source": "src/components/dashboards/OnlineExamsStudentList.tsx",
+      "target": "@/components/ui/badge"
+    },
+    {
+      "source": "src/components/dashboards/OnlineExamsStudentList.tsx",
+      "target": "@/components/ui/skeleton"
+    },
+    {
+      "source": "src/components/dashboards/OnlineExamsStudentList.tsx",
+      "target": "@/backend/online-exams.student.functions"
+    },
+    {
+      "source": "src/components/dashboards/OnlineExamsStudentList.tsx",
+      "target": "@/integrations/supabase/online-exams.types"
     },
     {
       "source": "src/components/dashboards/AdminDashboard.tsx",
