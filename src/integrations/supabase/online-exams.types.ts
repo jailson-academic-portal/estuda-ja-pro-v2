@@ -28,25 +28,6 @@ export type BiometricKind = "face" | "fingerprint" | "iris" | "voice";
 export type OnlineExamStatus = "draft" | "scheduled" | "open" | "closed" | "archived";
 export type ExamSessionStatus =
   "not_started" | "in_progress" | "submitted" | "graded" | "invalidated";
-export type BiometricVerifyResult = "pending" | "verified" | "failed" | "skipped";
-
-export interface UserBiometricRow {
-  id: string;
-  user_id: string;
-  kind: BiometricKind;
-  provider: string;
-  provider_ref: string | null;
-  template_data: Json;
-  template_hash: string | null;
-  quality_score: string | null;
-  is_primary: boolean;
-  is_active: boolean;
-  device_label: string | null;
-  enrolled_at: string;
-  last_verified_at: string | null;
-  created_at: string;
-  updated_at: string;
-}
 
 export interface OnlineExamRow {
   id: string;
@@ -62,6 +43,13 @@ export interface OnlineExamRow {
   randomize_options: boolean;
   opens_at: string | null;
   closes_at: string | null;
+  /**
+   * Colunas herdadas da era biométrica. A feature de biometria está
+   * em pausa e a UI não oferece mais o toggle, mas as colunas
+   * continuam existindo no banco (sempre gravadas como false/null)
+   * para evitar migração destrutiva. Podem ser removidas em uma
+   * migration futura sem impacto no fluxo atual.
+   */
   biometric_required: boolean;
   biometric_kind_required: BiometricKind | null;
   require_face_match: boolean;
@@ -112,9 +100,10 @@ export interface ExamSessionRow {
   submitted_at: string | null;
   graded_at: string | null;
   expires_at: string | null;
-  biometric_status: BiometricVerifyResult;
-  biometric_match_score: string | null;
-  biometric_ref: string | null;
+  /**
+   * Telemetria de integridade. Não há mais colunas biométricas
+   * (a biometria foi descartada; a liberação usa o Diário Digital).
+   */
   identity_snapshot: Json;
   tab_switches: number;
   fullscreen_exits: number;

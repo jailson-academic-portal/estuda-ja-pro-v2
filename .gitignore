@@ -35,7 +35,9 @@ dist-ssr
 # .env contém apenas chaves públicas e é necessário para publicar o site.
 .env.local
 tmp-*.cjs
-scripts/
+# Ignora por padrao, mas o runner principal (mjs) e versionado.
+scripts/*
+!scripts/apply-exams-table.mjs
 
 # artefatos locais do Supabase CLI
 supabase/.temp/
