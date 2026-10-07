@@ -501,6 +501,16 @@ CREATE INDEX IF NOT EXISTS idx_online_exams_attendance_session
   ON public.online_exams (attendance_session_id)
   WHERE attendance_session_id IS NOT NULL;
 
+-- Defesa: se a tabela ja existia (sem a coluna nova), garante
+-- que attendance_session_id existe antes de qualquer policy ou
+-- funcao que a referencia.
+ALTER TABLE public.online_exams
+  ADD COLUMN IF NOT EXISTS attendance_session_id uuid
+  REFERENCES public.attendance_sessions(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_online_exams_attendance_session
+  ON public.online_exams (attendance_session_id)
+  WHERE attendance_session_id IS NOT NULL;
+
 
 -- ============================================================
 -- 16. public.exam_sessions (PROVAS ONLINE)
