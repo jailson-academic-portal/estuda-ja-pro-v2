@@ -46,7 +46,6 @@ const MOCK_QUESTIONS: ExamQuestionView[] = [
       { id: "q-2-c", label: "Secretar insulina em resposta à glicemia." },
       { id: "q-2-d", label: "Armazenar oxigênio para liberação muscular." },
     ],
-    selectedOptionId: "q-2-b",
   },
   {
     id: "q-3",
@@ -59,26 +58,6 @@ const MOCK_QUESTIONS: ExamQuestionView[] = [
       { id: "q-3-c", label: "f(3) = −2" },
       { id: "q-3-d", label: "f(4) = 7" },
     ],
-    flagged: true,
-  },
-  {
-    id: "q-4",
-    number: 4,
-    prompt:
-      "Em relação à divisão celular por meiose, marque a alternativa CORRETA:",
-    options: [
-      { id: "q-4-a", label: "Produz duas células-filhas idênticas à célula-mãe." },
-      { id: "q-4-b", label: "Ocorre somente em células somáticas." },
-      { id: "q-4-c", label: "Reduz à metade o número de cromossomos, gerando gametas." },
-      { id: "q-4-d", label: "Não apresenta crossing-over na prófase 1." },
-    ],
-  },
-  {
-    id: "q-5",
-    number: 5,
-    prompt:
-      "Dissertativa — Explique, com suas palavras, a diferença entre algoritmos de busca em largura (BFS) e busca em profundidade (DFS), citando um caso de uso típico para cada um.",
-    options: [],
   },
 ];
 
@@ -102,12 +81,12 @@ function TesteProvaRoute() {
 
       <StudentOnlineExamRoom
         exam={{
-          title: "Simulado de Biologia e Química — 1º Bimestre",
-          disciplineName: "Ciências da Natureza",
-          durationMinutes: 90,
+          title: "Simulado de Ciências e Matemática",
+          disciplineName: "Ciências e Matemática",
+          durationMinutes: 60,
           totalQuestions: MOCK_QUESTIONS.length,
           instructions:
-            "Leia cada questão com atenção. Você pode marcar uma questão para revisão usando o botão próprio no topo da área de leitura. Use o mapa lateral para navegar diretamente.",
+            "Leia cada questão com atenção e selecione a alternativa que considerar correta. Você pode navegar entre as questões usando os botões Anterior/Próxima ou o mapa lateral.",
         }}
         questions={MOCK_QUESTIONS}
         initialIndex={0}
