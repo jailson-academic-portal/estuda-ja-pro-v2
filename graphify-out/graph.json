@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-07T00:33:21.568413+00:00",
+  "generated_at": "2026-10-07T00:47:34.766104+00:00",
   "files": [
     {
       "path": "roadmap.md",
@@ -63,7 +63,7 @@
     },
     {
       "path": "src/routeTree.gen.ts",
-      "bytes": 15435
+      "bytes": 16125
     },
     {
       "path": "src/styles.css",
@@ -2230,6 +2230,10 @@
     {
       "source": "src/routeTree.gen.ts",
       "target": "./routes/signup"
+    },
+    {
+      "source": "src/routeTree.gen.ts",
+      "target": "./routes/teste-prova"
     },
     {
       "source": "src/routeTree.gen.ts",
