@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { verifyPresenceCodeHash } from "./online-exams.functions";
 import type {
   ExamSessionStatus,
   OnlineExamForStudentListItem,
@@ -55,7 +56,9 @@ function formatDate(iso: string): string {
 async function assertStudentOwnsExam(examId: string, userId: string) {
   const { data: exam, error: eErr } = await supabaseAdmin
     .from("online_exams")
-    .select("id, discipline_id, status, opens_at, closes_at, time_limit_minutes, allow_resume")
+    .select(
+      "id, discipline_id, status, opens_at, closes_at, time_limit_minutes, allow_resume, title",
+    )
     .eq("id", examId)
     .maybeSingle();
   if (eErr) throw new Error(eErr.message);
@@ -77,6 +80,7 @@ async function assertStudentOwnsExam(examId: string, userId: string) {
     closes_at: string | null;
     time_limit_minutes: number;
     allow_resume: boolean;
+    title: string;
   };
 }
 
@@ -124,7 +128,7 @@ export const listOnlineExamsForStudent = createServerFn({ method: "POST" })
     const { data: exams, error: exErr } = await supabaseAdmin
       .from("online_exams")
       .select(
-        "id, title, discipline_id, status, opens_at, closes_at, time_limit_minutes, max_score, assessment_id",
+        "id, title, discipline_id, status, opens_at, closes_at, time_limit_minutes, max_score, assessment_id, presence_code_required",
       )
       .in("discipline_id", disciplineIds)
       .eq("status", "open")
@@ -134,9 +138,7 @@ export const listOnlineExamsForStudent = createServerFn({ method: "POST" })
 
     // 3) Contagem de questões por prova
     const assessmentIds = [
-      ...new Set(
-        exams.map((e: { assessment_id: string }) => e.assessment_id).filter(isUuid),
-      ),
+      ...new Set(exams.map((e: { assessment_id: string }) => e.assessment_id).filter(isUuid)),
     ];
     const questionCount = new Map<string, number>();
     if (assessmentIds.length) {
@@ -179,17 +181,20 @@ export const listOnlineExamsForStudent = createServerFn({ method: "POST" })
     }
 
     const now = new Date();
-    const out: OnlineExamForStudentListItem[] = (exams as unknown as Array<{
-      id: string;
-      title: string;
-      discipline_id: string;
-      status: string;
-      opens_at: string | null;
-      closes_at: string | null;
-      time_limit_minutes: number;
-      max_score: string;
-      assessment_id: string;
-    }>).map((e) => {
+    const out: OnlineExamForStudentListItem[] = (
+      exams as unknown as Array<{
+        id: string;
+        title: string;
+        discipline_id: string;
+        status: string;
+        opens_at: string | null;
+        closes_at: string | null;
+        time_limit_minutes: number;
+        max_score: string;
+        assessment_id: string;
+        presence_code_required: boolean;
+      }>
+    ).map((e) => {
       const win = computeInWindow(e.opens_at, e.closes_at, e.status, now);
       return {
         id: e.id,
@@ -205,6 +210,7 @@ export const listOnlineExamsForStudent = createServerFn({ method: "POST" })
         session_status: sessionByExam.get(e.id) ?? null,
         in_window: win.inWindow,
         availability_label: win.label,
+        presence_code_required: !!e.presence_code_required,
       };
     });
 
@@ -275,7 +281,9 @@ export const getOnlineExamForStudent = createServerFn({ method: "POST" })
 
     const { data: fullExam, error: fErr } = await supabaseAdmin
       .from("online_exams")
-      .select("id, title, instructions, assessment_id, discipline_id, time_limit_minutes, max_score, opens_at, closes_at, allow_resume")
+      .select(
+        "id, title, instructions, assessment_id, discipline_id, time_limit_minutes, max_score, opens_at, closes_at, allow_resume, presence_code_required",
+      )
       .eq("id", exam.id)
       .maybeSingle();
     if (fErr) throw new Error(fErr.message);
@@ -291,6 +299,7 @@ export const getOnlineExamForStudent = createServerFn({ method: "POST" })
       opens_at: string | null;
       closes_at: string | null;
       allow_resume: boolean;
+      presence_code_required: boolean;
     };
     const disc = discRow as { name?: string } | null;
 
@@ -305,9 +314,7 @@ export const getOnlineExamForStudent = createServerFn({ method: "POST" })
 
     if (!sessionRow) {
       const startedAt = new Date().toISOString();
-      const expiresAt = new Date(
-        now.getTime() + exam.time_limit_minutes * 60 * 1000,
-      ).toISOString();
+      const expiresAt = new Date(now.getTime() + exam.time_limit_minutes * 60 * 1000).toISOString();
       const { data: created, error: cErr } = await supabaseAdmin
         .from("exam_sessions")
         .insert({
@@ -325,12 +332,15 @@ export const getOnlineExamForStudent = createServerFn({ method: "POST" })
       sessionRow = created as unknown as SessionLite;
     } else if (sessionRow.status === "not_started") {
       const startedAt = new Date().toISOString();
-      const expiresAt = new Date(
-        now.getTime() + exam.time_limit_minutes * 60 * 1000,
-      ).toISOString();
+      const expiresAt = new Date(now.getTime() + exam.time_limit_minutes * 60 * 1000).toISOString();
       const { data: updated, error: uErr } = await supabaseAdmin
         .from("exam_sessions")
-        .update({ status: "in_progress", started_at: startedAt, last_activity_at: startedAt, expires_at: expiresAt })
+        .update({
+          status: "in_progress",
+          started_at: startedAt,
+          last_activity_at: startedAt,
+          expires_at: expiresAt,
+        })
         .eq("id", sessionRow.id)
         .select("id, status, started_at, expires_at")
         .single();
@@ -396,30 +406,26 @@ export const getOnlineExamForStudent = createServerFn({ method: "POST" })
         .select("question_id, answer, flagged")
         .eq("session_id", sessionRow.id);
       if (aErr) throw new Error(aErr.message);
-      existingAnswers = (ans ?? []).map((r: {
-        question_id: string;
-        answer: unknown;
-        flagged: boolean;
-      }) => ({
-        question_id: r.question_id,
-        selected_option_id: extractSelectedOptionId(r.answer),
-        flagged: !!r.flagged,
-      }));
+      existingAnswers = (ans ?? []).map(
+        (r: { question_id: string; answer: unknown; flagged: boolean }) => ({
+          question_id: r.question_id,
+          selected_option_id: extractSelectedOptionId(r.answer),
+          flagged: !!r.flagged,
+        }),
+      );
     } else if (sessionRow.status === "submitted" || sessionRow.status === "graded") {
       const { data: ans, error: aErr } = await supabaseAdmin
         .from("exam_answers")
         .select("question_id, answer, flagged")
         .eq("session_id", sessionRow.id);
       if (aErr) throw new Error(aErr.message);
-      existingAnswers = (ans ?? []).map((r: {
-        question_id: string;
-        answer: unknown;
-        flagged: boolean;
-      }) => ({
-        question_id: r.question_id,
-        selected_option_id: extractSelectedOptionId(r.answer),
-        flagged: !!r.flagged,
-      }));
+      existingAnswers = (ans ?? []).map(
+        (r: { question_id: string; answer: unknown; flagged: boolean }) => ({
+          question_id: r.question_id,
+          selected_option_id: extractSelectedOptionId(r.answer),
+          flagged: !!r.flagged,
+        }),
+      );
     }
 
     return {
@@ -433,6 +439,7 @@ export const getOnlineExamForStudent = createServerFn({ method: "POST" })
         max_score: String(fullExamRow.max_score),
         opens_at: fullExamRow.opens_at,
         closes_at: fullExamRow.closes_at,
+        presence_code_required: !!fullExamRow.presence_code_required,
       },
       session: {
         session_id: sessionRow.id,
@@ -551,9 +558,7 @@ export const submitOnlineExamForStudent = createServerFn({ method: "POST" })
         return {
           session_id: sessionId,
           question_id: a.questionId,
-          answer: a.selectedOptionId
-            ? JSON.stringify({ selected: a.selectedOptionId })
-            : null,
+          answer: a.selectedOptionId ? JSON.stringify({ selected: a.selectedOptionId }) : null,
           is_blank: isBlank,
           flagged: a.flagged ?? false,
           answered_at: isBlank ? null : new Date().toISOString(),
@@ -580,4 +585,98 @@ export const submitOnlineExamForStudent = createServerFn({ method: "POST" })
     if (cErr) throw new Error(cErr.message);
 
     return closed;
+  });
+
+/* ============================================================================
+ * VERIFICAR CODIGO DE PRESENCA
+ *
+ * Chamado pela UI antes de carregar a sala de prova. Se a prova NAO exige
+ * codigo, retorna { required:false, ok:true } sem checar nada. Se exige,
+ * compara o PIN plain enviado com o hash armazenado em tempo constante.
+ *
+ * O hash NUNCA volta no payload (defesa em profundidade: a funcao le
+ * direto do banco, compara, e retorna apenas ok/required).
+ * ========================================================================== */
+export const verifyPresenceCode = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d) =>
+    z
+      .object({
+        examId: z.string().uuid(),
+        code: z.string().min(1).max(32),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const userId = context.userId;
+    const exam = await assertStudentOwnsExam(data.examId, userId);
+
+    const { data: row, error } = await supabaseAdmin
+      .from("online_exams")
+      .select("presence_code_required, presence_code_hash")
+      .eq("id", exam.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+
+    const required = !!(row as { presence_code_required?: boolean } | null)?.presence_code_required;
+    if (!required) {
+      return { ok: true, required: false };
+    }
+
+    const hash = (row as { presence_code_hash?: string | null } | null)?.presence_code_hash ?? null;
+    const ok = verifyPresenceCodeHash(data.code, hash);
+    // Mensagem generica para nao dar dica ao aluno. O front mostra "Codigo
+    // incorreto" em ambos os casos.
+    return { ok, required: true };
+  });
+
+/* ============================================================================
+ * INSPECAO LEVE — usado pela rota /aluno/avaliacao/$examId antes do gate.
+ *
+ * Devolve apenas o minimo necessario para decidir se mostra o gate do
+ * Codigo de Presenca. NAO cria exam_sessions e NAO retorna questoes.
+ * ========================================================================== */
+export const getOnlineExamAccessRequirement = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d) => z.object({ examId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const userId = context.userId;
+    const exam = await assertStudentOwnsExam(data.examId, userId);
+
+    const now = new Date();
+    const win = computeInWindow(exam.opens_at, exam.closes_at, exam.status, now);
+
+    // Permite carregar prova ja submetida (visualizacao) mesmo fora da janela.
+    const existing = await getActiveOrSubmittedSession(exam.id, userId);
+    const closedForStudent =
+      existing &&
+      (existing.status === "submitted" ||
+        existing.status === "graded" ||
+        existing.status === "invalidated");
+
+    if (!win.inWindow && !closedForStudent) {
+      throw new Error(win.label ?? "A prova nao esta disponivel no momento");
+    }
+
+    // Sem hash — apenas a flag. Cliente usa para decidir se renderiza o gate.
+    const { data: row, error } = await supabaseAdmin
+      .from("online_exams")
+      .select("presence_code_required")
+      .eq("id", exam.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+
+    return {
+      exam_id: exam.id,
+      title: exam.title,
+      presence_code_required: !!(row as { presence_code_required?: boolean } | null)
+        ?.presence_code_required,
+      // Sabendo se ja passou pelo gate, a UI pode pular o input e ir direto.
+      session_status: existing?.status ?? null,
+    } as {
+      exam_id: string;
+      title: string;
+      presence_code_required: boolean;
+      session_status: string | null;
+    };
   });

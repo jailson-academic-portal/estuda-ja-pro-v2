@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Fingerprint, Loader2, ShieldCheck } from "lucide-react";
+import { KeyRound, Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
@@ -15,15 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { getOnlineExamConfig, saveOnlineExamConfig } from "@/backend/online-exams.functions";
-import type { BiometricKind } from "@/integrations/supabase/online-exams.types";
 
 /* ============================================================================
  * "Configurar Prova Online" — chamado pela lista de avaliacoes.
@@ -32,16 +24,12 @@ import type { BiometricKind } from "@/integrations/supabase/online-exams.types";
  * aplicar a prova no navegador. As questoes vem da propria avaliacao e o
  * gabarito permanece no servidor.
  *
- * Segue o padrao de campos condicionais do projeto: bloco Switch que revela
- * um painel tracejado (mesma classe de AssessmentEditDialog / WizardDialog).
+ * CONTROLE DE INTEGRIDADE: o campo "Codigo de Presenca" substituiu a
+ * checagem biometrica (em pausa). O professor define um PIN curto (4-6
+ * caracteres) que ditara na lousa; o aluno precisa digitar o PIN antes
+ * de a sala abrir. O codigo plain-text NUNCA volta ao cliente (so o hash
+ * e persistido no servidor).
  * ========================================================================== */
-
-const KIND_LABEL: Record<BiometricKind, string> = {
-  face: "Reconhecimento facial",
-  fingerprint: "Digital",
-  iris: "Íris",
-  voice: "Voz",
-};
 
 function toLocalInput(iso: string | null | undefined) {
   if (!iso) return "";
@@ -81,10 +69,11 @@ export function OnlineExamConfigDialog({
   const [timeLimit, setTimeLimit] = useState("60");
   const [maxScore, setMaxScore] = useState(String(defaultMaxScore || 10));
   const [maxAttempts, setMaxAttempts] = useState("1");
-  const [biometricRequired, setBiometricRequired] = useState(false);
-  const [biometricKind, setBiometricKind] = useState<BiometricKind>("face");
-  const [requireFaceMatch, setRequireFaceMatch] = useState(false);
-  const [tabSwitchLimit, setTabSwitchLimit] = useState("");
+  const [presenceCodeRequired, setPresenceCodeRequired] = useState(false);
+  /** PIN plain enviado apenas ao trocar/criar. Vazio = manter hash atual. */
+  const [presenceCode, setPresenceCode] = useState("");
+  /** Flag para sabermos se a prova ja tem codigo gravado (afecta copy/UX). */
+  const [hasStoredPresenceCode, setHasStoredPresenceCode] = useState(false);
 
   // Carrega a config existente para o formulario ja abrir preenchido.
   useEffect(() => {
@@ -98,8 +87,10 @@ export function OnlineExamConfigDialog({
           time_limit_minutes: number;
           max_score: number;
           max_attempts: number;
+          presence_code_required: boolean;
+          // presence_code_hash NAO vem (ver saveOnlineExamConfig/getOnlineExamConfig).
           biometric_required: boolean;
-          biometric_kind_required: BiometricKind | null;
+          biometric_kind_required: string | null;
           require_face_match: boolean;
           tab_switch_limit: number | null;
         } | null;
@@ -111,10 +102,12 @@ export function OnlineExamConfigDialog({
         setTimeLimit(String(cfg.time_limit_minutes));
         setMaxScore(String(cfg.max_score));
         setMaxAttempts(String(cfg.max_attempts));
-        setBiometricRequired(cfg.biometric_required);
-        setBiometricKind(cfg.biometric_kind_required ?? "face");
-        setRequireFaceMatch(cfg.require_face_match);
-        setTabSwitchLimit(cfg.tab_switch_limit == null ? "" : String(cfg.tab_switch_limit));
+        setPresenceCodeRequired(cfg.presence_code_required);
+        // Como o hash NAO e exposto, usamos a flag presence_code_required
+        // como proxy de "tem codigo gravado". O placeholder do input
+        // instrui o professor a deixar em branco para manter o atual.
+        setHasStoredPresenceCode(cfg.presence_code_required);
+        setPresenceCode(""); // nunca preenchemos com hash/plain
       } catch (e) {
         // Config inexistente ainda e o caso normal: segue com o formulario vazio.
         if (alive) {
@@ -135,6 +128,12 @@ export function OnlineExamConfigDialog({
       toast.error("Informe o título da prova online");
       return;
     }
+    if (presenceCodeRequired && presenceCode) {
+      if (!/^[A-Za-z0-9]{4,6}$/.test(presenceCode)) {
+        toast.error("O Codigo de Presenca deve ter 4 a 6 caracteres alfanumericos");
+        return;
+      }
+    }
     setSaving(true);
     const t = toast.loading("Salvando configuração...");
     try {
@@ -149,10 +148,10 @@ export function OnlineExamConfigDialog({
           timeLimitMinutes: Number(timeLimit) || 60,
           maxScore: Number(maxScore) || 0,
           maxAttempts: Number(maxAttempts) || 1,
-          biometricRequired,
-          biometricKind: biometricRequired ? biometricKind : null,
-          requireFaceMatch: biometricRequired && requireFaceMatch,
-          tabSwitchLimit: tabSwitchLimit ? Number(tabSwitchLimit) : null,
+          presenceCodeRequired,
+          presenceCode: presenceCode || undefined,
+          biometricRequired: false,
+          tabSwitchLimit: null,
         },
       });
       toast.success("Prova online configurada", { id: t });
@@ -281,56 +280,45 @@ export function OnlineExamConfigDialog({
                 <div className="flex items-start justify-between gap-3 rounded-md border bg-background p-3">
                   <div className="space-y-0.5">
                     <Label className="text-sm flex items-center gap-2">
-                      <Fingerprint className="h-4 w-4" /> Exigir biometria
+                      <KeyRound className="h-4 w-4" /> Exigir Código de Presença
                     </Label>
                     <p className="text-xs text-muted-foreground">
-                      O aluno precisa ter biometria cadastrada para iniciar a prova.
+                      O aluno só inicia a prova após digitar o PIN que você informar na lousa.
                     </p>
                   </div>
-                  <Switch checked={biometricRequired} onCheckedChange={setBiometricRequired} />
+                  <Switch
+                    checked={presenceCodeRequired}
+                    onCheckedChange={setPresenceCodeRequired}
+                  />
                 </div>
 
-                {biometricRequired && (
-                  <div className="space-y-3 rounded-md bg-muted/30 border border-dashed p-3 animate-in fade-in slide-in-from-top-1">
+                {presenceCodeRequired && (
+                  <div className="space-y-2 rounded-md bg-muted/30 border border-dashed p-3 animate-in fade-in slide-in-from-top-1">
                     <div className="space-y-1.5">
-                      <Label>Tipo de biometria</Label>
-                      <Select
-                        value={biometricKind}
-                        onValueChange={(v) => setBiometricKind(v as BiometricKind)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(Object.keys(KIND_LABEL) as BiometricKind[]).map((k) => (
-                            <SelectItem key={k} value={k}>
-                              {KIND_LABEL[k]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Label htmlFor="oe-cfg-pin">PIN da prova</Label>
+                      <Input
+                        id="oe-cfg-pin"
+                        type="password"
+                        inputMode="text"
+                        autoComplete="off"
+                        pattern="[A-Za-z0-9]{4,6}"
+                        minLength={4}
+                        maxLength={6}
+                        value={presenceCode}
+                        onChange={(e) => setPresenceCode(e.target.value)}
+                        placeholder={
+                          hasStoredPresenceCode
+                            ? "Deixe em branco para manter o código atual"
+                            : "4 a 6 caracteres (letras ou números)"
+                        }
+                        className="font-mono tracking-widest"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Defina um código curto (4 a 6 caracteres alfanuméricos) que você ditará na
+                        lousa no momento da aplicação. O código será salvo de forma segura (hash) e{" "}
+                        <strong>não</strong> poderá ser recuperado depois.
+                      </p>
                     </div>
-
-                    <div className="flex items-center justify-between gap-3">
-                      <Label className="text-sm">Reconhecer o aluno ao iniciar a prova</Label>
-                      <Switch checked={requireFaceMatch} onCheckedChange={setRequireFaceMatch} />
-                    </div>
-
-                    {requireFaceMatch && (
-                      <div className="space-y-1.5">
-                        <Label htmlFor="oe-cfg-tabs">Limite de trocas de aba</Label>
-                        <Input
-                          id="oe-cfg-tabs"
-                          type="number"
-                          min={0}
-                          max={999}
-                          value={tabSwitchLimit}
-                          onChange={(e) => setTabSwitchLimit(e.target.value)}
-                          placeholder="Sem limite"
-                          className="max-w-[10rem]"
-                        />
-                      </div>
-                    )}
                   </div>
                 )}
               </div>

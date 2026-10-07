@@ -64,6 +64,13 @@ export interface OnlineExamRow {
   proctoring_enabled: boolean;
   tab_switch_limit: number | null;
   allow_resume: boolean;
+  /**
+   * Código de Presença — substitui a checagem biométrica na UI.
+   * O hash NUNCA volta para o cliente (ler via SECURITY DEFINER
+   * ou não expor em SELECT do navegador).
+   */
+  presence_code_required: boolean;
+  presence_code_hash: string | null;
   config: Json;
   created_at: string;
   updated_at: string;
@@ -90,6 +97,8 @@ export interface OnlineExamInsert {
   proctoring_enabled?: boolean;
   tab_switch_limit?: number | null;
   allow_resume?: boolean;
+  presence_code_required?: boolean;
+  presence_code_hash?: string | null;
   config?: Json;
 }
 
@@ -166,6 +175,8 @@ export interface OnlineExamForStudentListItem {
   in_window: boolean;
   /** Texto humano explicando por que o botão está/ficará disponível. */
   availability_label: string | null;
+  /** Indica se o professor exige Código de Presença para iniciar. */
+  presence_code_required: boolean;
 }
 
 export interface OnlineExamQuestionForStudent {
@@ -203,6 +214,12 @@ export interface OnlineExamForStudentSession {
     max_score: string;
     opens_at: string | null;
     closes_at: string | null;
+    /**
+     * Se true, a sala de prova só é liberada após o aluno digitar o
+     * Código de Presença correto (verificado por server fn).
+     * O hash NUNCA é retornado para o cliente.
+     */
+    presence_code_required: boolean;
   };
   session: OnlineExamSessionForStudent;
   questions: OnlineExamQuestionForStudent[];

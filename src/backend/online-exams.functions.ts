@@ -3,11 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { assertTeacherOrAdmin } from "./discipline-access.server";
-import type {
-  BiometricKind,
-  OnlineExamRow,
-  OnlineExamStatus,
-} from "@/integrations/supabase/online-exams.types";
+import type { OnlineExamRow, OnlineExamStatus } from "@/integrations/supabase/online-exams.types";
 
 /* ============================================================================
  * AVALIAÇÕES ONLINE — funções do professor
@@ -78,7 +74,7 @@ export const listOnlineExams = createServerFn({ method: "POST" })
     )
       .from("online_exams")
       .select(
-        "id, assessment_id, discipline_id, created_by, title, instructions, status, time_limit_minutes, max_score, opens_at, closes_at, biometric_required, biometric_kind_required, require_face_match, max_attempts, proctoring_enabled, tab_switch_limit, allow_resume, created_at, updated_at",
+        "id, assessment_id, discipline_id, created_by, title, instructions, status, time_limit_minutes, max_score, opens_at, closes_at, biometric_required, biometric_kind_required, require_face_match, max_attempts, proctoring_enabled, tab_switch_limit, allow_resume, presence_code_required, created_at, updated_at",
       )
       .eq("discipline_id", data.disciplineId)
       .order("created_at", { ascending: false });
@@ -357,7 +353,13 @@ export const deleteOnlineExam = createServerFn({ method: "POST" })
  *
  * Usado pelo botao "Configurar Prova Online" na lista de avaliacoes.
  * Faz UPSERT por assessment_id: uma avaliacao tem no maximo uma prova online.
+ *
+ * A biometria esta em PAUSA: a UI nao oferece mais o toggle, mas a coluna
+ * continua existindo no banco para eventual reativacao. O controle real
+ * agora e o "Codigo de Presenca" (presence_code_required + hash).
  * ========================================================================== */
+
+import { createHash, timingSafeEqual } from "node:crypto";
 
 const configShape = z.object({
   assessmentId: z.string().uuid(),
@@ -369,11 +371,64 @@ const configShape = z.object({
   timeLimitMinutes: z.number().int().min(1).max(600).default(60),
   maxScore: z.number().min(0).max(1000).default(10),
   maxAttempts: z.number().int().min(1).max(20).default(1),
+  /**
+   * Codigo de Presenca: se true, o aluno precisa digitar o PIN correto
+   * (4-6 caracteres) antes de iniciar a prova. Substitui a checagem
+   * biometrica na UI.
+   */
+  presenceCodeRequired: z.boolean().default(false),
+  /**
+   * PIN plain-text enviado APENAS quando o professor esta criando/trocando
+   * o codigo. Nunca e devolvido ao cliente; e hasheado no servidor.
+   * - 4 a 6 caracteres alfanumericos.
+   * - Omitir/vazio em edicoes = manter o codigo anterior.
+   */
+  presenceCode: z
+    .string()
+    .regex(/^[A-Za-z0-9]{4,6}$/, "Codigo deve ter 4 a 6 caracteres alfanumericos")
+    .optional()
+    .or(z.literal("")),
   biometricRequired: z.boolean().default(false),
   biometricKind: kindEnum.nullish(),
   requireFaceMatch: z.boolean().default(false),
   tabSwitchLimit: z.number().int().min(0).max(999).nullish(),
 });
+
+/** Hash SHA-256 do PIN em hex (64 chars). NUNCA devolver ao cliente. */
+function hashPresenceCode(code: string): string {
+  return createHash("sha256").update(code, "utf8").digest("hex");
+}
+
+/** Compara PIN plain com hash armazenado em tempo constante. */
+export function verifyPresenceCodeHash(code: string, hash: string | null): boolean {
+  if (!hash) return false;
+  // SHA-256 hex = 64 chars. Se nao bater, nega. Tambem filtra hashes malformados.
+  if (typeof hash !== "string" || hash.length !== 64 || !/^[0-9a-fA-F]+$/.test(hash)) {
+    return false;
+  }
+  let candidate: Buffer;
+  let stored: Buffer;
+  try {
+    candidate = Buffer.from(hashPresenceCode(code), "hex");
+    stored = Buffer.from(hash, "hex");
+  } catch {
+    return false;
+  }
+  if (candidate.length !== stored.length) return false;
+  return timingSafeEqual(candidate, stored);
+}
+
+/**
+ * Decide o status inicial: se a janela ja esta aberta agora, libera como
+ * 'open' (corrige o bug "provas novas nao aparecem"). Caso contrario,
+ * mantem 'draft' para o professor publicar manualmente.
+ */
+function decideInitialStatus(opensAt: string | null, closesAt: string | null): "open" | "draft" {
+  const now = Date.now();
+  const opensOk = !opensAt || new Date(opensAt).getTime() <= now;
+  const closesOk = !closesAt || new Date(closesAt).getTime() > now;
+  return opensOk && closesOk ? "open" : "draft";
+}
 
 export const saveOnlineExamConfig = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -390,6 +445,10 @@ export const saveOnlineExamConfig = createServerFn({ method: "POST" })
     if (data.biometricRequired && !data.biometricKind) {
       throw new Error("Selecione qual biometria sera exigida");
     }
+    if (data.presenceCodeRequired && !data.presenceCode) {
+      // Sem codigo novo: o upsert preservara o hash anterior (se houver).
+      // Apenas avisamos quando o professor esta CRIANDO (sem hash previo).
+    }
 
     const { data: asms, error: aErr } = await (
       await supabaseAdmin
@@ -404,6 +463,45 @@ export const saveOnlineExamConfig = createServerFn({ method: "POST" })
       throw new Error("A avaliacao pertence a outra disciplina");
     }
 
+    // Se o professor ligou o toggle mas nao enviou codigo, verificamos
+    // se ja existe um hash gravado para a prova atual. Se nao existir
+    // (criacao), exigimos o codigo aqui com mensagem clara.
+    let presenceHash: string | null = null;
+    let previousStatus: string | null = null;
+    {
+      const { data: existing, error: eErr } = await (
+        await supabaseAdmin
+      )
+        .from("online_exams")
+        .select("presence_code_hash, status")
+        .eq("assessment_id", data.assessmentId)
+        .maybeSingle();
+      if (eErr) throw new Error(eErr.message);
+      presenceHash = (existing?.presence_code_hash as string | null | undefined) ?? null;
+      previousStatus = (existing?.status as string | null | undefined) ?? null;
+    }
+
+    if (data.presenceCodeRequired) {
+      if (data.presenceCode && data.presenceCode.length > 0) {
+        presenceHash = hashPresenceCode(data.presenceCode);
+      } else if (!presenceHash) {
+        throw new Error(
+          "Defina um Codigo de Presenca (4 a 6 caracteres) para exigir o PIN na prova",
+        );
+      }
+    } else {
+      // Toggle desligado: limpa o hash para nao deixar lixo.
+      presenceHash = null;
+    }
+
+    // Status: se ja era 'closed'/'archived'/'open' antes, respeitamos;
+    // senao, decidimos entre 'open' (janela aberta) e 'draft'.
+    const isLockedStatus =
+      previousStatus === "closed" || previousStatus === "archived" || previousStatus === "open";
+    const status: "open" | "draft" = isLockedStatus
+      ? ((previousStatus as "open" | "draft") ?? "draft")
+      : decideInitialStatus(data.opensAt ?? null, data.closesAt ?? null);
+
     const payload = {
       assessment_id: data.assessmentId,
       discipline_id: data.disciplineId,
@@ -415,11 +513,14 @@ export const saveOnlineExamConfig = createServerFn({ method: "POST" })
       time_limit_minutes: data.timeLimitMinutes,
       max_score: roundTwo(data.maxScore),
       max_attempts: data.maxAttempts,
+      presence_code_required: data.presenceCodeRequired,
+      presence_code_hash: presenceHash,
+      // Biometric columns mantidas por compat (UI nao oferece mais).
       biometric_required: data.biometricRequired,
       biometric_kind_required: data.biometricRequired ? (data.biometricKind ?? null) : null,
       require_face_match: data.biometricRequired && data.requireFaceMatch,
       tab_switch_limit: data.biometricRequired ? (data.tabSwitchLimit ?? null) : null,
-      status: "draft" as const,
+      status,
     };
 
     const { data: saved, error } = await (
@@ -433,7 +534,8 @@ export const saveOnlineExamConfig = createServerFn({ method: "POST" })
     return saved;
   });
 
-/** Le a config existente de uma avaliacao, se houver. */
+/** Le a config existente de uma avaliacao, se houver.
+ *  NUNCA retorna presence_code_hash — o hash e material sensivel. */
 export const getOnlineExamConfig = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d) => z.object({ assessmentId: z.string().uuid() }).parse(d))
@@ -443,7 +545,7 @@ export const getOnlineExamConfig = createServerFn({ method: "POST" })
     )
       .from("online_exams")
       .select(
-        "id, title, opens_at, closes_at, time_limit_minutes, max_score, max_attempts, biometric_required, biometric_kind_required, require_face_match, tab_switch_limit",
+        "id, title, opens_at, closes_at, time_limit_minutes, max_score, max_attempts, presence_code_required, biometric_required, biometric_kind_required, require_face_match, tab_switch_limit",
       )
       .eq("assessment_id", data.assessmentId)
       .maybeSingle();

@@ -12,7 +12,9 @@ import {
   type ExamAnswerState,
   type ExamQuestionView,
 } from "@/components/assessment/StudentOnlineExamRoom";
+import { PresenceCodeGate } from "@/components/assessment/PresenceCodeGate";
 import {
+  getOnlineExamAccessRequirement,
   getOnlineExamForStudent,
   submitOnlineExamForStudent,
 } from "@/backend/online-exams.student.functions";
@@ -25,13 +27,19 @@ import type {
  * Rota dinâmica `/aluno/avaliacao/$examId` — sala de prova real.
  *
  * Fluxo:
- *  1. Carrega `exam + session + questions` via server fn.
- *  2. Mostra sala de prova (modo controlado: respostas persistidas aqui).
- *  3. Ao finalizar, envia respostas em batch e fecha a sessão no servidor.
- *  4. Após envio, mostra a tela de sucesso (controlada via prop `finished`).
+ *  1. Inspeção leve (`getOnlineExamAccessRequirement`) para descobrir se a
+ *     prova exige Código de Presença, sem ainda criar sessão.
+ *  2. Se exige e a prova ainda não foi concluída, mostra o
+ *     `PresenceCodeGate` (PIN verificado server-side, constant-time).
+ *  3. Quando liberado, carrega `exam + session + questions` via
+ *     `getOnlineExamForStudent` (este sim cria/retoma a sessão).
+ *  4. Mostra sala de prova (modo controlado: respostas persistidas aqui).
+ *  5. Ao finalizar, envia respostas em batch e fecha a sessão no servidor.
+ *  6. Após envio, mostra a tela de sucesso (controlada via prop `finished`).
  *
  * Importante: o gabarito NUNCA é retornado pelo servidor (`correct_answer`
- * é filtrado em `getOnlineExamForStudent`).
+ * é filtrado em `getOnlineExamForStudent`). O hash do PIN nunca volta ao
+ * cliente (ver `verifyPresenceCode` em online-exams.student.functions.ts).
  */
 export const Route = createFileRoute("/aluno/avaliacao/$examId")({
   head: () => ({
@@ -53,12 +61,15 @@ function OnlineExamRoomRoute() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  const accessFn = useServerFn(getOnlineExamAccessRequirement);
   const loadFn = useServerFn(getOnlineExamForStudent);
   const submitFn = useServerFn(submitOnlineExamForStudent);
 
   const [answers, setAnswers] = useState<Record<string, ExamAnswerState>>({});
   const [submitting, setSubmitting] = useState(false);
   const [finished, setFinished] = useState(false);
+  /** Se a prova exige PIN e o aluno ainda não desbloqueou nesta sessão. */
+  const [unlocked, setUnlocked] = useState(false);
 
   // Guard de auth — mesmo padrão do resto do app.
   useEffect(() => {
@@ -67,14 +78,50 @@ function OnlineExamRoomRoute() {
     }
   }, [user, profile, authLoading, navigate]);
 
+  // Passo 1: inspeção leve. NÃO cria sessão ainda.
+  const accessQuery = useQuery({
+    queryKey: ["online-exam-access", examId, user?.id],
+    enabled: Boolean(user?.id && examId),
+    staleTime: 0,
+    retry: 1,
+    queryFn: async () => {
+      const res = (await accessFn({ data: { examId } })) as {
+        exam_id: string;
+        title: string;
+        presence_code_required: boolean;
+        session_status: string | null;
+      };
+      // Provas ja submetidas/graded/invalidated NAO exigem codigo de novo.
+      const closedSession =
+        res.session_status === "submitted" ||
+        res.session_status === "graded" ||
+        res.session_status === "invalidated";
+      if (!res.presence_code_required || closedSession) {
+        setUnlocked(true);
+      }
+      return res;
+    },
+  });
+
+  // Passo 2: gate de Codigo de Presenca (se exigido).
+  const showGate =
+    !!accessQuery.data?.presence_code_required &&
+    !unlocked &&
+    !(
+      accessQuery.data?.session_status === "submitted" ||
+      accessQuery.data?.session_status === "graded" ||
+      accessQuery.data?.session_status === "invalidated"
+    );
+
+  // Passo 3: carregar prova so apos unlock.
   const { data, isPending, error } = useQuery({
     queryKey: ["online-exam-student", examId, user?.id],
-    enabled: Boolean(user?.id && examId),
+    enabled: Boolean(user?.id && examId && unlocked && !showGate),
     staleTime: 0,
     retry: 1,
     queryFn: async (): Promise<OnlineExamForStudentSession> => {
       const result = (await loadFn({ data: { examId } })) as OnlineExamForStudentSession;
-      // Inicializa mapa de respostas com o que já estava gravado (resume)
+      // Inicializa mapa de respostas com o que ja estava gravado (resume)
       const initial: Record<string, ExamAnswerState> = {};
       for (const a of result.session.existing_answers) {
         initial[a.question_id] = {
@@ -84,7 +131,7 @@ function OnlineExamRoomRoute() {
         };
       }
       setAnswers(initial);
-      // Se já estava submetida/graded, mostra tela de sucesso direto.
+      // Se ja estava submetida/graded, mostra tela de sucesso direto.
       if (
         result.session.status === "submitted" ||
         result.session.status === "graded" ||
@@ -143,6 +190,7 @@ function OnlineExamRoomRoute() {
       setFinished(true);
       void queryClient.invalidateQueries({ queryKey: ["online-exam-student"] });
       void queryClient.invalidateQueries({ queryKey: ["online-exams-for-student"] });
+      void queryClient.invalidateQueries({ queryKey: ["online-exam-access"] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Falha ao enviar", { id: t });
     } finally {
@@ -150,7 +198,48 @@ function OnlineExamRoomRoute() {
     }
   };
 
-  if (authLoading || isPending) {
+  if (authLoading || accessQuery.isPending) {
+    return (
+      <div className="min-h-screen academic-bg flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (accessQuery.error) {
+    const message =
+      accessQuery.error instanceof Error ? accessQuery.error.message : "Avaliação indisponível";
+    return (
+      <div className="min-h-screen academic-bg flex flex-col items-center justify-center gap-4 px-4 text-center">
+        <ShieldAlert className="h-10 w-10 text-amber-500" />
+        <h2 className="text-lg font-semibold text-white">Não foi possível carregar a prova</h2>
+        <p className="text-sm text-white/80 max-w-md">{message}</p>
+        <Button variant="outline" onClick={() => void navigate({ to: "/aluno" })}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Voltar ao Painel
+        </Button>
+      </div>
+    );
+  }
+
+  // Gate do Codigo de Presenca (passo 2).
+  if (showGate && accessQuery.data) {
+    return (
+      <div className="min-h-screen academic-bg flex items-center justify-center px-4 py-10">
+        <PresenceCodeGate
+          examId={accessQuery.data.exam_id}
+          examTitle={accessQuery.data.title}
+          onUnlocked={() => {
+            setUnlocked(true);
+            toast.success("Acesso liberado. Boa prova!");
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Carregamento da prova apos unlock.
+  if (isPending) {
     return (
       <div className="min-h-screen academic-bg flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -159,14 +248,11 @@ function OnlineExamRoomRoute() {
   }
 
   if (error || !data) {
-    const message =
-      error instanceof Error ? error.message : "Avaliação indisponível";
+    const message = error instanceof Error ? error.message : "Avaliação indisponível";
     return (
       <div className="min-h-screen academic-bg flex flex-col items-center justify-center gap-4 px-4 text-center">
         <ShieldAlert className="h-10 w-10 text-amber-500" />
-        <h2 className="text-lg font-semibold text-white">
-          Não foi possível carregar a prova
-        </h2>
+        <h2 className="text-lg font-semibold text-white">Não foi possível carregar a prova</h2>
         <p className="text-sm text-white/80 max-w-md">{message}</p>
         <Button variant="outline" onClick={() => void navigate({ to: "/aluno" })}>
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -202,22 +288,14 @@ function OnlineExamRoomRoute() {
       <div className="mx-auto max-w-7xl px-3 py-3 sm:px-6 sm:py-6">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-white">
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void navigate({ to: "/aluno" })}
-            >
+            <Button variant="outline" size="sm" onClick={() => void navigate({ to: "/aluno" })}>
               <ArrowLeft className="h-4 w-4 mr-1" />
               Painel
             </Button>
-            <h1 className="text-base sm:text-lg font-semibold truncate">
-              {examView.title}
-            </h1>
+            <h1 className="text-base sm:text-lg font-semibold truncate">{examView.title}</h1>
             {sessionClosed && (
               <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-100">
-                {data.session.status === "invalidated"
-                  ? "Sessão invalidada"
-                  : "Concluída"}
+                {data.session.status === "invalidated" ? "Sessão invalidada" : "Concluída"}
               </Badge>
             )}
             <Badge variant="outline" className="border-white/30 text-white/80">
