@@ -82,7 +82,10 @@ CREATE TABLE IF NOT EXISTS public.online_exams (
 
 CREATE INDEX IF NOT EXISTS idx_online_exams_discipline
   ON public.online_exams (discipline_id);
-CREATE INDEX IF NOT EXISTS idx_online_exams_assessment
+-- assessment_id precisa ser UNIQUE: o upsert de saveOnlineExamConfig
+-- usa onConflict="assessment_id" e o PostgREST so aceita onConflict
+-- com UNIQUE INDEX/constraint. Ver migration 20261008150000.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_online_exams_assessment
   ON public.online_exams (assessment_id);
 CREATE INDEX IF NOT EXISTS idx_online_exams_status
   ON public.online_exams (status);

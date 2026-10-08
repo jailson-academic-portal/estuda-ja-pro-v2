@@ -486,38 +486,21 @@ export const saveOnlineExamConfig = createServerFn({ method: "POST" })
       status,
     };
 
-    // Usamos a RPC upsert_online_exam_config em vez do .upsert direto
-    // porque a RPC nao sofre do cache de schema do PostgREST
-    // ("Could not find the ... column in the schema cache" quando
-    // uma coluna nova foi adicionada). O body da funcao e
-    // enviado ao Postgres como texto e o cache nao interfere.
-    const { data: saved, error } = await (supabaseAdmin.rpc as unknown as (
-      fn: string,
-      args: Record<string, unknown>,
-    ) => Promise<{ data: { id: string; title: string; status: string } | null; error: { message: string } | null }>)(
-      "upsert_online_exam_config",
-      {
-        p_assessment_id: payload.assessment_id,
-        p_discipline_id: payload.discipline_id,
-        p_created_by: payload.created_by,
-        p_title: payload.title,
-        p_instructions: payload.instructions,
-        p_status: payload.status,
-        p_opens_at: payload.opens_at,
-        p_closes_at: payload.closes_at,
-        p_time_limit_minutes: payload.time_limit_minutes,
-        p_max_score: payload.max_score,
-        p_max_attempts: payload.max_attempts,
-        p_attendance_session_id: payload.attendance_session_id,
-        p_biometric_required: payload.biometric_required,
-        p_biometric_kind_required: payload.biometric_kind_required ?? "face",
-        p_require_face_match: payload.require_face_match,
-        p_tab_switch_limit: payload.tab_switch_limit,
-        p_allow_resume: true,
-        p_config: {},
-        p_status_override: previousStatus ?? "draft",
-      },
-    );
+    // Upsert direto na tabela, em cima do UNIQUE INDEX
+    // idx_online_exams_assessment (assessment_id). A RPC
+    // upsert_online_exam_config foi removida porque sofria do
+    // cache de schema do PostgREST mesmo apos reload manual
+    // ("Could not find the function ... in the schema cache").
+    // Aqui o caminho e INSERT ... ON CONFLIT (assessment_id) DO
+    // UPDATE, identico ao que a RPC fazia, mas sem assinatura
+    // RPC para o PostgREST validar.
+    const { data: saved, error } = await (
+      await supabaseAdmin
+    )
+      .from("online_exams")
+      .upsert(payload, { onConflict: "assessment_id" })
+      .select("id, title, status")
+      .single();
     if (error) throw new Error(error.message);
     return saved;
   });
