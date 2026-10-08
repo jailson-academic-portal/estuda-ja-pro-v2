@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-07T18:35:31.003166+00:00",
+  "generated_at": "2026-10-08T13:59:13.923290+00:00",
   "files": [
     {
       "path": "roadmap.md",
@@ -15,11 +15,11 @@
     },
     {
       "path": "setup_banco_provas.sql",
-      "bytes": 13561
+      "bytes": 13769
     },
     {
       "path": "setup_completo_avaliacoes.sql",
-      "bytes": 59568
+      "bytes": 55952
     },
     {
       "path": "AGENTS.md",
@@ -418,6 +418,10 @@
       "bytes": 119
     },
     {
+      "path": "supabase/migrations/20261008150000_online_exams_assessment_unique.sql",
+      "bytes": 3380
+    },
+    {
       "path": "supabase/migrations/20260807223446_6148be3b-0948-48de-81a5-fefb966a7393.sql",
       "bytes": 2013
     },
@@ -452,10 +456,6 @@
     {
       "path": "supabase/migrations/20260514151449_c8fb4702-b5cf-4c3d-9f7b-77601f23ae3b.sql",
       "bytes": 2094
-    },
-    {
-      "path": "supabase/migrations/20261008140000_upsert_online_exam_config_rpc.sql",
-      "bytes": 4629
     },
     {
       "path": "supabase/migrations/20260720190559_02412b96-a574-4601-a9c0-95827f7505c8.sql",
@@ -1219,7 +1219,7 @@
     },
     {
       "path": "src/backend/online-exams.functions.ts",
-      "bytes": 23867
+      "bytes": 23025
     },
     {
       "path": "src/backend/calendar.functions.ts",
