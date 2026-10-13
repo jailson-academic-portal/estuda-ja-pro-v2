@@ -15,15 +15,8 @@ export default defineConfig({
       __BUILD_ID__: JSON.stringify(createSourceHash()),
     },
     ssr: {
-      // Externalizar módulos Node.js que não devem ser bundleados
-      external: ["https", "http", "http2", "zlib", "stream", "util", "buffer", "events", "path", "fs", "os", "crypto", "net", "tls", "url", "querystring", "string_decoder", "punycode", "process"],
-    },
-  },
-  nitro: {
-    // Configuração para Vercel
-    preset: "vercel",
-    externals: {
-      external: ["https", "http", "http2", "zlib", "stream", "util", "buffer", "events", "path", "fs", "os", "crypto", "net", "tls", "url", "querystring", "string_decoder", "punycode", "process"],
+      // Garantir que módulos Node.js não sejam resolvidos para o browser
+      noExternal: [],
     },
   },
 });
