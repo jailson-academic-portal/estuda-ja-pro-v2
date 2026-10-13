@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-13T17:02:02.815033+00:00",
+  "generated_at": "2026-10-13T17:15:23.104449+00:00",
   "files": [
     {
       "path": "roadmap.md",
@@ -1095,7 +1095,7 @@
     },
     {
       "path": "src/backend/ai.server.ts",
-      "bytes": 8851
+      "bytes": 8408
     },
     {
       "path": "src/backend/students.functions.ts",
