@@ -6,6 +6,7 @@ import { notifyEnrolledStudents, notifyUsers } from "./notifications.server";
 import { callAIJson } from "./ai.server";
 import { assertTeacherOrAdmin, userIsAdmin } from "./discipline-access.server";
 import { notifyTeacherOfSubmission } from "./submissions-notify.server";
+import { submitActivityPure } from "./submissions-pure";
 import { buildDocumentFilename } from "@/lib/document-filename";
 import { stripLeadingStandardHeader, normalizeActivitySyllabusLabels, extractStandardHeaderDocLine } from "@/lib/document-header";
 import { ACTIVITY_SUBTYPE_LABELS } from "@/lib/rubric-library";
@@ -165,41 +166,46 @@ export const submitActivity = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input) => z.object({
     activity_id: z.string().uuid(),
-    student_id: z.string().uuid().optional(),
     file_url: z.string().max(500).optional(),
     answers: z.record(z.string()).optional(),
     questions: z.array(z.string()).optional(),
   }).parse(input))
   .handler(async ({ data, context }) => {
-    const studentId = data.student_id || context.userId;
-    
-    // Usamos um único INSERT definitivo (upsert com student_id explícito)
-    const { error } = await supabaseAdmin.from("activity_submissions").upsert({
-      activity_id: data.activity_id,
-      student_id: studentId,
-      file_url: data.file_url ?? "inline_submission",
-      attachments: { 
-        answers: data.answers || {}, 
-        questions: data.questions || [] 
-      } as any,
-      status: "submitted",
-      submitted_at: new Date().toISOString(),
-    }, { onConflict: "activity_id,student_id" });
-    if (error) throw new Error(error.message);
-    const { data: act } = await supabaseAdmin
-      .from("activities")
-      .select("discipline_id,title")
-      .eq("id", data.activity_id)
-      .maybeSingle();
-    if (act) {
-      await notifyTeacherOfSubmission({
-        disciplineId: act.discipline_id,
-        studentId: context.userId,
-        kind: "activity",
-        parentTitle: act.title,
-      });
-    }
-    return { ok: true };
+    return submitActivityPure(context.userId, data, {
+      lookupActivity: async (id) => {
+        const { data: act, error: actErr } = await supabaseAdmin
+          .from("activities")
+          .select("id, discipline_id, title")
+          .eq("id", id)
+          .maybeSingle();
+        if (actErr) throw new Error(actErr.message);
+        return act;
+      },
+      lookupEnrollment: async (disciplineId, studentId) => {
+        const { data: enroll, error: enrollError } = await supabaseAdmin
+          .from("discipline_students")
+          .select("id")
+          .eq("discipline_id", disciplineId)
+          .eq("student_id", studentId)
+          .maybeSingle();
+        if (enrollError) throw new Error(enrollError.message);
+        return !!enroll;
+      },
+      upsertActivitySubmission: async (row) => {
+        const { error } = await supabaseAdmin.from("activity_submissions").upsert(row, {
+          onConflict: "activity_id,student_id",
+        });
+        if (error) throw new Error(error.message);
+      },
+      notifyTeacher: async ({ disciplineId, studentId, parentTitle }) => {
+        await notifyTeacherOfSubmission({
+          disciplineId,
+          studentId,
+          kind: "activity",
+          parentTitle,
+        });
+      },
+    });
   });
 
 /** Teacher requests AI correction for a submission. */

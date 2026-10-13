@@ -77,8 +77,6 @@ ALTER FUNCTION public.enqueue_email(queue_name text, payload jsonb) SET search_p
 ALTER FUNCTION public.delete_email(queue_name text, message_id bigint) SET search_path = public;
 ALTER FUNCTION public.read_email_batch(queue_name text, batch_size integer, vt integer) SET search_path = public;
 ALTER FUNCTION public.move_to_dlq(source_queue text, dlq_name text, message_id bigint, payload jsonb) SET search_path = public;
-ALTER FUNCTION public.email_queue_wake() SET search_path = public;
-ALTER FUNCTION public.email_queue_dispatch() SET search_path = public;
 
 -- Standardize grants
 GRANT SELECT ON public.subscriptions TO authenticated;

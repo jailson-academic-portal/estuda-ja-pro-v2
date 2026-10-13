@@ -1665,12 +1665,11 @@ function SubmitDialog({
         if (upErr) throw upErr;
       }
       const { data: { user: authUser } } = await supabase.auth.getUser();
-      await submitActivity({ 
-        data: { 
-          activity_id: activity.id, 
-          student_id: authUser?.id || user.id, // Injeta explicitamente o student_id
-          file_url: path 
-        } 
+      await submitActivity({
+        data: {
+          activity_id: activity.id,
+          file_url: path
+        }
       });
       toast.success("Atividade enviada");
       onDone();

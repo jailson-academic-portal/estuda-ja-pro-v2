@@ -1,5 +1,8 @@
 {
   "disabledMcpjsonServers": [
     "supabase"
+  ],
+  "enabledMcpjsonServers": [
+    "github"
   ]
 }

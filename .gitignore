@@ -14,6 +14,7 @@ dist-ssr
 .vinxi
 .tanstack/**
 .nitro
+.test-build
 *.local
 
 # Wrangler / Cloudflare
@@ -41,3 +42,12 @@ scripts/*
 
 # artefatos locais do Supabase CLI
 supabase/.temp/
+
+# Separacao V2 (2026-10-10): manter segredos fora do indice Git
+.env
+.env.development
+.env.production
+.mcp.json
+
+# Backup temporario criado durante a separacao V2
+.local-backup-pre-sep/

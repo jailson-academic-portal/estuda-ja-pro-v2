@@ -2072,7 +2072,6 @@ function SubmitWorkDialog({
       await submitAcademicWork({
         data: {
           work_id: work.id,
-          student_id: authUser?.id || user.id,
           file_url: path,
           submission_text: editor.getText().substring(0, 1000),
         },

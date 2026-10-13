@@ -7,7 +7,20 @@ BEGIN
 END $$;
 
 -- Habilitar Realtime para academic_works
-ALTER PUBLICATION supabase_realtime ADD TABLE public.academic_works;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime'
+      AND schemaname = 'public'
+      AND tablename = 'academic_works'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime
+      ADD TABLE public.academic_works;
+  END IF;
+END
+$$;
 
 -- Garantir Grants
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.academic_works TO authenticated;
@@ -54,11 +67,11 @@ ON public.academic_work_submissions
 FOR SELECT 
 TO authenticated 
 USING (
-  student_id = auth.uid() OR 
+  student_id = auth.uid() OR
   (group_id IS NOT NULL AND EXISTS (
-    SELECT 1 FROM public.activity_group_members gm 
-    WHERE gm.group_id = academic_work_submissions.group_id 
-    AND gm.student_id = auth.uid()
+    SELECT 1 FROM public.activity_groups g
+    WHERE g.id = academic_work_submissions.group_id
+    AND (g.leader_id = auth.uid() OR auth.uid() = ANY(g.member_ids))
   ))
 );
 

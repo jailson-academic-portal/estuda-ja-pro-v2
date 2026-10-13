@@ -1176,6 +1176,9 @@ function AssessmentWizardDialog({
               timeLimitMinutes: 60,
               maxScore: Number(maxScore) || 0,
               maxAttempts: 1,
+              // Sem chamada vinculada na criação via wizard (professor pode adicionar depois)
+              attendanceSessionId: null,
+              biometricRequired: false,
               tabSwitchLimit: null,
             },
           });

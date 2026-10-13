@@ -160,7 +160,6 @@ export function InlineSubmissionDialog({
       await submitActivity({
         data: {
           activity_id: activity.id,
-          student_id: authUser.id, // Injeta explicitamente o student_id no payload
           answers: Object.fromEntries(
             Object.entries(answers).map(([idx, text]) => [idx, text])
           ),

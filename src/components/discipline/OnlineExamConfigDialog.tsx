@@ -185,7 +185,8 @@ export function OnlineExamConfigDialog({
           timeLimitMinutes: Number(timeLimit) || 60,
           maxScore: Number(maxScore) || 0,
           maxAttempts: Number(maxAttempts) || 1,
-          attendanceSessionId,
+          // Converte string vazia para null: Zod espera uuid | null | undefined
+          attendanceSessionId: attendanceSessionId || null,
           biometricRequired: false,
           tabSwitchLimit: null,
         },

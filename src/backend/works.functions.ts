@@ -12,6 +12,7 @@ import {
 } from "@/lib/document-header";
 import { WORK_SUBTYPE_LABELS } from "@/lib/rubric-library";
 import { notifyTeacherOfSubmission } from "./submissions-notify.server";
+import { submitAcademicWorkPure } from "./submissions-pure";
 import { isLaunchableDiaryAssessmentId, type DiaryAssessmentSource } from "@/lib/diary-assessments";
 import { getAIGeneration } from "./ai-assistant.functions";
 
@@ -212,42 +213,47 @@ export const submitAcademicWork = createServerFn({ method: "POST" })
     z
       .object({
         work_id: z.string().uuid(),
-        student_id: z.string().uuid().optional(),
         file_url: z.string().min(1).max(500),
         submission_text: z.string().optional(),
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const studentId = data.student_id || context.userId;
-    
-    // Usamos upsert com student_id explícito para garantir conformidade com RLS WITH CHECK
-    const { error } = await supabaseAdmin.from("academic_work_submissions").upsert(
-      ({
-        work_id: data.work_id,
-        student_id: studentId,
-        file_url: data.file_url,
-        submission_text: data.submission_text ?? null,
-        status: "submitted",
-        submitted_at: new Date().toISOString(),
-      } as any),
-      { onConflict: "work_id,student_id" },
-    );
-    if (error) throw new Error(error.message);
-    const { data: work } = await supabaseAdmin
-      .from("academic_works")
-      .select("discipline_id,title")
-      .eq("id", data.work_id)
-      .maybeSingle();
-    if (work) {
-      await notifyTeacherOfSubmission({
-        disciplineId: work.discipline_id,
-        studentId: context.userId,
-        kind: "work",
-        parentTitle: work.title,
-      });
-    }
-    return { ok: true };
+    return submitAcademicWorkPure(context.userId, data, {
+      lookupWork: async (id) => {
+        const { data: work, error: workErr } = await supabaseAdmin
+          .from("academic_works")
+          .select("id, discipline_id, title")
+          .eq("id", id)
+          .maybeSingle();
+        if (workErr) throw new Error(workErr.message);
+        return work;
+      },
+      lookupEnrollment: async (disciplineId, studentId) => {
+        const { data: enroll, error: enrollError } = await supabaseAdmin
+          .from("discipline_students")
+          .select("id")
+          .eq("discipline_id", disciplineId)
+          .eq("student_id", studentId)
+          .maybeSingle();
+        if (enrollError) throw new Error(enrollError.message);
+        return !!enroll;
+      },
+      upsertWorkSubmission: async (row) => {
+        const { error } = await supabaseAdmin
+          .from("academic_work_submissions")
+          .upsert(row, { onConflict: "work_id,student_id" });
+        if (error) throw new Error(error.message);
+      },
+      notifyTeacher: async ({ disciplineId, studentId, parentTitle }) => {
+        await notifyTeacherOfSubmission({
+          disciplineId,
+          studentId,
+          kind: "work",
+          parentTitle,
+        });
+      },
+    });
   });
 
 function sanitizeFilename(name: string) {

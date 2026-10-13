@@ -17,7 +17,7 @@ CREATE TYPE public.invitation_kind AS ENUM ('institution', 'teacher');
 
 CREATE TABLE public.invitations (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  token text NOT NULL UNIQUE DEFAULT encode(gen_random_bytes(18), 'hex'),
+  token text NOT NULL UNIQUE DEFAULT encode(extensions.gen_random_bytes(18), 'hex'),
   kind public.invitation_kind NOT NULL,
   created_by uuid NOT NULL,
   institution_id uuid,

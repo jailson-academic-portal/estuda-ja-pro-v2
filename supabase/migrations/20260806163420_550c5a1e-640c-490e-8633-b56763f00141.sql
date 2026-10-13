@@ -19,7 +19,6 @@ USING (
   OR public.has_role(auth.uid(), 'admin'::public.app_role)
   OR (
     (public.has_role(auth.uid(), 'teacher'::public.app_role)
-     OR public.has_role(auth.uid(), 'gestor'::public.app_role)
      OR public.has_role(auth.uid(), 'institution'::public.app_role))
     AND institution_id = public.current_institution_id()
   )

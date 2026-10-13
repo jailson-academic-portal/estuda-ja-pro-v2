@@ -445,7 +445,6 @@ export function WorkSubmissionAssistant({
       await submitAcademicWork({
         data: {
           work_id: work.id,
-          student_id: authUser.id,
           file_url: "inline_submission",
           submission_text: fullText,
         },

@@ -1,4 +1,4 @@
-project_id = "khhemnphzdlulpzhjzqg"
+project_id = "iybaqzddxnbghfrpfpgm"
 
 [functions.matricula-login]
 verify_jwt = false

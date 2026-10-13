@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { assertTeacherOrAdmin } from "./discipline-access.server";
 import type { OnlineExamRow, OnlineExamStatus } from "@/integrations/supabase/online-exams.types";
+import { stripBiometricFlags, forceDisabledProctoringFlags } from "./online-exams-pure";
 
 /* ============================================================================
  * AVALIAÇÕES ONLINE — funções do professor
@@ -11,10 +12,17 @@ import type { OnlineExamRow, OnlineExamStatus } from "@/integrations/supabase/on
  * Segue o padrão de `assessments.functions.ts`: server fn + supabaseAdmin +
  * assertTeacherOrAdmin antes de qualquer escrita.
  *
- * NOTA DE SEGURANÇA: `biometric_required` e `require_face_match` são apenas
- * SINAIS persistidos. A verificação biométrica de verdade (match de face,
- * liveness) NÃO acontece aqui e NÃO deve rodar no browser do aluno sem antes
- * decidir onde o template é processado. Ver README da feature.
+ * BIOMETRIA REMOVIDA (decisão de Produto): as colunas biometric_required,
+ * biometric_kind_required e require_face_match em public.online_exams são
+ * herdadas da era biométrica e ainda existem no schema. A decisão de
+ * removê-las do banco é do DBA. Enquanto a migration de remoção não é
+ * aplicada, este módulo **força** os flags para `false` / `null` antes de
+ * gravar — qualquer valor enviado pelo cliente é ignorado. A função
+ * `validateBiometricFlags` foi removida: nada precisa mais ser validado.
+ *
+ * ATENÇÃO: quando a migration de remoção rodar, este módulo deve ser
+ * atualizado para tirar os campos dos Zod shapes e do payload. Até lá, o
+ * payload é persistido com os 3 campos zerados.
  * ========================================================================== */
 
 const statusEnum = z.enum(["draft", "scheduled", "open", "closed", "archived"]);
@@ -50,17 +58,8 @@ function validateWindow(opens_at: string | null | undefined, closes_at: string |
   }
 }
 
-function validateBiometricFlags(v: z.infer<typeof examShape>) {
-  if (v.require_face_match && !v.biometric_required) {
-    throw new Error("Exigir reconhecimento facial pressupõe biometria obrigatória");
-  }
-  if (v.biometric_required && !v.biometric_kind_required) {
-    throw new Error("Selecione qual biometria será exigida");
-  }
-  if (v.proctoring_enabled && !v.biometric_required) {
-    throw new Error("Monitoramento de prova pressupõe biometria obrigatória");
-  }
-}
+// `stripBiometricFlags` e `forceDisabledProctoringFlags` foram extraídos
+// para `./online-exams-pure.ts` para serem testáveis sem Supabase.
 
 // ---------- LISTAR ----------------------------------------------------------
 export const listOnlineExams = createServerFn({ method: "POST" })
@@ -184,7 +183,6 @@ export const createOnlineExam = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertTeacherOrAdmin(data.disciplineId, context.userId);
     validateWindow(data.opens_at, data.closes_at);
-    validateBiometricFlags(data);
 
     // A assessment precisa pertencer à mesma disciplina — evita atravessar
     // a fronteira entre disciplinas com um id válido de outra.
@@ -201,7 +199,7 @@ export const createOnlineExam = createServerFn({ method: "POST" })
       throw new Error("A avaliação de origem pertence a outra disciplina");
     }
 
-    const payload = {
+    const payload = stripBiometricFlags({
       assessment_id: data.assessmentId,
       discipline_id: data.disciplineId,
       created_by: context.userId,
@@ -214,16 +212,11 @@ export const createOnlineExam = createServerFn({ method: "POST" })
       randomize_options: data.randomize_options,
       opens_at: data.opens_at ?? null,
       closes_at: data.closes_at ?? null,
-      biometric_required: data.biometric_required,
-      biometric_kind_required: data.biometric_required
-        ? (data.biometric_kind_required ?? null)
-        : null,
-      require_face_match: data.require_face_match,
       max_attempts: data.max_attempts,
       proctoring_enabled: data.proctoring_enabled,
       tab_switch_limit: data.tab_switch_limit ?? null,
       allow_resume: data.allow_resume,
-    };
+    });
 
     const { data: created, error } = await (
       await supabaseAdmin
@@ -253,32 +246,28 @@ export const updateOnlineExam = createServerFn({ method: "POST" })
 
     await assertTeacherOrAdmin(exam.discipline_id as string, context.userId);
     validateWindow(data.opens_at, data.closes_at);
-    validateBiometricFlags(data);
 
     const { data: updated, error } = await (
       await supabaseAdmin
     )
       .from("online_exams")
-      .update({
-        title: data.title,
-        instructions: data.instructions ?? null,
-        status: data.status,
-        time_limit_minutes: data.time_limit_minutes,
-        max_score: roundTwo(data.max_score),
-        randomize_questions: data.randomize_questions,
-        randomize_options: data.randomize_options,
-        opens_at: data.opens_at ?? null,
-        closes_at: data.closes_at ?? null,
-        biometric_required: data.biometric_required,
-        biometric_kind_required: data.biometric_required
-          ? (data.biometric_kind_required ?? null)
-          : null,
-        require_face_match: data.require_face_match,
-        max_attempts: data.max_attempts,
-        proctoring_enabled: data.proctoring_enabled,
-        tab_switch_limit: data.tab_switch_limit ?? null,
-        allow_resume: data.allow_resume,
-      })
+      .update(
+        stripBiometricFlags({
+          title: data.title,
+          instructions: data.instructions ?? null,
+          status: data.status,
+          time_limit_minutes: data.time_limit_minutes,
+          max_score: roundTwo(data.max_score),
+          randomize_questions: data.randomize_questions,
+          randomize_options: data.randomize_options,
+          opens_at: data.opens_at ?? null,
+          closes_at: data.closes_at ?? null,
+          max_attempts: data.max_attempts,
+          proctoring_enabled: data.proctoring_enabled,
+          tab_switch_limit: data.tab_switch_limit ?? null,
+          allow_resume: data.allow_resume,
+        }),
+      )
       .eq("id", data.id)
       .select("id, title, status")
       .single();
@@ -410,12 +399,6 @@ export const saveOnlineExamConfig = createServerFn({ method: "POST" })
     if (data.opensAt && data.closesAt && new Date(data.closesAt) <= new Date(data.opensAt)) {
       throw new Error("O encerramento deve ser posterior a abertura");
     }
-    if (data.requireFaceMatch && !data.biometricRequired) {
-      throw new Error("Exigir reconhecimento facial pressupoe biometria obrigatoria");
-    }
-    if (data.biometricRequired && !data.biometricKind) {
-      throw new Error("Selecione qual biometria sera exigida");
-    }
 
     const { data: asms, error: aErr } = await (
       await supabaseAdmin
@@ -466,25 +449,22 @@ export const saveOnlineExamConfig = createServerFn({ method: "POST" })
       ? ((previousStatus as "open" | "draft") ?? "draft")
       : decideInitialStatus(data.opensAt ?? null, data.closesAt ?? null);
 
-    const payload = {
-      assessment_id: data.assessmentId,
-      discipline_id: data.disciplineId,
-      created_by: context.userId,
-      title: data.title.trim(),
-      instructions: data.instructions ?? null,
-      opens_at: data.opensAt ?? null,
-      closes_at: data.closesAt ?? null,
-      time_limit_minutes: data.timeLimitMinutes,
-      max_score: roundTwo(data.maxScore),
-      max_attempts: data.maxAttempts,
-      attendance_session_id: data.attendanceSessionId ?? null,
-      // Biometric columns mantidas por compat (UI nao oferece mais).
-      biometric_required: data.biometricRequired,
-      biometric_kind_required: data.biometricRequired ? (data.biometricKind ?? null) : null,
-      require_face_match: data.biometricRequired && data.requireFaceMatch,
-      tab_switch_limit: data.biometricRequired ? (data.tabSwitchLimit ?? null) : null,
-      status,
-    };
+    const payload = forceDisabledProctoringFlags(
+      stripBiometricFlags({
+        assessment_id: data.assessmentId,
+        discipline_id: data.disciplineId,
+        created_by: context.userId,
+        title: data.title.trim(),
+        instructions: data.instructions ?? null,
+        opens_at: data.opensAt ?? null,
+        closes_at: data.closesAt ?? null,
+        time_limit_minutes: data.timeLimitMinutes,
+        max_score: roundTwo(data.maxScore),
+        max_attempts: data.maxAttempts,
+        attendance_session_id: data.attendanceSessionId ?? null,
+        status,
+      }),
+    );
 
     // Upsert direto na tabela, em cima do UNIQUE INDEX
     // idx_online_exams_assessment (assessment_id). A RPC

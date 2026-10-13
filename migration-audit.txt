@@ -1,0 +1,3999 @@
+Total de migrations: 156
+Arquivos: 20240802151400_clinical_cases_deadlines.sql até 20261008150000_online_exams_assessment_unique.sql
+
+=== CORRECOES APLICADAS EM 2026-10-12 ===
+
+1. Contagem de migrations corrigida: 155 -> 156 (confirmado: 156 arquivos .sql)
+2. Contagem de linhas do arquivo: backup com 3.945 linhas; arquivo atual com 3.999 linhas (wc -l em 2026-10-12)
+3. Config local verificada: project_id em supabase/config.toml corresponde ao V2 esperado (iybaqzddxnbghfrpfpgm)
+
+=== TRECHOS QUE EXIGEM REVISÃO ===
+
+--- 20240802151400_clinical_cases_deadlines.sql:2 ---
+-- Add deadline and penalty columns to clinical_cases
+ALTER TABLE public.clinical_cases 
+ADD COLUMN IF NOT EXISTS due_date timestamp with time zone,
+
+--- 20240802151400_clinical_cases_deadlines.sql:13 ---
+-- (Assuming they exist based on previous messages, but standardizing here)
+DROP POLICY IF EXISTS "Teachers can manage their own cases" ON public.clinical_cases;
+CREATE POLICY "Teachers can manage their own cases"
+
+--- 20240802151400_clinical_cases_deadlines.sql:20 ---
+
+DROP POLICY IF EXISTS "Students can view cases in their disciplines" ON public.clinical_cases;
+CREATE POLICY "Students can view cases in their disciplines"
+
+--- 20240804164500_academic_hierarchy.sql:12 ---
+-- Instituições (Complemento)
+ALTER TABLE public.institutions ADD COLUMN IF NOT EXISTS unit TEXT;
+ALTER TABLE public.institutions ADD COLUMN IF NOT EXISTS primary_color TEXT DEFAULT '#0d9488';
+
+--- 20240804164500_academic_hierarchy.sql:13 ---
+ALTER TABLE public.institutions ADD COLUMN IF NOT EXISTS unit TEXT;
+ALTER TABLE public.institutions ADD COLUMN IF NOT EXISTS primary_color TEXT DEFAULT '#0d9488';
+ALTER TABLE public.institutions ADD COLUMN IF NOT EXISTS secondary_color TEXT DEFAULT '#14b8a6';
+
+--- 20240804164500_academic_hierarchy.sql:14 ---
+ALTER TABLE public.institutions ADD COLUMN IF NOT EXISTS primary_color TEXT DEFAULT '#0d9488';
+ALTER TABLE public.institutions ADD COLUMN IF NOT EXISTS secondary_color TEXT DEFAULT '#14b8a6';
+
+
+--- 20240804164500_academic_hierarchy.sql:17 ---
+-- Cursos (Ajuste)
+ALTER TABLE public.courses ADD COLUMN IF NOT EXISTS institution_id UUID REFERENCES public.institutions(id) ON DELETE CASCADE;
+ALTER TABLE public.courses ADD COLUMN IF NOT EXISTS department TEXT;
+
+--- 20240804164500_academic_hierarchy.sql:18 ---
+ALTER TABLE public.courses ADD COLUMN IF NOT EXISTS institution_id UUID REFERENCES public.institutions(id) ON DELETE CASCADE;
+ALTER TABLE public.courses ADD COLUMN IF NOT EXISTS department TEXT;
+
+
+--- 20240804164500_academic_hierarchy.sql:21 ---
+-- Disciplinas (Ajuste)
+ALTER TABLE public.disciplines ADD COLUMN IF NOT EXISTS course_id UUID REFERENCES public.courses(id) ON DELETE CASCADE;
+ALTER TABLE public.disciplines ADD COLUMN IF NOT EXISTS semester INTEGER;
+
+--- 20240804164500_academic_hierarchy.sql:22 ---
+ALTER TABLE public.disciplines ADD COLUMN IF NOT EXISTS course_id UUID REFERENCES public.courses(id) ON DELETE CASCADE;
+ALTER TABLE public.disciplines ADD COLUMN IF NOT EXISTS semester INTEGER;
+
+
+--- 20240804164500_academic_hierarchy.sql:27 ---
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    institution_id UUID REFERENCES public.institutions(id) ON DELETE CASCADE NOT NULL,
+    course_id UUID REFERENCES public.courses(id) ON DELETE CASCADE NOT NULL,
+
+--- 20240804164500_academic_hierarchy.sql:28 ---
+    institution_id UUID REFERENCES public.institutions(id) ON DELETE CASCADE NOT NULL,
+    course_id UUID REFERENCES public.courses(id) ON DELETE CASCADE NOT NULL,
+    name TEXT NOT NULL,
+
+--- 20240804164500_academic_hierarchy.sql:39 ---
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    class_id UUID REFERENCES public.school_classes(id) ON DELETE CASCADE NOT NULL,
+    discipline_id UUID REFERENCES public.disciplines(id) ON DELETE CASCADE NOT NULL,
+
+--- 20240804164500_academic_hierarchy.sql:40 ---
+    class_id UUID REFERENCES public.school_classes(id) ON DELETE CASCADE NOT NULL,
+    discipline_id UUID REFERENCES public.disciplines(id) ON DELETE CASCADE NOT NULL,
+    professor_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+
+--- 20240804164500_academic_hierarchy.sql:41 ---
+    discipline_id UUID REFERENCES public.disciplines(id) ON DELETE CASCADE NOT NULL,
+    professor_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now(),
+
+--- 20240804164500_academic_hierarchy.sql:49 ---
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    class_id UUID REFERENCES public.school_classes(id) ON DELETE CASCADE NOT NULL,
+    student_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+
+--- 20240804164500_academic_hierarchy.sql:50 ---
+    class_id UUID REFERENCES public.school_classes(id) ON DELETE CASCADE NOT NULL,
+    student_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    matricula TEXT,
+
+--- 20240804164500_academic_hierarchy.sql:67 ---
+-- 3. RLS
+ALTER TABLE public.school_classes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.class_professors ENABLE ROW LEVEL SECURITY;
+
+--- 20240804164500_academic_hierarchy.sql:68 ---
+ALTER TABLE public.school_classes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.class_professors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.class_students ENABLE ROW LEVEL SECURITY;
+
+--- 20240804164500_academic_hierarchy.sql:69 ---
+ALTER TABLE public.class_professors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.class_students ENABLE ROW LEVEL SECURITY;
+
+
+--- 20250802000000_simulsaude_schema.sql:7 ---
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    discipline_id UUID NOT NULL REFERENCES public.disciplines(id) ON DELETE CASCADE,
+    teacher_id UUID NOT NULL REFERENCES public.profiles(id),
+
+--- 20250802000000_simulsaude_schema.sql:22 ---
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    case_id UUID NOT NULL REFERENCES public.clinical_cases(id) ON DELETE CASCADE,
+    student_id UUID NOT NULL REFERENCES public.profiles(id),
+
+--- 20250802000000_simulsaude_schema.sql:34 ---
+-- RLS and Grants
+ALTER TABLE public.clinical_cases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.student_submissions ENABLE ROW LEVEL SECURITY;
+
+--- 20250802000000_simulsaude_schema.sql:35 ---
+ALTER TABLE public.clinical_cases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.student_submissions ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260429170922_c4d5b84d-ac2d-421a-9979-8ec3b1d36eed.sql:19 ---
+CREATE TABLE public.profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL DEFAULT '',
+
+--- 20260429170922_c4d5b84d-ac2d-421a-9979-8ec3b1d36eed.sql:37 ---
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  role public.app_role NOT NULL,
+
+--- 20260429170922_c4d5b84d-ac2d-421a-9979-8ec3b1d36eed.sql:46 ---
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  teacher_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  institution_id UUID REFERENCES public.institutions(id) ON DELETE SET NULL,
+
+--- 20260429170922_c4d5b84d-ac2d-421a-9979-8ec3b1d36eed.sql:65 ---
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  discipline_id UUID NOT NULL REFERENCES public.disciplines(id) ON DELETE CASCADE,
+  student_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+
+--- 20260429170922_c4d5b84d-ac2d-421a-9979-8ec3b1d36eed.sql:66 ---
+  discipline_id UUID NOT NULL REFERENCES public.disciplines(id) ON DELETE CASCADE,
+  student_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  enrolled_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+--- 20260429170922_c4d5b84d-ac2d-421a-9979-8ec3b1d36eed.sql:75 ---
+
+-- SECURITY DEFINER ROLE CHECKER
+CREATE OR REPLACE FUNCTION public.has_role(_user_id UUID, _role public.app_role)
+
+--- 20260429170922_c4d5b84d-ac2d-421a-9979-8ec3b1d36eed.sql:80 ---
+STABLE
+SECURITY DEFINER
+SET search_path = public
+
+--- 20260429170922_c4d5b84d-ac2d-421a-9979-8ec3b1d36eed.sql:94 ---
+STABLE
+SECURITY DEFINER
+SET search_path = public
+
+--- 20260429170922_c4d5b84d-ac2d-421a-9979-8ec3b1d36eed.sql:104 ---
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+
+--- 20260429170922_c4d5b84d-ac2d-421a-9979-8ec3b1d36eed.sql:133 ---
+-- ENABLE RLS
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
+
+--- 20260429170922_c4d5b84d-ac2d-421a-9979-8ec3b1d36eed.sql:134 ---
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.institutions ENABLE ROW LEVEL SECURITY;
+
+--- 20260429170922_c4d5b84d-ac2d-421a-9979-8ec3b1d36eed.sql:135 ---
+ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.institutions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.disciplines ENABLE ROW LEVEL SECURITY;
+
+--- 20260429170922_c4d5b84d-ac2d-421a-9979-8ec3b1d36eed.sql:136 ---
+ALTER TABLE public.institutions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.disciplines ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.discipline_students ENABLE ROW LEVEL SECURITY;
+
+--- 20260429170922_c4d5b84d-ac2d-421a-9979-8ec3b1d36eed.sql:137 ---
+ALTER TABLE public.disciplines ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.discipline_students ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260429172613_585d44a4-dc19-4ca5-8dd0-6ea6e42d9126.sql:2 ---
+-- Add class/group name to disciplines
+ALTER TABLE public.disciplines
+  ADD COLUMN IF NOT EXISTS group_name TEXT;
+
+--- 20260429172613_585d44a4-dc19-4ca5-8dd0-6ea6e42d9126.sql:9 ---
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:28 ---
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  discipline_id UUID NOT NULL UNIQUE REFERENCES public.disciplines(id) ON DELETE CASCADE,
+  justified_counts_as_presence BOOLEAN NOT NULL DEFAULT true,
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:35 ---
+);
+ALTER TABLE public.discipline_settings ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:60 ---
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  discipline_id UUID NOT NULL REFERENCES public.disciplines(id) ON DELETE CASCADE,
+  teacher_id UUID NOT NULL,
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:69 ---
+CREATE INDEX idx_attendance_sessions_discipline ON public.attendance_sessions(discipline_id);
+ALTER TABLE public.attendance_sessions ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:92 ---
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id UUID NOT NULL REFERENCES public.attendance_sessions(id) ON DELETE CASCADE,
+  student_id UUID NOT NULL,
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:102 ---
+CREATE INDEX idx_attendance_records_student ON public.attendance_records(student_id);
+ALTER TABLE public.attendance_records ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:130 ---
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id UUID NOT NULL REFERENCES public.attendance_sessions(id) ON DELETE CASCADE,
+  student_id UUID NOT NULL,
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:144 ---
+CREATE INDEX idx_justifications_session ON public.justifications(session_id);
+ALTER TABLE public.justifications ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:173 ---
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  discipline_id UUID NOT NULL REFERENCES public.disciplines(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:178 ---
+);
+ALTER TABLE public.material_modules ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:200 ---
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  module_id UUID NOT NULL REFERENCES public.material_modules(id) ON DELETE CASCADE,
+  discipline_id UUID NOT NULL REFERENCES public.disciplines(id) ON DELETE CASCADE,
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:201 ---
+  module_id UUID NOT NULL REFERENCES public.material_modules(id) ON DELETE CASCADE,
+  discipline_id UUID NOT NULL REFERENCES public.disciplines(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:213 ---
+);
+ALTER TABLE public.materials ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:241 ---
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  discipline_id UUID NOT NULL REFERENCES public.disciplines(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:253 ---
+);
+ALTER TABLE public.exercises ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:278 ---
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  exercise_id UUID NOT NULL REFERENCES public.exercises(id) ON DELETE CASCADE,
+  position INTEGER NOT NULL DEFAULT 0,
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:291 ---
+);
+ALTER TABLE public.exercise_questions ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:313 ---
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  exercise_id UUID NOT NULL REFERENCES public.exercises(id) ON DELETE CASCADE,
+  student_id UUID NOT NULL,
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:326 ---
+);
+ALTER TABLE public.exercise_submissions ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:348 ---
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  discipline_id UUID NOT NULL REFERENCES public.disciplines(id) ON DELETE CASCADE,
+  subtype public.activity_subtype NOT NULL,
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:364 ---
+);
+ALTER TABLE public.activities ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:389 ---
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  activity_id UUID NOT NULL REFERENCES public.activities(id) ON DELETE CASCADE,
+  student_id UUID NOT NULL,
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:402 ---
+);
+ALTER TABLE public.activity_submissions ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:424 ---
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  discipline_id UUID NOT NULL REFERENCES public.disciplines(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:437 ---
+);
+ALTER TABLE public.academic_works ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:462 ---
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  work_id UUID NOT NULL REFERENCES public.academic_works(id) ON DELETE CASCADE,
+  student_id UUID NOT NULL,
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:475 ---
+);
+ALTER TABLE public.academic_work_submissions ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:497 ---
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  discipline_id UUID NOT NULL UNIQUE REFERENCES public.disciplines(id) ON DELETE CASCADE,
+  -- assessments: [{ id, name, weight }]
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:507 ---
+);
+ALTER TABLE public.grade_structures ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:529 ---
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  discipline_id UUID NOT NULL REFERENCES public.disciplines(id) ON DELETE CASCADE,
+  student_id UUID NOT NULL,
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:537 ---
+);
+ALTER TABLE public.grade_entries ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260429173856_8c91924a-d8fd-480f-841c-6d4aa428b17f.sql:572 ---
+CREATE INDEX idx_notifications_user_unread ON public.notifications(user_id, read_at);
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260429181151_1dd69716-a0ed-4da0-b579-1eab903d0470.sql:14 ---
+
+ALTER TABLE public.student_diary_entries ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260429181151_1dd69716-a0ed-4da0-b579-1eab903d0470.sql:44 ---
+
+ALTER TABLE public.calendar_events ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260429182438_3b2e1386-98c9-4a02-9790-df071f220070.sql:12 ---
+
+ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260429182438_3b2e1386-98c9-4a02-9790-df071f220070.sql:64 ---
+
+ALTER TABLE public.ai_generations ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260429185243_74bc5e3b-c4fd-4762-ac14-ff10639a6396.sql:2 ---
+-- Garante linhas completas nos eventos de UPDATE/DELETE
+ALTER TABLE public.attendance_records REPLICA IDENTITY FULL;
+ALTER TABLE public.grade_entries REPLICA IDENTITY FULL;
+
+--- 20260429185243_74bc5e3b-c4fd-4762-ac14-ff10639a6396.sql:3 ---
+ALTER TABLE public.attendance_records REPLICA IDENTITY FULL;
+ALTER TABLE public.grade_entries REPLICA IDENTITY FULL;
+ALTER TABLE public.notifications REPLICA IDENTITY FULL;
+
+--- 20260429185243_74bc5e3b-c4fd-4762-ac14-ff10639a6396.sql:4 ---
+ALTER TABLE public.grade_entries REPLICA IDENTITY FULL;
+ALTER TABLE public.notifications REPLICA IDENTITY FULL;
+
+
+--- 20260429190101_469b1d74-05e3-4342-a1b2-41685a05415e.sql:1 ---
+ALTER TABLE public.grade_structures
+  ADD COLUMN IF NOT EXISTS recovery_config jsonb DEFAULT NULL;
+
+--- 20260429191108_2f3eec73-beba-4fc3-bf03-6821b401c69b.sql:1 ---
+ALTER TABLE public.grade_structures
+  ADD COLUMN IF NOT EXISTS recovery_average numeric,
+
+--- 20260430005341_4325c60d-cb5c-4953-b0a1-3d7238d26e08.sql:6 ---
+LANGUAGE sql
+STABLE SECURITY DEFINER
+SET search_path = public
+
+--- 20260430005341_4325c60d-cb5c-4953-b0a1-3d7238d26e08.sql:15 ---
+LANGUAGE sql
+STABLE SECURITY DEFINER
+SET search_path = public
+
+--- 20260430005341_4325c60d-cb5c-4953-b0a1-3d7238d26e08.sql:22 ---
+-- Replace recursive policies on discipline_students
+DROP POLICY IF EXISTS "Teachers manage enrollments in own disciplines" ON public.discipline_students;
+CREATE POLICY "Teachers manage enrollments in own disciplines"
+
+--- 20260430005341_4325c60d-cb5c-4953-b0a1-3d7238d26e08.sql:30 ---
+-- Replace recursive policy on disciplines
+DROP POLICY IF EXISTS "Students see enrolled disciplines" ON public.disciplines;
+CREATE POLICY "Students see enrolled disciplines"
+
+--- 20260430010937_623abe36-6dc9-4385-aef5-abbcd950f37d.sql:35 ---
+
+ALTER TABLE public.invitations ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260430010937_623abe36-6dc9-4385-aef5-abbcd950f37d.sql:56 ---
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+
+--- 20260430010937_623abe36-6dc9-4385-aef5-abbcd950f37d.sql:105 ---
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+
+--- 20260430015748_a8b7f5aa-42b4-432a-8195-9bc7b81d164a.sql:32 ---
+
+ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260430015748_a8b7f5aa-42b4-432a-8195-9bc7b81d164a.sql:34 ---
+
+DROP POLICY IF EXISTS "Owners view own subscription" ON public.subscriptions;
+CREATE POLICY "Owners view own subscription" ON public.subscriptions
+
+--- 20260430015748_a8b7f5aa-42b4-432a-8195-9bc7b81d164a.sql:39 ---
+
+DROP POLICY IF EXISTS "Admins manage all subscriptions" ON public.subscriptions;
+CREATE POLICY "Admins manage all subscriptions" ON public.subscriptions
+
+--- 20260430015748_a8b7f5aa-42b4-432a-8195-9bc7b81d164a.sql:64 ---
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+
+--- 20260430015748_a8b7f5aa-42b4-432a-8195-9bc7b81d164a.sql:91 ---
+-- Allow recipient identification: add recipient_name + recipient_email columns
+ALTER TABLE public.invitations
+  ADD COLUMN IF NOT EXISTS recipient_name text,
+
+--- 20260430021059_e4ca8a86-0ede-4ceb-9792-f6071fdd6a31.sql:2 ---
+-- Stripe-specific columns on existing subscriptions table
+ALTER TABLE public.subscriptions
+  ADD COLUMN IF NOT EXISTS stripe_customer_id text,
+
+--- 20260430021059_e4ca8a86-0ede-4ceb-9792-f6071fdd6a31.sql:17 ---
+STABLE
+SECURITY DEFINER
+SET search_path = public
+
+--- 20260430021059_e4ca8a86-0ede-4ceb-9792-f6071fdd6a31.sql:34 ---
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+
+--- 20260430021059_e4ca8a86-0ede-4ceb-9792-f6071fdd6a31.sql:70 ---
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+
+--- 20260430021738_31f3b1ce-244d-4c1c-a962-f53afdaaf41d.sql:2 ---
+-- 1) Drop the old uniqueness that blocks multiple historical rows
+ALTER TABLE public.subscriptions
+  DROP CONSTRAINT IF EXISTS subscriptions_subscriber_id_subscriber_kind_key;
+
+--- 20260430021738_31f3b1ce-244d-4c1c-a962-f53afdaaf41d.sql:32 ---
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+
+--- 20260504133238_5f7b9245-41ad-4191-a906-1a5a610cb8f6.sql:1 ---
+ALTER TABLE public.disciplines
+  ADD COLUMN IF NOT EXISTS start_date date,
+
+--- 20260504135356_3d47d3c2-6e34-4728-aa76-9fc2f45298ea.sql:1 ---
+ALTER TABLE public.disciplines
+  ALTER COLUMN status SET DEFAULT 'active'::public.discipline_status;
+
+--- 20260504140226_39344dc8-1495-489f-af5b-5d44e799e7f6.sql:3 ---
+
+ALTER TABLE public.disciplines ALTER COLUMN status DROP DEFAULT;
+ALTER TABLE public.disciplines ALTER COLUMN status TYPE text USING COALESCE(NULLIF(status::text, ''), 'active');
+
+--- 20260504140226_39344dc8-1495-489f-af5b-5d44e799e7f6.sql:4 ---
+ALTER TABLE public.disciplines ALTER COLUMN status DROP DEFAULT;
+ALTER TABLE public.disciplines ALTER COLUMN status TYPE text USING COALESCE(NULLIF(status::text, ''), 'active');
+ALTER TABLE public.disciplines ALTER COLUMN status SET DEFAULT 'active';
+
+--- 20260504140226_39344dc8-1495-489f-af5b-5d44e799e7f6.sql:5 ---
+ALTER TABLE public.disciplines ALTER COLUMN status TYPE text USING COALESCE(NULLIF(status::text, ''), 'active');
+ALTER TABLE public.disciplines ALTER COLUMN status SET DEFAULT 'active';
+ALTER TABLE public.disciplines ALTER COLUMN status SET NOT NULL;
+
+--- 20260504140226_39344dc8-1495-489f-af5b-5d44e799e7f6.sql:6 ---
+ALTER TABLE public.disciplines ALTER COLUMN status SET DEFAULT 'active';
+ALTER TABLE public.disciplines ALTER COLUMN status SET NOT NULL;
+
+
+--- 20260508160718_306b3ed9-c0c6-417c-a4bb-b6218acc5d95.sql:2 ---
+-- Remove duplicates first if any
+DELETE FROM public.subscriptions a
+USING public.subscriptions b
+
+--- 20260508160718_306b3ed9-c0c6-417c-a4bb-b6218acc5d95.sql:8 ---
+
+ALTER TABLE public.subscriptions
+  ADD CONSTRAINT subscriptions_subscriber_id_kind_key UNIQUE (subscriber_id, subscriber_kind);
+
+--- 20260508160718_306b3ed9-c0c6-417c-a4bb-b6218acc5d95.sql:9 ---
+ALTER TABLE public.subscriptions
+  ADD CONSTRAINT subscriptions_subscriber_id_kind_key UNIQUE (subscriber_id, subscriber_kind);
+
+--- 20260508190905_d06ecb9b-bd54-415c-9a46-e26f1c731acc.sql:1 ---
+ALTER TABLE public.disciplines ADD COLUMN IF NOT EXISTS location text;
+
+--- 20260513223608_ea86eba5-e56e-4fcf-ac99-a0ff2ae4a4a6.sql:1 ---
+ALTER TABLE public.attendance_sessions
+ADD COLUMN IF NOT EXISTS code_window_minutes integer NOT NULL DEFAULT 15;
+
+--- 20260513225856_b781037e-f169-43fb-b298-534c890d4e29.sql:1 ---
+ALTER TABLE public.attendance_sessions
+  ADD COLUMN IF NOT EXISTS starts_at timestamp with time zone NOT NULL DEFAULT now();
+
+--- 20260513235657_7e85624c-7597-4cbb-b706-290ed70937f1.sql:24 ---
+
+ALTER TABLE public.attendance_sessions REPLICA IDENTITY FULL;
+ALTER TABLE public.justifications REPLICA IDENTITY FULL;
+
+--- 20260513235657_7e85624c-7597-4cbb-b706-290ed70937f1.sql:25 ---
+ALTER TABLE public.attendance_sessions REPLICA IDENTITY FULL;
+ALTER TABLE public.justifications REPLICA IDENTITY FULL;
+
+--- 20260514004903_d7e5ab03-a292-4f57-9b7f-ed1f93312a71.sql:25 ---
+-- Add subtype + grading formula columns to academic_works
+ALTER TABLE public.academic_works
+  ADD COLUMN IF NOT EXISTS subtype public.academic_work_subtype NOT NULL DEFAULT 'tema_predefinido',
+
+--- 20260514004903_d7e5ab03-a292-4f57-9b7f-ed1f93312a71.sql:30 ---
+-- Add grading formula column to activities
+ALTER TABLE public.activities
+  ADD COLUMN IF NOT EXISTS grading_formula text NOT NULL DEFAULT 'weighted_average';
+
+--- 20260514011337_4fa2be24-1f49-48da-a3cb-895abaf7d5e5.sql:14 ---
+
+ALTER TABLE public.custom_rubrics ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260514151449_c8fb4702-b5cf-4c3d-9f7b-77601f23ae3b.sql:19 ---
+
+ALTER TABLE public.student_documents ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260514162625_73e6c1d6-5fb4-4a94-abf0-11841749023a.sql:1 ---
+ALTER TABLE public.attendance_sessions
+  ADD COLUMN IF NOT EXISTS finalized_at TIMESTAMPTZ,
+
+--- 20260516185453_a1bd5402-5b69-4fc1-a850-4ec0d864569b.sql:4 ---
+-- uploads always failed.
+DROP POLICY IF EXISTS "Teachers manage materials files" ON storage.objects;
+
+
+--- 20260516185453_a1bd5402-5b69-4fc1-a850-4ec0d864569b.sql:30 ---
+-- download submitted PDFs from their disciplines.
+DROP POLICY IF EXISTS "Teachers read submissions in own disciplines" ON storage.objects;
+
+
+--- 20260516191858_da1f7cb8-ac8c-4e42-83f5-c6ac0b7c2f2a.sql:5 ---
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+
+--- 20260516191858_da1f7cb8-ac8c-4e42-83f5-c6ac0b7c2f2a.sql:37 ---
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+
+--- 20260516191858_da1f7cb8-ac8c-4e42-83f5-c6ac0b7c2f2a.sql:65 ---
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+
+--- 20260516204205_13f7fb42-bf2a-439d-9bff-6896aaee2d9d.sql:4 ---
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+
+--- 20260516204205_13f7fb42-bf2a-439d-9bff-6896aaee2d9d.sql:33 ---
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+
+--- 20260519184900_796b10f9-eeee-40c9-a682-4f77110057f5.sql:27 ---
+-- Activity submissions: enrichment columns
+ALTER TABLE public.activity_submissions
+  ADD COLUMN IF NOT EXISTS ai_usage_report jsonb,
+
+--- 20260519184900_796b10f9-eeee-40c9-a682-4f77110057f5.sql:38 ---
+-- Academic work submissions: enrichment columns
+ALTER TABLE public.academic_work_submissions
+  ADD COLUMN IF NOT EXISTS ai_usage_report jsonb,
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:3 ---
+-- 1. LOGO / Identidade visual
+ALTER TABLE public.institutions ADD COLUMN IF NOT EXISTS logo_url text;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS logo_url text;
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:4 ---
+ALTER TABLE public.institutions ADD COLUMN IF NOT EXISTS logo_url text;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS logo_url text;
+
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:11 ---
+
+DROP POLICY IF EXISTS "branding public read" ON storage.objects;
+CREATE POLICY "branding public read" ON storage.objects
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:15 ---
+
+DROP POLICY IF EXISTS "branding owner write" ON storage.objects;
+CREATE POLICY "branding owner write" ON storage.objects
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:20 ---
+
+DROP POLICY IF EXISTS "branding owner update" ON storage.objects;
+CREATE POLICY "branding owner update" ON storage.objects
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:25 ---
+
+DROP POLICY IF EXISTS "branding owner delete" ON storage.objects;
+CREATE POLICY "branding owner delete" ON storage.objects
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:70 ---
+
+ALTER TABLE public.assessments ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:72 ---
+
+DROP POLICY IF EXISTS "Admins manage assessments" ON public.assessments;
+CREATE POLICY "Admins manage assessments" ON public.assessments
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:78 ---
+
+DROP POLICY IF EXISTS "Teachers manage own assessments" ON public.assessments;
+CREATE POLICY "Teachers manage own assessments" ON public.assessments
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:87 ---
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  assessment_id uuid NOT NULL REFERENCES public.assessments(id) ON DELETE CASCADE,
+  position int NOT NULL DEFAULT 0,
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:100 ---
+
+ALTER TABLE public.assessment_questions ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:102 ---
+
+DROP POLICY IF EXISTS "Admins manage aq" ON public.assessment_questions;
+CREATE POLICY "Admins manage aq" ON public.assessment_questions
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:108 ---
+
+DROP POLICY IF EXISTS "Teachers manage aq" ON public.assessment_questions;
+CREATE POLICY "Teachers manage aq" ON public.assessment_questions
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:117 ---
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  assessment_id uuid NOT NULL REFERENCES public.assessments(id) ON DELETE CASCADE,
+  version_label text NOT NULL,
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:126 ---
+
+ALTER TABLE public.assessment_versions ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:128 ---
+
+DROP POLICY IF EXISTS "Admins manage av" ON public.assessment_versions;
+CREATE POLICY "Admins manage av" ON public.assessment_versions
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:134 ---
+
+DROP POLICY IF EXISTS "Teachers manage av" ON public.assessment_versions;
+CREATE POLICY "Teachers manage av" ON public.assessment_versions
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:143 ---
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  assessment_id uuid NOT NULL REFERENCES public.assessments(id) ON DELETE CASCADE,
+  version_id uuid NOT NULL REFERENCES public.assessment_versions(id) ON DELETE CASCADE,
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:144 ---
+  assessment_id uuid NOT NULL REFERENCES public.assessments(id) ON DELETE CASCADE,
+  version_id uuid NOT NULL REFERENCES public.assessment_versions(id) ON DELETE CASCADE,
+  student_id uuid NOT NULL,
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:153 ---
+
+ALTER TABLE public.assessment_assignments ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:155 ---
+
+DROP POLICY IF EXISTS "Admins manage aa" ON public.assessment_assignments;
+CREATE POLICY "Admins manage aa" ON public.assessment_assignments
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:161 ---
+
+DROP POLICY IF EXISTS "Teachers manage aa" ON public.assessment_assignments;
+CREATE POLICY "Teachers manage aa" ON public.assessment_assignments
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:167 ---
+
+DROP POLICY IF EXISTS "Students see own assignment" ON public.assessment_assignments;
+CREATE POLICY "Students see own assignment" ON public.assessment_assignments
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:175 ---
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  assignment_id uuid NOT NULL UNIQUE REFERENCES public.assessment_assignments(id) ON DELETE CASCADE,
+  objective_answers jsonb NOT NULL DEFAULT '{}'::jsonb,
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:194 ---
+
+ALTER TABLE public.assessment_submissions ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:196 ---
+
+DROP POLICY IF EXISTS "Admins manage asub" ON public.assessment_submissions;
+CREATE POLICY "Admins manage asub" ON public.assessment_submissions
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:202 ---
+
+DROP POLICY IF EXISTS "Teachers manage asub" ON public.assessment_submissions;
+CREATE POLICY "Teachers manage asub" ON public.assessment_submissions
+
+--- 20260525163319_42436301-0630-43e7-a32e-37131679a988.sql:218 ---
+
+DROP POLICY IF EXISTS "Students see own posted submission" ON public.assessment_submissions;
+CREATE POLICY "Students see own posted submission" ON public.assessment_submissions
+
+--- 20260525190124_676174ed-65cf-40b5-b82b-154df0ad9524.sql:2 ---
+-- 1. Remove overly permissive invitation read policy
+DROP POLICY IF EXISTS "Anyone can read invitation by token" ON public.invitations;
+
+
+--- 20260526194739_c0e53705-5827-4f3b-bf87-4551bf0e89d7.sql:1 ---
+ALTER TABLE public.assessments ADD COLUMN IF NOT EXISTS assessment_date date;
+
+--- 20260527163350_397dd71f-ce1a-4078-8468-511f878ed396.sql:1 ---
+ALTER TABLE public.assessment_assignments
+  ADD COLUMN IF NOT EXISTS bubble_layout jsonb;
+
+--- 20260527171515_c6778114-6f7e-4e8b-98ee-045d1c8e1266.sql:3 ---
+-- 1) INVITATIONS: remove client-side SELECT capability; keep INSERT/UPDATE/DELETE
+DROP POLICY IF EXISTS "Institutions manage own invitations" ON public.invitations;
+
+
+--- 20260527171515_c6778114-6f7e-4e8b-98ee-045d1c8e1266.sql:19 ---
+-- 2) STORAGE: tighten syllabi student-read policy to match exact file URL
+DROP POLICY IF EXISTS "Students read enrolled syllabi" ON storage.objects;
+
+
+--- 20260527171515_c6778114-6f7e-4e8b-98ee-045d1c8e1266.sql:36 ---
+-- 3) EXERCISE_QUESTIONS: hide correct_answer/explanation from students
+DROP POLICY IF EXISTS "Students view questions of published exercises" ON public.exercise_questions;
+
+
+--- 20260527171515_c6778114-6f7e-4e8b-98ee-045d1c8e1266.sql:54 ---
+-- 4) ATTENDANCE_SESSIONS: hide check-in code from students
+DROP POLICY IF EXISTS "Students see sessions in enrolled disciplines" ON public.attendance_sessions;
+
+
+--- 20260529184134_7b36e7b0-f55a-4aa7-a05a-0e83a4ba0ce1.sql:8 ---
+-- activity_submissions
+DROP POLICY IF EXISTS "Students manage own activity submissions" ON public.activity_submissions;
+CREATE POLICY "Students view own activity submissions"
+
+--- 20260529184134_7b36e7b0-f55a-4aa7-a05a-0e83a4ba0ce1.sql:16 ---
+-- academic_work_submissions
+DROP POLICY IF EXISTS "Students manage own work submissions" ON public.academic_work_submissions;
+CREATE POLICY "Students view own work submissions"
+
+--- 20260529184134_7b36e7b0-f55a-4aa7-a05a-0e83a4ba0ce1.sql:24 ---
+-- exercise_submissions
+DROP POLICY IF EXISTS "Students manage own submissions" ON public.exercise_submissions;
+CREATE POLICY "Students view own submissions"
+
+--- 20260529211350_bd046e5a-2ae1-46ab-a76d-f74526f7a692.sql:1 ---
+ALTER TABLE public.assessment_assignments
+  ADD COLUMN IF NOT EXISTS question_order text[],
+
+--- 20260529223135_0fb3359f-6b0c-4566-88c4-479c7b3a6801.sql:12 ---
+
+ALTER TABLE public.assessments
+  ADD COLUMN IF NOT EXISTS control_sequence integer;
+
+--- 20260529223247_870a6aae-861d-4ef4-b76e-8994416590a2.sql:12 ---
+
+ALTER TABLE public.assessments
+  ALTER COLUMN control_sequence SET DEFAULT nextval('public.assessment_control_seq'::regclass);
+
+--- 20260529234147_2d64b2fe-dacc-48d5-93dc-4efe9055cf51.sql:34 ---
+
+ALTER TABLE public.assessments
+  ALTER COLUMN control_sequence SET DEFAULT nextval('public.assessment_control_seq'::regclass);
+
+--- 20260531162110_f27609bd-7f69-4e70-801c-d908b04a5ca4.sql:1 ---
+ALTER TABLE public.assessments
+  ADD COLUMN IF NOT EXISTS control_number text,
+
+--- 20260531162110_f27609bd-7f69-4e70-801c-d908b04a5ca4.sql:17 ---
+
+ALTER TABLE public.assessment_control_counters ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260531162110_f27609bd-7f69-4e70-801c-d908b04a5ca4.sql:19 ---
+
+DROP POLICY IF EXISTS "Admins manage assessment counters" ON public.assessment_control_counters;
+CREATE POLICY "Admins manage assessment counters" ON public.assessment_control_counters
+
+--- 20260531162110_f27609bd-7f69-4e70-801c-d908b04a5ca4.sql:25 ---
+
+DROP POLICY IF EXISTS "Teachers manage assessment counters" ON public.assessment_control_counters;
+CREATE POLICY "Teachers manage assessment counters" ON public.assessment_control_counters
+
+--- 20260531162110_f27609bd-7f69-4e70-801c-d908b04a5ca4.sql:46 ---
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+
+--- 20260531162152_a883bf68-f2fb-41a5-a4bb-cfc2a581f206.sql:1 ---
+DROP POLICY IF EXISTS "Teachers manage assessment counters" ON public.assessment_control_counters;
+DROP POLICY IF EXISTS "Admins manage assessment counters" ON public.assessment_control_counters;
+
+--- 20260531162152_a883bf68-f2fb-41a5-a4bb-cfc2a581f206.sql:2 ---
+DROP POLICY IF EXISTS "Teachers manage assessment counters" ON public.assessment_control_counters;
+DROP POLICY IF EXISTS "Admins manage assessment counters" ON public.assessment_control_counters;
+
+
+--- 20260531162213_3398ba91-0ef4-4bbb-9791-052c68be8349.sql:1 ---
+DROP POLICY IF EXISTS "No direct client access to assessment counters" ON public.assessment_control_counters;
+CREATE POLICY "No direct client access to assessment counters" ON public.assessment_control_counters
+
+--- 20260531162340_3743af06-9747-42fe-96df-8beb3eb7b594.sql:8 ---
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+
+--- 20260531162642_66e65670-76e8-4ff7-9aec-c7551c029de3.sql:13 ---
+
+ALTER TABLE public.assessment_control_reservations ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260531162642_66e65670-76e8-4ff7-9aec-c7551c029de3.sql:15 ---
+
+DROP POLICY IF EXISTS "No direct client access to assessment reservations" ON public.assessment_control_reservations;
+CREATE POLICY "No direct client access to assessment reservations" ON public.assessment_control_reservations
+
+--- 20260531162642_66e65670-76e8-4ff7-9aec-c7551c029de3.sql:40 ---
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+
+--- 20260531163747_eb4bf9f3-90ef-46a5-986d-958c38d2d452.sql:1 ---
+DROP FUNCTION IF EXISTS public.reserve_assessment_control(uuid, text, timestamptz);
+
+
+--- 20260531163747_eb4bf9f3-90ef-46a5-986d-958c38d2d452.sql:15 ---
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+
+--- 20260531191057_36041791-0393-4ca6-8d58-8f6665b07a6b.sql:4 ---
+-- causes "duplicate key value violates unique constraint assessments_control_sequence_key".
+DROP INDEX IF EXISTS public.assessments_control_sequence_key;
+
+
+--- 20260601192006_9afb8369-c978-4163-bb9a-196947a73a35.sql:1 ---
+ALTER TABLE public.exercises
+  ADD COLUMN IF NOT EXISTS shuffle_questions boolean NOT NULL DEFAULT false,
+
+--- 20260630154412_11f2d441-68e3-482e-8bda-1f0752acf1d8.sql:13 ---
+
+ALTER TABLE public.courses ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260630154412_11f2d441-68e3-482e-8bda-1f0752acf1d8.sql:31 ---
+-- 2) Optional course link on disciplines
+ALTER TABLE public.disciplines
+  ADD COLUMN IF NOT EXISTS course_id uuid REFERENCES public.courses(id) ON DELETE SET NULL;
+
+--- 20260630155659_0f8a3a17-34e8-4caf-b44c-6b0f7b042363.sql:2 ---
+-- 1. Restrict invitation creation to institution-role users only.
+DROP POLICY IF EXISTS "Institutions insert own invitations" ON public.invitations;
+CREATE POLICY "Institutions insert own invitations" ON public.invitations
+
+--- 20260630155659_0f8a3a17-34e8-4caf-b44c-6b0f7b042363.sql:12 ---
+-- 2. Remove teachers' direct full-row read of student profiles (which exposed email).
+DROP POLICY IF EXISTS "Teachers see students in their disciplines" ON public.profiles;
+
+
+--- 20260630155818_aa594a75-64b7-4ba3-a921-306ea7adf966.sql:7 ---
+STABLE
+SECURITY DEFINER
+SET search_path = public
+
+--- 20260630180230_effb429d-c888-45a3-a032-83fdc332e239.sql:1 ---
+ALTER TABLE public.activities
+  ADD COLUMN IF NOT EXISTS delivery_type text NOT NULL DEFAULT 'individual',
+
+--- 20260630180230_effb429d-c888-45a3-a032-83fdc332e239.sql:8 ---
+
+ALTER TABLE public.academic_works
+  ADD COLUMN IF NOT EXISTS delivery_type text NOT NULL DEFAULT 'individual',
+
+--- 20260630180230_effb429d-c888-45a3-a032-83fdc332e239.sql:21 ---
+  id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  discipline_id uuid NOT NULL REFERENCES public.disciplines(id) ON DELETE CASCADE,
+  activity_id uuid NOT NULL,
+
+--- 20260630180230_effb429d-c888-45a3-a032-83fdc332e239.sql:24 ---
+  activity_kind public.group_activity_kind NOT NULL,
+  leader_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  member_ids uuid[] NOT NULL DEFAULT '{}',
+
+--- 20260630180230_effb429d-c888-45a3-a032-83fdc332e239.sql:32 ---
+
+ALTER TABLE public.activity_groups ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260702170903_4acea2d0-b156-4e98-86e6-ec42c109714a.sql:1 ---
+ALTER TABLE public.materials ADD COLUMN IF NOT EXISTS source_generation_id uuid;
+ALTER TABLE public.activities ADD COLUMN IF NOT EXISTS source_generation_id uuid;
+
+--- 20260702170903_4acea2d0-b156-4e98-86e6-ec42c109714a.sql:2 ---
+ALTER TABLE public.materials ADD COLUMN IF NOT EXISTS source_generation_id uuid;
+ALTER TABLE public.activities ADD COLUMN IF NOT EXISTS source_generation_id uuid;
+ALTER TABLE public.academic_works ADD COLUMN IF NOT EXISTS source_generation_id uuid;
+
+--- 20260702170903_4acea2d0-b156-4e98-86e6-ec42c109714a.sql:3 ---
+ALTER TABLE public.activities ADD COLUMN IF NOT EXISTS source_generation_id uuid;
+ALTER TABLE public.academic_works ADD COLUMN IF NOT EXISTS source_generation_id uuid;
+
+
+--- 20260702172100_44484ea5-a57a-4a5c-8737-3f41f119dc02.sql:3 ---
+-- Students never read this table directly (all access is server-side via service role).
+DROP POLICY IF EXISTS "Students see own assignment" ON public.assessment_assignments;
+REVOKE SELECT ON public.assessment_assignments FROM anon;
+
+--- 20260702172100_44484ea5-a57a-4a5c-8737-3f41f119dc02.sql:8 ---
+-- Institution/teacher/student clients read the masked attendance_sessions_view instead.
+DROP POLICY IF EXISTS "Institutions see attendance sessions" ON public.attendance_sessions;
+
+
+--- 20260702180151_e767844d-aa36-40c4-b590-b48198e4916e.sql:6 ---
+--    server function (service role, safe columns only).
+DROP POLICY IF EXISTS "Owners view own subscription" ON public.subscriptions;
+REVOKE SELECT ON public.subscriptions FROM authenticated;
+
+--- 20260702180151_e767844d-aa36-40c4-b590-b48198e4916e.sql:13 ---
+--    attendance_sessions_view and the still-published attendance_records events.
+ALTER PUBLICATION supabase_realtime DROP TABLE public.attendance_sessions;
+
+
+--- 20260702180151_e767844d-aa36-40c4-b590-b48198e4916e.sql:23 ---
+--    instead of the public role to make intent explicit and remove any anon edge case.
+DROP POLICY IF EXISTS "Teachers manage enrollments in own disciplines" ON public.discipline_students;
+CREATE POLICY "Teachers manage enrollments in own disciplines"
+
+--- 20260706123523_736dfa68-0e66-47b2-b9b4-ef94f8f71930.sql:2 ---
+-- Finding 1: disciplines "Students see enrolled disciplines" should be authenticated-only
+DROP POLICY IF EXISTS "Students see enrolled disciplines" ON public.disciplines;
+CREATE POLICY "Students see enrolled disciplines"
+
+--- 20260706124640_8e26ee2f-7b0f-4994-b915-6ee6ba60d6dd.sql:3 ---
+-- Leitura do painel passa a ser feita por server function com service role, escopada.
+DROP POLICY IF EXISTS "Institutions see profiles in their institution" ON public.profiles;
+
+
+--- 20260706124640_8e26ee2f-7b0f-4994-b915-6ee6ba60d6dd.sql:8 ---
+-- impede a enumeração sem quebrar a exibição das logos.
+DROP POLICY IF EXISTS "branding public read" ON storage.objects;
+
+--- 20260706172141_60db7f9d-19f8-4a40-9278-120013fb8282.sql:1 ---
+ALTER TABLE public.attendance_sessions ADD COLUMN IF NOT EXISTS closed_at timestamptz;
+
+
+--- 20260709010231_aa8202e7-3ca0-4e9a-92e5-ec3ad6d81dd2.sql:1 ---
+ALTER TABLE public.assessments DROP CONSTRAINT IF EXISTS assessments_version_count_check;
+ALTER TABLE public.assessments ADD CONSTRAINT assessments_version_count_check CHECK (version_count >= 1 AND version_count <= 4);
+
+--- 20260709010231_aa8202e7-3ca0-4e9a-92e5-ec3ad6d81dd2.sql:2 ---
+ALTER TABLE public.assessments DROP CONSTRAINT IF EXISTS assessments_version_count_check;
+ALTER TABLE public.assessments ADD CONSTRAINT assessments_version_count_check CHECK (version_count >= 1 AND version_count <= 4);
+
+--- 20260709211936_51d793cf-62b3-4f9d-a74d-f313f3e75a19.sql:5 ---
+stable
+security definer
+set search_path to 'public'
+
+--- 20260709220234_86117ada-bba5-4f5f-b0dd-eadef17a76a6.sql:1 ---
+ALTER TABLE public.subscriptions
+  DROP CONSTRAINT IF EXISTS subscriptions_subscriber_id_kind_key;
+
+--- 20260709220234_86117ada-bba5-4f5f-b0dd-eadef17a76a6.sql:4 ---
+
+DELETE FROM public.subscriptions a
+USING public.subscriptions b
+
+--- 20260709220342_bc022265-a707-42f4-a3f2-67a9589b5fbd.sql:5 ---
+stable
+security definer
+set search_path to 'public'
+
+--- 20260709220342_bc022265-a707-42f4-a3f2-67a9589b5fbd.sql:44 ---
+language plpgsql
+security definer
+set search_path to 'public'
+
+--- 20260709220342_bc022265-a707-42f4-a3f2-67a9589b5fbd.sql:74 ---
+language plpgsql
+security definer
+set search_path to 'public'
+
+--- 20260710205958_b871a46e-3733-465b-ba37-049b1bcf050d.sql:4 ---
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+
+--- 20260714002859_94057c9a-5611-408f-b84d-7bbbe6ae8e59.sql:1 ---
+ALTER TABLE public.exercise_submissions
+  ADD COLUMN IF NOT EXISTS attempt_count integer NOT NULL DEFAULT 0;
+
+--- 20260714011807_302625ca-c7af-4cb1-8232-c143429ee4d6.sql:1 ---
+ALTER TABLE public.exercises ADD COLUMN IF NOT EXISTS module_label text;
+
+--- 20260720190559_02412b96-a574-4601-a9c0-95827f7505c8.sql:33 ---
+
+ALTER TABLE public.catalog_items ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260720190559_02412b96-a574-4601-a9c0-95827f7505c8.sql:62 ---
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  catalog_item_id uuid NOT NULL REFERENCES public.catalog_items(id) ON DELETE CASCADE,
+  teacher_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+
+--- 20260720190559_02412b96-a574-4601-a9c0-95827f7505c8.sql:63 ---
+  catalog_item_id uuid NOT NULL REFERENCES public.catalog_items(id) ON DELETE CASCADE,
+  teacher_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+
+--- 20260720190559_02412b96-a574-4601-a9c0-95827f7505c8.sql:71 ---
+
+ALTER TABLE public.catalog_item_grants ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260721142531_21c1fe1c-6de7-4d4f-bdff-6bc9535fcfa3.sql:8 ---
+
+-- 2) Revoke EXECUTE from anon/public on every SECURITY DEFINER function in public.
+--    Keep EXECUTE for authenticated + service_role so RLS policies and RPC calls keep working.
+
+--- 20260727135250_80e39fdc-c4c7-4f48-8a75-ebeafc911988.sql:7 ---
+  id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  discipline_id uuid NOT NULL REFERENCES public.disciplines(id) ON DELETE CASCADE,
+  sender_id uuid NOT NULL,
+
+--- 20260727135250_80e39fdc-c4c7-4f48-8a75-ebeafc911988.sql:23 ---
+
+ALTER TABLE public.direct_messages ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260727135250_80e39fdc-c4c7-4f48-8a75-ebeafc911988.sql:27 ---
+CREATE OR REPLACE FUNCTION public.is_discipline_member(_discipline_id uuid, _user_id uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT public.is_discipline_teacher(_discipline_id, _user_id)
+
+--- 20260727135250_80e39fdc-c4c7-4f48-8a75-ebeafc911988.sql:54 ---
+ALTER PUBLICATION supabase_realtime ADD TABLE public.direct_messages;
+ALTER TABLE public.direct_messages REPLICA IDENTITY FULL;
+
+
+--- 20260727135250_80e39fdc-c4c7-4f48-8a75-ebeafc911988.sql:73 ---
+
+ALTER TABLE public.push_subscriptions ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260727164405_bca12de6-fefd-4ff1-b062-d43d69784290.sql:3 ---
+UPDATE public.attendance_sessions SET window_hours = 72 WHERE window_hours <> 72 AND finalized_at IS NULL;
+ALTER TABLE public.discipline_settings ALTER COLUMN attendance_window_hours SET DEFAULT 72;
+ALTER TABLE public.attendance_sessions ALTER COLUMN window_hours SET DEFAULT 72;
+
+--- 20260727164405_bca12de6-fefd-4ff1-b062-d43d69784290.sql:4 ---
+ALTER TABLE public.discipline_settings ALTER COLUMN attendance_window_hours SET DEFAULT 72;
+ALTER TABLE public.attendance_sessions ALTER COLUMN window_hours SET DEFAULT 72;
+
+--- 20260729185504_44aae6d3-32f3-4633-8379-7589a223b5d0.sql:1 ---
+ALTER TABLE public.disciplines ADD COLUMN IF NOT EXISTS sort_order integer NOT NULL DEFAULT 0;
+WITH ranked AS (
+
+--- 20260730002545_email_infra.sql:42 ---
+
+ALTER TABLE public.email_send_log ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260730002545_email_infra.sql:71 ---
+DO $$ BEGIN
+  ALTER TABLE public.email_send_log ADD COLUMN message_id TEXT;
+EXCEPTION WHEN duplicate_column THEN NULL;
+
+--- 20260730002545_email_infra.sql:85 ---
+DO $$ BEGIN
+  ALTER TABLE public.email_send_log DROP CONSTRAINT IF EXISTS email_send_log_status_check;
+  ALTER TABLE public.email_send_log ADD CONSTRAINT email_send_log_status_check
+
+--- 20260730002545_email_infra.sql:86 ---
+  ALTER TABLE public.email_send_log DROP CONSTRAINT IF EXISTS email_send_log_status_check;
+  ALTER TABLE public.email_send_log ADD CONSTRAINT email_send_log_status_check
+    CHECK (status IN ('pending', 'sent', 'suppressed', 'failed', 'bounced', 'complained', 'dlq'));
+
+--- 20260730002545_email_infra.sql:105 ---
+DO $$ BEGIN
+  ALTER TABLE public.email_send_state ADD COLUMN batch_size INTEGER NOT NULL DEFAULT 10;
+EXCEPTION WHEN duplicate_column THEN NULL;
+
+--- 20260730002545_email_infra.sql:109 ---
+DO $$ BEGIN
+  ALTER TABLE public.email_send_state ADD COLUMN send_delay_ms INTEGER NOT NULL DEFAULT 200;
+EXCEPTION WHEN duplicate_column THEN NULL;
+
+--- 20260730002545_email_infra.sql:113 ---
+DO $$ BEGIN
+  ALTER TABLE public.email_send_state ADD COLUMN auth_email_ttl_minutes INTEGER NOT NULL DEFAULT 15;
+EXCEPTION WHEN duplicate_column THEN NULL;
+
+--- 20260730002545_email_infra.sql:117 ---
+DO $$ BEGIN
+  ALTER TABLE public.email_send_state ADD COLUMN transactional_email_ttl_minutes INTEGER NOT NULL DEFAULT 60;
+EXCEPTION WHEN duplicate_column THEN NULL;
+
+--- 20260730002545_email_infra.sql:123 ---
+
+ALTER TABLE public.email_send_state ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260730002545_email_infra.sql:139 ---
+RETURNS BIGINT
+LANGUAGE plpgsql SECURITY DEFINER
+AS $$
+
+--- 20260730002545_email_infra.sql:151 ---
+RETURNS TABLE(msg_id BIGINT, read_ct INT, message JSONB)
+LANGUAGE plpgsql SECURITY DEFINER
+AS $$
+
+--- 20260730002545_email_infra.sql:163 ---
+RETURNS BOOLEAN
+LANGUAGE plpgsql SECURITY DEFINER
+AS $$
+
+--- 20260730002545_email_infra.sql:176 ---
+RETURNS BIGINT
+LANGUAGE plpgsql SECURITY DEFINER
+AS $$
+
+--- 20260730002545_email_infra.sql:199 ---
+
+-- Restrict queue RPC wrappers to service_role only (SECURITY DEFINER runs as owner,
+-- so without this any authenticated user could manipulate the email queues)
+
+--- 20260730002545_email_infra.sql:226 ---
+
+ALTER TABLE public.suppressed_emails ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260730002545_email_infra.sql:256 ---
+
+ALTER TABLE public.email_unsubscribe_tokens ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260730002545_email_infra.sql:293 ---
+--    Uses vault.create_secret / vault.update_secret (upsert).
+--    To revert: DELETE FROM vault.secrets WHERE name = 'email_queue_service_role_key';
+--
+
+--- 20260731011656_00f64e36-7c2a-43a8-ae1e-53b34c9da603.sql:20 ---
+
+ALTER TABLE public.assessment_header_templates ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260731015405_510eb631-4a44-49fd-b004-309d17307b71.sql:1 ---
+ALTER TABLE public.assessment_header_templates ADD COLUMN IF NOT EXISTS logo_scale numeric NOT NULL DEFAULT 1.0;
+
+--- 20260801000704_cff8ca54-db94-4793-93bd-39603013fbde.sql:3 ---
+  id uuid primary key default gen_random_uuid(),
+  assessment_id uuid not null references public.assessments(id) on delete cascade,
+  question_id uuid references public.assessment_questions(id) on delete cascade,
+
+--- 20260801000704_cff8ca54-db94-4793-93bd-39603013fbde.sql:4 ---
+  assessment_id uuid not null references public.assessments(id) on delete cascade,
+  question_id uuid references public.assessment_questions(id) on delete cascade,
+  version_label text not null,
+
+--- 20260801000704_cff8ca54-db94-4793-93bd-39603013fbde.sql:26 ---
+
+ALTER TABLE public.assessment_question_audits ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260801194023_1addbe73-ce81-4507-b264-b0ff2e5208e3.sql:6 ---
+-- The current policy might fail if the folder segment [1] check is too strict or lacks admin/institution coverage.
+DROP POLICY IF EXISTS "Teachers manage materials files" ON storage.objects;
+
+
+--- 20260801194023_1addbe73-ce81-4507-b264-b0ff2e5208e3.sql:53 ---
+-- 2. Ensure students can read published materials files if they are enrolled.
+DROP POLICY IF EXISTS "Students read published materials" ON storage.objects;
+CREATE POLICY "Students read published materials"
+
+--- 20260801194023_1addbe73-ce81-4507-b264-b0ff2e5208e3.sql:71 ---
+-- Syllabus path is {user_id}/{folder_id}/{filename}, so segment [1] must match auth.uid().
+DROP POLICY IF EXISTS "Teachers upload own syllabi" ON storage.objects;
+DROP POLICY IF EXISTS "Teachers read own syllabi" ON storage.objects;
+
+--- 20260801194023_1addbe73-ce81-4507-b264-b0ff2e5208e3.sql:72 ---
+DROP POLICY IF EXISTS "Teachers upload own syllabi" ON storage.objects;
+DROP POLICY IF EXISTS "Teachers read own syllabi" ON storage.objects;
+DROP POLICY IF EXISTS "Teachers update own syllabi" ON storage.objects;
+
+--- 20260801194023_1addbe73-ce81-4507-b264-b0ff2e5208e3.sql:73 ---
+DROP POLICY IF EXISTS "Teachers read own syllabi" ON storage.objects;
+DROP POLICY IF EXISTS "Teachers update own syllabi" ON storage.objects;
+DROP POLICY IF EXISTS "Teachers delete own syllabi" ON storage.objects;
+
+--- 20260801194023_1addbe73-ce81-4507-b264-b0ff2e5208e3.sql:74 ---
+DROP POLICY IF EXISTS "Teachers update own syllabi" ON storage.objects;
+DROP POLICY IF EXISTS "Teachers delete own syllabi" ON storage.objects;
+
+
+--- 20260802025341_0426b7ad-2268-49ea-a62c-7716841e771c.sql:5 ---
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    discipline_id UUID NOT NULL REFERENCES public.disciplines(id) ON DELETE CASCADE,
+    teacher_id UUID NOT NULL REFERENCES public.profiles(id),
+
+--- 20260802025341_0426b7ad-2268-49ea-a62c-7716841e771c.sql:19 ---
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    case_id UUID NOT NULL REFERENCES public.clinical_cases(id) ON DELETE CASCADE,
+    student_id UUID NOT NULL REFERENCES public.profiles(id),
+
+--- 20260802025341_0426b7ad-2268-49ea-a62c-7716841e771c.sql:36 ---
+
+ALTER TABLE public.clinical_cases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.student_submissions ENABLE ROW LEVEL SECURITY;
+
+--- 20260802025341_0426b7ad-2268-49ea-a62c-7716841e771c.sql:37 ---
+ALTER TABLE public.clinical_cases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.student_submissions ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260802025845_f5d969c5-5afa-447b-aaec-ae9170263739.sql:6 ---
+-- Fix "grade_entries_no_owner_delete_update_restriction_check"
+DROP POLICY IF EXISTS "Teachers manage grades in own disciplines" ON public.grade_entries;
+CREATE POLICY "Teachers manage grades in own disciplines" ON public.grade_entries
+
+--- 20260802025845_f5d969c5-5afa-447b-aaec-ae9170263739.sql:19 ---
+-- Fix "profiles_institution_role_no_select_policy"
+DROP POLICY IF EXISTS "Users see their own profile" ON public.profiles;
+CREATE POLICY "Users see their own profile" ON public.profiles
+
+--- 20260802025845_f5d969c5-5afa-447b-aaec-ae9170263739.sql:28 ---
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'unique_matricula') THEN
+      ALTER TABLE public.profiles ADD CONSTRAINT unique_matricula UNIQUE (matricula);
+    END IF;
+
+--- 20260802025845_f5d969c5-5afa-447b-aaec-ae9170263739.sql:33 ---
+
+-- Fix ERROR 1 & 2: Security Definer Views
+DROP VIEW IF EXISTS public.attendance_sessions_view;
+
+--- 20260802025905_367cad93-0e67-4d6e-949c-1b1db8cf395a.sql:1 ---
+-- Revoke public execution of identified SECURITY DEFINER functions for security hardening
+REVOKE EXECUTE ON FUNCTION public.enqueue_email(text, jsonb) FROM public, authenticated;
+
+--- 20260802044239_ebc61d0a-555d-4a7f-8e35-59023248c9ff.sql:4 ---
+-- 1. Disciplinas
+ALTER TABLE public.disciplines ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260802044239_ebc61d0a-555d-4a7f-8e35-59023248c9ff.sql:6 ---
+
+DROP POLICY IF EXISTS "Professors can manage their own disciplines" ON public.disciplines;
+CREATE POLICY "Professors can manage their own disciplines"
+
+--- 20260802044239_ebc61d0a-555d-4a7f-8e35-59023248c9ff.sql:14 ---
+
+DROP POLICY IF EXISTS "Students can see disciplines they are enrolled in" ON public.disciplines;
+CREATE POLICY "Students can see disciplines they are enrolled in"
+
+--- 20260802044239_ebc61d0a-555d-4a7f-8e35-59023248c9ff.sql:28 ---
+-- 2. Modulos (material_modules)
+ALTER TABLE public.material_modules ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260802044239_ebc61d0a-555d-4a7f-8e35-59023248c9ff.sql:30 ---
+
+DROP POLICY IF EXISTS "Professors can manage their own modules" ON public.material_modules;
+CREATE POLICY "Professors can manage their own modules"
+
+--- 20260802044239_ebc61d0a-555d-4a7f-8e35-59023248c9ff.sql:43 ---
+
+DROP POLICY IF EXISTS "Students can see modules of their disciplines" ON public.material_modules;
+CREATE POLICY "Students can see modules of their disciplines"
+
+--- 20260802044239_ebc61d0a-555d-4a7f-8e35-59023248c9ff.sql:57 ---
+-- 3. Aulas (materials)
+ALTER TABLE public.materials ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260802044239_ebc61d0a-555d-4a7f-8e35-59023248c9ff.sql:59 ---
+
+DROP POLICY IF EXISTS "Professors can manage their own materials" ON public.materials;
+CREATE POLICY "Professors can manage their own materials"
+
+--- 20260802044239_ebc61d0a-555d-4a7f-8e35-59023248c9ff.sql:67 ---
+
+DROP POLICY IF EXISTS "Students can see materials of their disciplines" ON public.materials;
+CREATE POLICY "Students can see materials of their disciplines"
+
+--- 20260802044239_ebc61d0a-555d-4a7f-8e35-59023248c9ff.sql:81 ---
+-- 4. Casos Práticos (clinical_cases)
+ALTER TABLE public.clinical_cases ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260802044239_ebc61d0a-555d-4a7f-8e35-59023248c9ff.sql:83 ---
+
+DROP POLICY IF EXISTS "Teachers can manage their own clinical cases" ON public.clinical_cases;
+CREATE POLICY "Teachers can manage their own clinical cases"
+
+--- 20260802044239_ebc61d0a-555d-4a7f-8e35-59023248c9ff.sql:91 ---
+
+DROP POLICY IF EXISTS "Students can see clinical cases of their disciplines" ON public.clinical_cases;
+CREATE POLICY "Students can see clinical cases of their disciplines"
+
+--- 20260802044239_ebc61d0a-555d-4a7f-8e35-59023248c9ff.sql:105 ---
+-- 5. Avaliações (assessments)
+ALTER TABLE public.assessments ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260802044239_ebc61d0a-555d-4a7f-8e35-59023248c9ff.sql:107 ---
+
+DROP POLICY IF EXISTS "Teachers can manage their own assessments" ON public.assessments;
+CREATE POLICY "Teachers can manage their own assessments"
+
+--- 20260802044239_ebc61d0a-555d-4a7f-8e35-59023248c9ff.sql:115 ---
+
+DROP POLICY IF EXISTS "Students can see assessments of their disciplines" ON public.assessments;
+CREATE POLICY "Students can see assessments of their disciplines"
+
+--- 20260802044239_ebc61d0a-555d-4a7f-8e35-59023248c9ff.sql:129 ---
+-- 6. Diário de Notas (grade_entries / attendance_sessions)
+ALTER TABLE public.grade_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.attendance_sessions ENABLE ROW LEVEL SECURITY;
+
+--- 20260802044239_ebc61d0a-555d-4a7f-8e35-59023248c9ff.sql:130 ---
+ALTER TABLE public.grade_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.attendance_sessions ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260802044239_ebc61d0a-555d-4a7f-8e35-59023248c9ff.sql:132 ---
+
+DROP POLICY IF EXISTS "Teachers can manage their own grade entries" ON public.grade_entries;
+CREATE POLICY "Teachers can manage their own grade entries"
+
+--- 20260802044239_ebc61d0a-555d-4a7f-8e35-59023248c9ff.sql:145 ---
+
+DROP POLICY IF EXISTS "Teachers can manage their own attendance sessions" ON public.attendance_sessions;
+CREATE POLICY "Teachers can manage their own attendance sessions"
+
+--- 20260802044954_b8d6af70-c2bf-4d28-a27c-ccb4f370a47d.sql:1 ---
+-- Security Hardening: Revoke public execute on SECURITY DEFINER functions identified by linter
+-- and fix remaining RLS issues.
+
+--- 20260802044954_b8d6af70-c2bf-4d28-a27c-ccb4f370a47d.sql:4 ---
+
+-- 1. Revoke public/authenticated EXECUTE on specific SECURITY DEFINER functions
+DO $$
+
+--- 20260802044954_b8d6af70-c2bf-4d28-a27c-ccb4f370a47d.sql:21 ---
+-- 2. profiles_institution_role_no_select_policy: Fix missing SELECT policy for profiles
+DROP POLICY IF EXISTS "Institutions can select profiles they manage" ON public.profiles;
+CREATE POLICY "Institutions can select profiles they manage"
+
+--- 20260802044954_b8d6af70-c2bf-4d28-a27c-ccb4f370a47d.sql:46 ---
+-- 3. subscriptions_no_owner_read_policy: Ensure users can read their own subscriptions
+ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can read their own subscriptions" ON public.subscriptions;
+
+--- 20260802044954_b8d6af70-c2bf-4d28-a27c-ccb4f370a47d.sql:47 ---
+ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can read their own subscriptions" ON public.subscriptions;
+CREATE POLICY "Users can read their own subscriptions"
+
+--- 20260802044954_b8d6af70-c2bf-4d28-a27c-ccb4f370a47d.sql:58 ---
+-- 4. idor_content_hijack: reinforcing RLS on materials/exercises
+DROP POLICY IF EXISTS "Professors can manage their own materials" ON public.materials;
+CREATE POLICY "Professors can manage their own materials"
+
+--- 20260802045424_4797bb4f-a3e2-420e-883a-2f81cf564933.sql:2 ---
+-- Remove overly permissive clinical_cases SELECT policy; scoped policies remain
+DROP POLICY IF EXISTS "Anyone authenticated can select cases" ON public.clinical_cases;
+
+
+--- 20260802045424_4797bb4f-a3e2-420e-883a-2f81cf564933.sql:5 ---
+-- Consolidate duplicate/overlapping policies (policy drift)
+DROP POLICY IF EXISTS "Teachers can manage their cases" ON public.clinical_cases;
+DROP POLICY IF EXISTS "Teachers manage own disciplines" ON public.disciplines;
+
+--- 20260802045424_4797bb4f-a3e2-420e-883a-2f81cf564933.sql:6 ---
+DROP POLICY IF EXISTS "Teachers can manage their cases" ON public.clinical_cases;
+DROP POLICY IF EXISTS "Teachers manage own disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "Students see enrolled disciplines" ON public.disciplines;
+
+--- 20260802045424_4797bb4f-a3e2-420e-883a-2f81cf564933.sql:7 ---
+DROP POLICY IF EXISTS "Teachers manage own disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "Students see enrolled disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "Teachers manage own material modules" ON public.material_modules;
+
+--- 20260802045424_4797bb4f-a3e2-420e-883a-2f81cf564933.sql:8 ---
+DROP POLICY IF EXISTS "Students see enrolled disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "Teachers manage own material modules" ON public.material_modules;
+DROP POLICY IF EXISTS "Students view modules in enrolled disciplines" ON public.material_modules;
+
+--- 20260802045424_4797bb4f-a3e2-420e-883a-2f81cf564933.sql:9 ---
+DROP POLICY IF EXISTS "Teachers manage own material modules" ON public.material_modules;
+DROP POLICY IF EXISTS "Students view modules in enrolled disciplines" ON public.material_modules;
+
+
+--- 20260802051011_1b22efb0-0491-4a79-8075-a75bd72a8d60.sql:22 ---
+    -- Política de leitura para disciplinas
+    DROP POLICY IF EXISTS "Teachers can view own disciplines" ON public.disciplines;
+    CREATE POLICY "Teachers can view own disciplines"
+
+--- 20260802051011_1b22efb0-0491-4a79-8075-a75bd72a8d60.sql:30 ---
+    -- Política de escrita para professores (donos)
+    DROP POLICY IF EXISTS "Teachers can manage own disciplines" ON public.disciplines;
+    CREATE POLICY "Teachers can manage own disciplines"
+
+--- 20260802051011_1b22efb0-0491-4a79-8075-a75bd72a8d60.sql:42 ---
+BEGIN
+    DROP POLICY IF EXISTS "Teachers can manage own modules" ON public.material_modules;
+    CREATE POLICY "Teachers can manage own modules"
+
+--- 20260802051513_63089995-06b2-40de-877d-d86f1d4747a3.sql:5 ---
+BEGIN
+    ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+    
+
+--- 20260802051513_63089995-06b2-40de-877d-d86f1d4747a3.sql:7 ---
+    
+    DROP POLICY IF EXISTS "Permitir leitura do próprio perfil" ON public.profiles;
+    CREATE POLICY "Permitir leitura do próprio perfil" 
+
+--- 20260802051513_63089995-06b2-40de-877d-d86f1d4747a3.sql:15 ---
+    -- Permissão de leitura base para perfis (complementar)
+    DROP POLICY IF EXISTS "Anyone authenticated can read profiles" ON public.profiles;
+    CREATE POLICY "Anyone authenticated can read profiles"
+
+--- 20260802051513_63089995-06b2-40de-877d-d86f1d4747a3.sql:26 ---
+BEGIN
+    ALTER TABLE public.disciplines ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260802051513_63089995-06b2-40de-877d-d86f1d4747a3.sql:28 ---
+
+    DROP POLICY IF EXISTS "Professores leem suas disciplinas" ON public.disciplines;
+    CREATE POLICY "Professores leem suas disciplinas" 
+
+--- 20260802051513_63089995-06b2-40de-877d-d86f1d4747a3.sql:36 ---
+    -- Garantir permissão total para o professor dono
+    DROP POLICY IF EXISTS "Teachers can manage own disciplines" ON public.disciplines;
+    CREATE POLICY "Teachers can manage own disciplines"
+
+--- 20260802052043_623cbf36-22d9-4c5e-9b7e-a9058ffadb36.sql:2 ---
+-- 1. LIMPEZA E LIBERAÇÃO DA TABELA PROFILES
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260802052043_623cbf36-22d9-4c5e-9b7e-a9058ffadb36.sql:4 ---
+
+DROP POLICY IF EXISTS "Permitir leitura do próprio perfil" ON public.profiles;
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
+
+--- 20260802052043_623cbf36-22d9-4c5e-9b7e-a9058ffadb36.sql:5 ---
+DROP POLICY IF EXISTS "Permitir leitura do próprio perfil" ON public.profiles;
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;
+
+--- 20260802052043_623cbf36-22d9-4c5e-9b7e-a9058ffadb36.sql:6 ---
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON public.profiles;
+
+--- 20260802052043_623cbf36-22d9-4c5e-9b7e-a9058ffadb36.sql:7 ---
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON public.profiles;
+DROP POLICY IF EXISTS "Anyone authenticated can read profiles" ON public.profiles;
+
+--- 20260802052043_623cbf36-22d9-4c5e-9b7e-a9058ffadb36.sql:8 ---
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON public.profiles;
+DROP POLICY IF EXISTS "Anyone authenticated can read profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Allow authenticated read profiles" ON public.profiles;
+
+--- 20260802052043_623cbf36-22d9-4c5e-9b7e-a9058ffadb36.sql:9 ---
+DROP POLICY IF EXISTS "Anyone authenticated can read profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Allow authenticated read profiles" ON public.profiles;
+
+
+--- 20260802052043_623cbf36-22d9-4c5e-9b7e-a9058ffadb36.sql:17 ---
+-- 2. LIMPEZA E LIBERAÇÃO DA TABELA DISCIPLINES
+ALTER TABLE public.disciplines ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260802052043_623cbf36-22d9-4c5e-9b7e-a9058ffadb36.sql:19 ---
+
+DROP POLICY IF EXISTS "Professores leem suas disciplinas" ON public.disciplines;
+DROP POLICY IF EXISTS "Users can view assigned disciplines" ON public.disciplines;
+
+--- 20260802052043_623cbf36-22d9-4c5e-9b7e-a9058ffadb36.sql:20 ---
+DROP POLICY IF EXISTS "Professores leem suas disciplinas" ON public.disciplines;
+DROP POLICY IF EXISTS "Users can view assigned disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "Teachers can view own disciplines" ON public.disciplines;
+
+--- 20260802052043_623cbf36-22d9-4c5e-9b7e-a9058ffadb36.sql:21 ---
+DROP POLICY IF EXISTS "Users can view assigned disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "Teachers can view own disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "Allow authenticated read disciplines" ON public.disciplines;
+
+--- 20260802052043_623cbf36-22d9-4c5e-9b7e-a9058ffadb36.sql:22 ---
+DROP POLICY IF EXISTS "Teachers can view own disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "Allow authenticated read disciplines" ON public.disciplines;
+
+
+--- 20260802053642_e556b4cc-2923-4b9b-81ec-6fa6f50b3477.sql:1 ---
+DROP POLICY IF EXISTS "Institutions can select profiles they manage" ON public.profiles;
+
+
+--- 20260802060124_68e86d45-9671-4159-a5ff-81ad986fdd34.sql:4 ---
+LANGUAGE sql
+STABLE SECURITY DEFINER
+SET search_path = public
+
+--- 20260802060124_68e86d45-9671-4159-a5ff-81ad986fdd34.sql:13 ---
+
+DROP POLICY IF EXISTS "Students can see disciplines they are enrolled in" ON public.disciplines;
+
+
+--- 20260802060124_68e86d45-9671-4159-a5ff-81ad986fdd34.sql:20 ---
+
+DROP POLICY IF EXISTS "Institutions see enrollments in their disciplines" ON public.discipline_students;
+
+
+--- 20260802151431_ff93a255-160f-4ef0-bcee-c0ea35d48fc0.sql:2 ---
+-- Add deadline and penalty columns to clinical_cases
+ALTER TABLE public.clinical_cases 
+ADD COLUMN IF NOT EXISTS due_date timestamp with time zone,
+
+--- 20260802151431_ff93a255-160f-4ef0-bcee-c0ea35d48fc0.sql:11 ---
+
+DROP POLICY IF EXISTS "Teachers can manage their own cases" ON public.clinical_cases;
+CREATE POLICY "Teachers can manage their own cases"
+
+--- 20260802151431_ff93a255-160f-4ef0-bcee-c0ea35d48fc0.sql:18 ---
+
+DROP POLICY IF EXISTS "Students can view cases in their disciplines" ON public.clinical_cases;
+CREATE POLICY "Students can view cases in their disciplines"
+
+--- 20260802164656_9e9228e4-e88f-447a-9d3e-eca8c66707f4.sql:2 ---
+-- Garante que RLS esteja ativo na tabela profiles sem bloqueios de função
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260802164656_9e9228e4-e88f-447a-9d3e-eca8c66707f4.sql:5 ---
+-- Remove políticas antigas de perfis que dependiam de funções restritas
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON profiles;
+DROP POLICY IF EXISTS "Users can view own profile" ON profiles;
+
+--- 20260802164656_9e9228e4-e88f-447a-9d3e-eca8c66707f4.sql:6 ---
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON profiles;
+DROP POLICY IF EXISTS "Users can view own profile" ON profiles;
+DROP POLICY IF EXISTS "Allow authenticated read profiles" ON profiles;
+
+--- 20260802164656_9e9228e4-e88f-447a-9d3e-eca8c66707f4.sql:7 ---
+DROP POLICY IF EXISTS "Users can view own profile" ON profiles;
+DROP POLICY IF EXISTS "Allow authenticated read profiles" ON profiles;
+DROP POLICY IF EXISTS "allow_authenticated_read_profiles" ON profiles;
+
+--- 20260802164656_9e9228e4-e88f-447a-9d3e-eca8c66707f4.sql:8 ---
+DROP POLICY IF EXISTS "Allow authenticated read profiles" ON profiles;
+DROP POLICY IF EXISTS "allow_authenticated_read_profiles" ON profiles;
+
+
+--- 20260805201950_be062e75-0ace-40fd-bbd1-b3efe57260e1.sql:1 ---
+ALTER TABLE public.grade_entries ADD COLUMN IF NOT EXISTS metadata jsonb DEFAULT '{}'::jsonb;
+
+
+--- 20260806123517_3a6d75d4-092b-40d5-a27f-dacbe7cb3238.sql:16 ---
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  discipline_id uuid REFERENCES public.disciplines(id) ON DELETE CASCADE NOT NULL,
+  module_type public.lab_module_type NOT NULL,
+
+--- 20260806123517_3a6d75d4-092b-40d5-a27f-dacbe7cb3238.sql:27 ---
+
+ALTER TABLE public.discipline_lab_config ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260806123517_3a6d75d4-092b-40d5-a27f-dacbe7cb3238.sql:38 ---
+-- Adicionar colunas de controle de atraso e horário limite em atividades e casos clínicos
+ALTER TABLE public.activities 
+  ADD COLUMN IF NOT EXISTS due_time time DEFAULT '23:59:59',
+
+--- 20260806123517_3a6d75d4-092b-40d5-a27f-dacbe7cb3238.sql:44 ---
+
+ALTER TABLE public.academic_works
+  ADD COLUMN IF NOT EXISTS due_time time DEFAULT '23:59:59',
+
+--- 20260806123517_3a6d75d4-092b-40d5-a27f-dacbe7cb3238.sql:50 ---
+
+ALTER TABLE public.exercises
+  ADD COLUMN IF NOT EXISTS due_time time DEFAULT '23:59:59',
+
+--- 20260806123517_3a6d75d4-092b-40d5-a27f-dacbe7cb3238.sql:59 ---
+
+ALTER TABLE public.clinical_cases
+  ADD COLUMN IF NOT EXISTS due_time time DEFAULT '23:59:59',
+
+--- 20260806134107_e1f04170-6709-4b5f-9f7f-b2a84bedef75.sql:2 ---
+-- 1) Remove overly permissive (USING true / public role) SELECT policies
+DROP POLICY IF EXISTS "permitir_leitura_profiles" ON public.profiles;
+DROP POLICY IF EXISTS "allow_authenticated_read_profiles" ON public.profiles;
+
+--- 20260806134107_e1f04170-6709-4b5f-9f7f-b2a84bedef75.sql:3 ---
+DROP POLICY IF EXISTS "permitir_leitura_profiles" ON public.profiles;
+DROP POLICY IF EXISTS "allow_authenticated_read_profiles" ON public.profiles;
+DROP POLICY IF EXISTS "assessments_select" ON public.assessments;
+
+--- 20260806134107_e1f04170-6709-4b5f-9f7f-b2a84bedef75.sql:4 ---
+DROP POLICY IF EXISTS "allow_authenticated_read_profiles" ON public.profiles;
+DROP POLICY IF EXISTS "assessments_select" ON public.assessments;
+DROP POLICY IF EXISTS "assessments_select_policy" ON public.assessments;
+
+--- 20260806134107_e1f04170-6709-4b5f-9f7f-b2a84bedef75.sql:5 ---
+DROP POLICY IF EXISTS "assessments_select" ON public.assessments;
+DROP POLICY IF EXISTS "assessments_select_policy" ON public.assessments;
+DROP POLICY IF EXISTS "clinical_cases_select_policy" ON public.clinical_cases;
+
+--- 20260806134107_e1f04170-6709-4b5f-9f7f-b2a84bedef75.sql:6 ---
+DROP POLICY IF EXISTS "assessments_select_policy" ON public.assessments;
+DROP POLICY IF EXISTS "clinical_cases_select_policy" ON public.clinical_cases;
+DROP POLICY IF EXISTS "disciplines_select_policy" ON public.disciplines;
+
+--- 20260806134107_e1f04170-6709-4b5f-9f7f-b2a84bedef75.sql:7 ---
+DROP POLICY IF EXISTS "clinical_cases_select_policy" ON public.clinical_cases;
+DROP POLICY IF EXISTS "disciplines_select_policy" ON public.disciplines;
+DROP POLICY IF EXISTS "exercises_select_policy" ON public.exercises;
+
+--- 20260806134107_e1f04170-6709-4b5f-9f7f-b2a84bedef75.sql:8 ---
+DROP POLICY IF EXISTS "disciplines_select_policy" ON public.disciplines;
+DROP POLICY IF EXISTS "exercises_select_policy" ON public.exercises;
+DROP POLICY IF EXISTS "material_modules_select_policy" ON public.material_modules;
+
+--- 20260806134107_e1f04170-6709-4b5f-9f7f-b2a84bedef75.sql:9 ---
+DROP POLICY IF EXISTS "exercises_select_policy" ON public.exercises;
+DROP POLICY IF EXISTS "material_modules_select_policy" ON public.material_modules;
+DROP POLICY IF EXISTS "materials_select_policy" ON public.materials;
+
+--- 20260806134107_e1f04170-6709-4b5f-9f7f-b2a84bedef75.sql:10 ---
+DROP POLICY IF EXISTS "material_modules_select_policy" ON public.material_modules;
+DROP POLICY IF EXISTS "materials_select_policy" ON public.materials;
+
+
+--- 20260806134107_e1f04170-6709-4b5f-9f7f-b2a84bedef75.sql:13 ---
+-- 2) Ensure institution managers can still read clinical cases of their institution
+DROP POLICY IF EXISTS "Institutions see clinical cases" ON public.clinical_cases;
+CREATE POLICY "Institutions see clinical cases"
+
+--- 20260806134107_e1f04170-6709-4b5f-9f7f-b2a84bedef75.sql:21 ---
+
+DROP POLICY IF EXISTS "Admins manage clinical cases" ON public.clinical_cases;
+CREATE POLICY "Admins manage clinical cases"
+
+--- 20260806134107_e1f04170-6709-4b5f-9f7f-b2a84bedef75.sql:28 ---
+-- 3) Enable row level security on every affected table
+ALTER TABLE public.activities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_generations ENABLE ROW LEVEL SECURITY;
+
+--- 20260806134107_e1f04170-6709-4b5f-9f7f-b2a84bedef75.sql:29 ---
+ALTER TABLE public.activities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_generations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.assessments ENABLE ROW LEVEL SECURITY;
+
+--- 20260806134107_e1f04170-6709-4b5f-9f7f-b2a84bedef75.sql:30 ---
+ALTER TABLE public.ai_generations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.assessments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.attendance_records ENABLE ROW LEVEL SECURITY;
+
+--- 20260806134107_e1f04170-6709-4b5f-9f7f-b2a84bedef75.sql:31 ---
+ALTER TABLE public.assessments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.attendance_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.attendance_sessions ENABLE ROW LEVEL SECURITY;
+
+--- 20260806134107_e1f04170-6709-4b5f-9f7f-b2a84bedef75.sql:32 ---
+ALTER TABLE public.attendance_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.attendance_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.clinical_cases ENABLE ROW LEVEL SECURITY;
+
+--- 20260806134107_e1f04170-6709-4b5f-9f7f-b2a84bedef75.sql:33 ---
+ALTER TABLE public.attendance_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.clinical_cases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.discipline_students ENABLE ROW LEVEL SECURITY;
+
+--- 20260806134107_e1f04170-6709-4b5f-9f7f-b2a84bedef75.sql:34 ---
+ALTER TABLE public.clinical_cases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.discipline_students ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.disciplines ENABLE ROW LEVEL SECURITY;
+
+--- 20260806134107_e1f04170-6709-4b5f-9f7f-b2a84bedef75.sql:35 ---
+ALTER TABLE public.discipline_students ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.disciplines ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.exercises ENABLE ROW LEVEL SECURITY;
+
+--- 20260806134107_e1f04170-6709-4b5f-9f7f-b2a84bedef75.sql:36 ---
+ALTER TABLE public.disciplines ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.exercises ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.grade_entries ENABLE ROW LEVEL SECURITY;
+
+--- 20260806134107_e1f04170-6709-4b5f-9f7f-b2a84bedef75.sql:37 ---
+ALTER TABLE public.exercises ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.grade_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.material_modules ENABLE ROW LEVEL SECURITY;
+
+--- 20260806134107_e1f04170-6709-4b5f-9f7f-b2a84bedef75.sql:38 ---
+ALTER TABLE public.grade_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.material_modules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.materials ENABLE ROW LEVEL SECURITY;
+
+--- 20260806134107_e1f04170-6709-4b5f-9f7f-b2a84bedef75.sql:39 ---
+ALTER TABLE public.material_modules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.materials ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+--- 20260806134107_e1f04170-6709-4b5f-9f7f-b2a84bedef75.sql:40 ---
+ALTER TABLE public.materials ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.student_diary_entries ENABLE ROW LEVEL SECURITY;
+
+--- 20260806134107_e1f04170-6709-4b5f-9f7f-b2a84bedef75.sql:41 ---
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.student_diary_entries ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260806140947_301e8181-32c0-45c1-a03d-84c188ced7e1.sql:1 ---
+ALTER TABLE public.disciplines ADD COLUMN IF NOT EXISTS visible_modules jsonb;
+
+
+--- 20260806140947_301e8181-32c0-45c1-a03d-84c188ced7e1.sql:5 ---
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    discipline_id uuid REFERENCES public.disciplines(id) ON DELETE CASCADE NOT NULL,
+    module_type text NOT NULL,
+
+--- 20260806140947_301e8181-32c0-45c1-a03d-84c188ced7e1.sql:17 ---
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    simulation_id uuid REFERENCES public.discipline_lab_simulations(id) ON DELETE CASCADE NOT NULL,
+    student_id uuid REFERENCES auth.users(id) NOT NULL,
+
+--- 20260806140947_301e8181-32c0-45c1-a03d-84c188ced7e1.sql:28 ---
+GRANT ALL ON public.discipline_lab_simulations TO service_role;
+ALTER TABLE public.discipline_lab_simulations ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260806140947_301e8181-32c0-45c1-a03d-84c188ced7e1.sql:38 ---
+GRANT ALL ON public.discipline_lab_submissions TO service_role;
+ALTER TABLE public.discipline_lab_submissions ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260806142459_94e381c9-2ab9-40ba-b7ec-27697f81a96b.sql:2 ---
+-- Add missing columns to discipline_lab_simulations
+ALTER TABLE public.discipline_lab_simulations 
+ADD COLUMN IF NOT EXISTS is_draft BOOLEAN DEFAULT false,
+
+--- 20260806142459_94e381c9-2ab9-40ba-b7ec-27697f81a96b.sql:9 ---
+-- Ensure RLS is enabled and policies are correct for virtual lab tables
+ALTER TABLE public.discipline_lab_simulations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.discipline_lab_submissions ENABLE ROW LEVEL SECURITY;
+
+--- 20260806142459_94e381c9-2ab9-40ba-b7ec-27697f81a96b.sql:10 ---
+ALTER TABLE public.discipline_lab_simulations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.discipline_lab_submissions ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260806163420_550c5a1e-640c-490e-8633-b56763f00141.sql:5 ---
+STABLE
+SECURITY DEFINER
+SET search_path = public
+
+--- 20260806163420_550c5a1e-640c-490e-8633-b56763f00141.sql:11 ---
+
+DROP POLICY IF EXISTS "profiles_select_policy" ON public.profiles;
+
+
+--- 20260807004046_c5030355-b1e6-419d-abe1-5a820fb74075.sql:6 ---
+    status text default 'pending' check (status in ('pending', 'active')),
+    institution_id uuid references public.institutions(id) on delete cascade,
+    created_at timestamptz default now()
+
+--- 20260807004046_c5030355-b1e6-419d-abe1-5a820fb74075.sql:16 ---
+-- Enable RLS
+ALTER TABLE public.authorized_students ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260807010225_44e9558e-9e50-4cd6-b8e5-8a7ec3fc3e60.sql:1 ---
+ALTER TABLE public.attendance_sessions
+  ADD COLUMN IF NOT EXISTS programmatic_content text,
+
+--- 20260807224612_968843a3-d281-4917-a215-8c935e14318a.sql:2 ---
+-- 1. Create clean policies for material_modules
+DROP POLICY IF EXISTS "Teachers manage own material modules" ON public.material_modules;
+DROP POLICY IF EXISTS "Students view modules in enrolled disciplines" ON public.material_modules;
+
+--- 20260807224612_968843a3-d281-4917-a215-8c935e14318a.sql:3 ---
+DROP POLICY IF EXISTS "Teachers manage own material modules" ON public.material_modules;
+DROP POLICY IF EXISTS "Students view modules in enrolled disciplines" ON public.material_modules;
+DROP POLICY IF EXISTS "Admins manage all material modules" ON public.material_modules;
+
+--- 20260807224612_968843a3-d281-4917-a215-8c935e14318a.sql:4 ---
+DROP POLICY IF EXISTS "Students view modules in enrolled disciplines" ON public.material_modules;
+DROP POLICY IF EXISTS "Admins manage all material modules" ON public.material_modules;
+DROP POLICY IF EXISTS "Institutions see material modules" ON public.material_modules;
+
+--- 20260807224612_968843a3-d281-4917-a215-8c935e14318a.sql:5 ---
+DROP POLICY IF EXISTS "Admins manage all material modules" ON public.material_modules;
+DROP POLICY IF EXISTS "Institutions see material modules" ON public.material_modules;
+DROP POLICY IF EXISTS "Professors can manage their own modules" ON public.material_modules;
+
+--- 20260807224612_968843a3-d281-4917-a215-8c935e14318a.sql:6 ---
+DROP POLICY IF EXISTS "Institutions see material modules" ON public.material_modules;
+DROP POLICY IF EXISTS "Professors can manage their own modules" ON public.material_modules;
+DROP POLICY IF EXISTS "Students can see modules of their disciplines" ON public.material_modules;
+
+--- 20260807224612_968843a3-d281-4917-a215-8c935e14318a.sql:7 ---
+DROP POLICY IF EXISTS "Professors can manage their own modules" ON public.material_modules;
+DROP POLICY IF EXISTS "Students can see modules of their disciplines" ON public.material_modules;
+DROP POLICY IF EXISTS "Teachers can manage own modules" ON public.material_modules;
+
+--- 20260807224612_968843a3-d281-4917-a215-8c935e14318a.sql:8 ---
+DROP POLICY IF EXISTS "Students can see modules of their disciplines" ON public.material_modules;
+DROP POLICY IF EXISTS "Teachers can manage own modules" ON public.material_modules;
+DROP POLICY IF EXISTS "material_modules_select_policy" ON public.material_modules;
+
+--- 20260807224612_968843a3-d281-4917-a215-8c935e14318a.sql:9 ---
+DROP POLICY IF EXISTS "Teachers can manage own modules" ON public.material_modules;
+DROP POLICY IF EXISTS "material_modules_select_policy" ON public.material_modules;
+
+
+--- 20260807224612_968843a3-d281-4917-a215-8c935e14318a.sql:21 ---
+-- 2. Create clean policies for materials
+DROP POLICY IF EXISTS "Teachers manage own materials" ON public.materials;
+DROP POLICY IF EXISTS "Students view materials in enrolled disciplines" ON public.materials;
+
+--- 20260807224612_968843a3-d281-4917-a215-8c935e14318a.sql:22 ---
+DROP POLICY IF EXISTS "Teachers manage own materials" ON public.materials;
+DROP POLICY IF EXISTS "Students view materials in enrolled disciplines" ON public.materials;
+DROP POLICY IF EXISTS "Admins manage all materials" ON public.materials;
+
+--- 20260807224612_968843a3-d281-4917-a215-8c935e14318a.sql:23 ---
+DROP POLICY IF EXISTS "Students view materials in enrolled disciplines" ON public.materials;
+DROP POLICY IF EXISTS "Admins manage all materials" ON public.materials;
+
+
+--- 20260807224612_968843a3-d281-4917-a215-8c935e14318a.sql:35 ---
+-- 3. Create clean policies for clinical_cases
+DROP POLICY IF EXISTS "Teachers manage own clinical cases" ON public.clinical_cases;
+DROP POLICY IF EXISTS "Students read cases in enrolled disciplines" ON public.clinical_cases;
+
+--- 20260807224612_968843a3-d281-4917-a215-8c935e14318a.sql:36 ---
+DROP POLICY IF EXISTS "Teachers manage own clinical cases" ON public.clinical_cases;
+DROP POLICY IF EXISTS "Students read cases in enrolled disciplines" ON public.clinical_cases;
+
+
+--- 20260807225000_fix_materials_rls.sql:5 ---
+-- Materials (these are the "items" inside modules)
+DROP POLICY IF EXISTS "Users read module items" ON public.materials;
+CREATE POLICY "Users read module items" ON public.materials
+
+--- 20260807225000_fix_materials_rls.sql:10 ---
+-- Material Modules
+DROP POLICY IF EXISTS "Users read modules of enrolled/owned disciplines" ON public.material_modules;
+CREATE POLICY "Users read modules of enrolled/owned disciplines" ON public.material_modules
+
+--- 20260807225000_fix_materials_rls.sql:15 ---
+-- Clinical Cases
+DROP POLICY IF EXISTS "Users read clinical cases" ON public.clinical_cases;
+CREATE POLICY "Users read clinical cases" ON public.clinical_cases
+
+--- 20260807225000_fix_materials_rls.sql:20 ---
+-- Academic Works (if applicable)
+DROP POLICY IF EXISTS "Users read academic works" ON public.academic_works;
+CREATE POLICY "Users read academic works" ON public.academic_works
+
+--- 20260807225013_f9b52005-3649-4904-a774-35f98611f7ef.sql:5 ---
+-- Materials (these are the "items" inside modules)
+DROP POLICY IF EXISTS "Users read module items" ON public.materials;
+CREATE POLICY "Users read module items" ON public.materials
+
+--- 20260807225013_f9b52005-3649-4904-a774-35f98611f7ef.sql:10 ---
+-- Material Modules
+DROP POLICY IF EXISTS "Users read modules of enrolled/owned disciplines" ON public.material_modules;
+CREATE POLICY "Users read modules of enrolled/owned disciplines" ON public.material_modules
+
+--- 20260807225013_f9b52005-3649-4904-a774-35f98611f7ef.sql:15 ---
+-- Clinical Cases
+DROP POLICY IF EXISTS "Users read clinical cases" ON public.clinical_cases;
+CREATE POLICY "Users read clinical cases" ON public.clinical_cases
+
+--- 20260807225013_f9b52005-3649-4904-a774-35f98611f7ef.sql:20 ---
+-- Academic Works (if applicable)
+DROP POLICY IF EXISTS "Users read academic works" ON public.academic_works;
+CREATE POLICY "Users read academic works" ON public.academic_works
+
+--- 20260807225549_3627b703-ce31-4550-9e65-88824cab8f99.sql:6 ---
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'storage' AND tablename = 'objects') THEN
+        DROP POLICY IF EXISTS "Read storage objects" ON storage.objects;
+        CREATE POLICY "Read storage objects" ON storage.objects FOR SELECT TO authenticated USING (true);
+
+--- 20260807225549_3627b703-ce31-4550-9e65-88824cab8f99.sql:12 ---
+-- Garantir leitura nas tabelas que realmente existem e representam os materiais
+DROP POLICY IF EXISTS "Users read module items" ON public.materials;
+CREATE POLICY "Users read module items" ON public.materials FOR SELECT TO authenticated USING (true);
+
+--- 20260807225549_3627b703-ce31-4550-9e65-88824cab8f99.sql:15 ---
+
+DROP POLICY IF EXISTS "Users read modules of enrolled/owned disciplines" ON public.material_modules;
+CREATE POLICY "Users read modules of enrolled/owned disciplines" ON public.material_modules FOR SELECT TO authenticated USING (true);
+
+--- 20260807230043_ae5000de-b65f-4eeb-860d-6ca32e9996af.sql:5 ---
+STABLE
+SECURITY DEFINER
+SET search_path = public
+
+--- 20260807230043_ae5000de-b65f-4eeb-860d-6ca32e9996af.sql:17 ---
+
+DROP POLICY IF EXISTS "Admins read all profiles" ON public.profiles;
+CREATE POLICY "Admins read all profiles" ON public.profiles
+
+--- 20260814165622_51ddd63d-6e16-4c65-b36f-92bfa6cd0263.sql:2 ---
+-- 1. Fix EXPOSED_ROLE_DATA (user_roles_select_true_exposure)
+DROP POLICY IF EXISTS "user_roles_select_authenticated" ON public.user_roles;
+
+
+--- 20260814165622_51ddd63d-6e16-4c65-b36f-92bfa6cd0263.sql:5 ---
+-- 2. Fix PUBLIC_USER_DATA (profiles_select_true_exposure)
+DROP POLICY IF EXISTS "profiles_select_authenticated" ON public.profiles;
+DROP POLICY IF EXISTS "profiles_select_all" ON public.profiles;
+
+--- 20260814165622_51ddd63d-6e16-4c65-b36f-92bfa6cd0263.sql:6 ---
+DROP POLICY IF EXISTS "profiles_select_authenticated" ON public.profiles;
+DROP POLICY IF EXISTS "profiles_select_all" ON public.profiles;
+
+
+--- 20260814165622_51ddd63d-6e16-4c65-b36f-92bfa6cd0263.sql:17 ---
+-- 3. Fix MISSING_RLS_PROTECTION (disciplines_select_true_exposure)
+DROP POLICY IF EXISTS "disciplines_simple_read_v3" ON public.disciplines;
+
+
+--- 20260814165622_51ddd63d-6e16-4c65-b36f-92bfa6cd0263.sql:20 ---
+-- 4. Fix STORAGE_OVERPERMISSIVE_POLICY (strict_storage_isolation_missing_bucket_scope)
+DROP POLICY IF EXISTS "strict_storage_isolation" ON storage.objects;
+CREATE POLICY "strict_storage_isolation" ON storage.objects
+
+--- 20260814165622_51ddd63d-6e16-4c65-b36f-92bfa6cd0263.sql:36 ---
+-- 5. Fix STORAGE_OVERPERMISSIVE_POLICY (submissions_teacher_role_broad_access)
+DROP POLICY IF EXISTS "submissions_owner_strict" ON storage.objects;
+CREATE POLICY "submissions_owner_strict" ON storage.objects
+
+--- 20260814170540_a7d511c6-509d-4403-b163-1b609be3a598.sql:2 ---
+-- Fix discipline_students RLS: Scoped policies for Admins, Teachers, and Students
+DROP POLICY IF EXISTS "discipline_students_all" ON public.discipline_students;
+DROP POLICY IF EXISTS "discipline_students_read" ON public.discipline_students;
+
+--- 20260814170540_a7d511c6-509d-4403-b163-1b609be3a598.sql:3 ---
+DROP POLICY IF EXISTS "discipline_students_all" ON public.discipline_students;
+DROP POLICY IF EXISTS "discipline_students_read" ON public.discipline_students;
+DROP POLICY IF EXISTS "Admins can manage all discipline_students" ON public.discipline_students;
+
+--- 20260814170540_a7d511c6-509d-4403-b163-1b609be3a598.sql:4 ---
+DROP POLICY IF EXISTS "discipline_students_read" ON public.discipline_students;
+DROP POLICY IF EXISTS "Admins can manage all discipline_students" ON public.discipline_students;
+DROP POLICY IF EXISTS "Teachers can manage students in their disciplines" ON public.discipline_students;
+
+--- 20260814170540_a7d511c6-509d-4403-b163-1b609be3a598.sql:5 ---
+DROP POLICY IF EXISTS "Admins can manage all discipline_students" ON public.discipline_students;
+DROP POLICY IF EXISTS "Teachers can manage students in their disciplines" ON public.discipline_students;
+DROP POLICY IF EXISTS "Students can see their own enrollments" ON public.discipline_students;
+
+--- 20260814170540_a7d511c6-509d-4403-b163-1b609be3a598.sql:6 ---
+DROP POLICY IF EXISTS "Teachers can manage students in their disciplines" ON public.discipline_students;
+DROP POLICY IF EXISTS "Students can see their own enrollments" ON public.discipline_students;
+
+
+--- 20260814170540_a7d511c6-509d-4403-b163-1b609be3a598.sql:33 ---
+-- Fix grade_entries RLS: Enforce discipline ownership for teachers
+DROP POLICY IF EXISTS "grade_entries_all" ON public.grade_entries;
+DROP POLICY IF EXISTS "grade_entries_teacher_manage" ON public.grade_entries;
+
+--- 20260814170540_a7d511c6-509d-4403-b163-1b609be3a598.sql:34 ---
+DROP POLICY IF EXISTS "grade_entries_all" ON public.grade_entries;
+DROP POLICY IF EXISTS "grade_entries_teacher_manage" ON public.grade_entries;
+DROP POLICY IF EXISTS "Admins manage all grades" ON public.grade_entries;
+
+--- 20260814170540_a7d511c6-509d-4403-b163-1b609be3a598.sql:35 ---
+DROP POLICY IF EXISTS "grade_entries_teacher_manage" ON public.grade_entries;
+DROP POLICY IF EXISTS "Admins manage all grades" ON public.grade_entries;
+DROP POLICY IF EXISTS "Teachers manage grades in their disciplines" ON public.grade_entries;
+
+--- 20260814170540_a7d511c6-509d-4403-b163-1b609be3a598.sql:36 ---
+DROP POLICY IF EXISTS "Admins manage all grades" ON public.grade_entries;
+DROP POLICY IF EXISTS "Teachers manage grades in their disciplines" ON public.grade_entries;
+DROP POLICY IF EXISTS "Students view their own grades" ON public.grade_entries;
+
+--- 20260814170540_a7d511c6-509d-4403-b163-1b609be3a598.sql:37 ---
+DROP POLICY IF EXISTS "Teachers manage grades in their disciplines" ON public.grade_entries;
+DROP POLICY IF EXISTS "Students view their own grades" ON public.grade_entries;
+
+
+--- 20260814170540_a7d511c6-509d-4403-b163-1b609be3a598.sql:64 ---
+-- Fix invitations RLS: Scope invitation management for gestors to their own institution
+DROP POLICY IF EXISTS "Admins manage all invitations" ON public.invitations;
+DROP POLICY IF EXISTS "Gestors manage institution invitations" ON public.invitations;
+
+--- 20260814170540_a7d511c6-509d-4403-b163-1b609be3a598.sql:65 ---
+DROP POLICY IF EXISTS "Admins manage all invitations" ON public.invitations;
+DROP POLICY IF EXISTS "Gestors manage institution invitations" ON public.invitations;
+
+
+--- 20260814170540_a7d511c6-509d-4403-b163-1b609be3a598.sql:87 ---
+-- Fix lab config and simulations visibility: Correct join conditions
+DROP POLICY IF EXISTS "Students can see active lab config" ON public.discipline_lab_config;
+DROP POLICY IF EXISTS "Students can see simulation list" ON public.discipline_lab_simulations;
+
+--- 20260814170540_a7d511c6-509d-4403-b163-1b609be3a598.sql:88 ---
+DROP POLICY IF EXISTS "Students can see active lab config" ON public.discipline_lab_config;
+DROP POLICY IF EXISTS "Students can see simulation list" ON public.discipline_lab_simulations;
+
+
+--- 20260814171541_aa698fab-59f5-4f95-bfa9-9f864cb809c7.sql:4 ---
+-- 1. Ensure students can see their own discipline associations
+DROP POLICY IF EXISTS "Students can see their own enrollments" ON public.discipline_students;
+CREATE POLICY "Students can see their own enrollments"
+
+--- 20260814171541_aa698fab-59f5-4f95-bfa9-9f864cb809c7.sql:12 ---
+-- 2. Ensure students can see the disciplines they are enrolled in
+DROP POLICY IF EXISTS "Students can see enrolled disciplines" ON public.disciplines;
+CREATE POLICY "Students can see enrolled disciplines"
+
+--- 20260814171541_aa698fab-59f5-4f95-bfa9-9f864cb809c7.sql:26 ---
+-- 3. Ensure clinical cases are visible to enrolled students
+DROP POLICY IF EXISTS "Students can view clinical cases of their disciplines" ON public.clinical_cases;
+CREATE POLICY "Students can view clinical cases of their disciplines"
+
+--- 20260814172112_e0326aa8-2841-42c8-8e89-5dcebd7b0858.sql:6 ---
+-- and discipline_students likely had a policy that referenced disciplines.
+DROP POLICY IF EXISTS "Students can see enrolled disciplines" ON public.disciplines;
+CREATE POLICY "Students can see enrolled disciplines"
+
+--- 20260814172112_e0326aa8-2841-42c8-8e89-5dcebd7b0858.sql:23 ---
+-- It should only check student_id = auth.uid() or be manageable by teachers/admins
+DROP POLICY IF EXISTS "Students can see their own enrollments" ON public.discipline_students;
+CREATE POLICY "Students can see their own enrollments"
+
+--- 20260814172112_e0326aa8-2841-42c8-8e89-5dcebd7b0858.sql:31 ---
+-- 3. Clean up other potentially recursive policies
+DROP POLICY IF EXISTS "Students can view clinical cases of their disciplines" ON public.clinical_cases;
+CREATE POLICY "Students can view clinical cases of their disciplines"
+
+--- 20260814172145_2dfb0d16-451c-4e37-bd77-fc3da179f33e.sql:1 ---
+-- Resolve stubborn infinite recursion in disciplines policy by using a Security Definer function
+
+
+--- 20260814172145_2dfb0d16-451c-4e37-bd77-fc3da179f33e.sql:3 ---
+
+-- 1. Create a security definer function to check enrollment
+-- This function executes with the privileges of its owner (superuser), 
+
+--- 20260814172145_2dfb0d16-451c-4e37-bd77-fc3da179f33e.sql:10 ---
+STABLE
+SECURITY DEFINER
+SET search_path = public
+
+--- 20260814172145_2dfb0d16-451c-4e37-bd77-fc3da179f33e.sql:22 ---
+-- 2. Drop the problematic recursive policies
+DROP POLICY IF EXISTS "Students can see enrolled disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "discipline_students_read" ON public.discipline_students;
+
+--- 20260814172145_2dfb0d16-451c-4e37-bd77-fc3da179f33e.sql:23 ---
+DROP POLICY IF EXISTS "Students can see enrolled disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "discipline_students_read" ON public.discipline_students;
+DROP POLICY IF EXISTS "Students can see their own enrollments" ON public.discipline_students;
+
+--- 20260814172145_2dfb0d16-451c-4e37-bd77-fc3da179f33e.sql:24 ---
+DROP POLICY IF EXISTS "discipline_students_read" ON public.discipline_students;
+DROP POLICY IF EXISTS "Students can see their own enrollments" ON public.discipline_students;
+
+
+--- 20260814172145_2dfb0d16-451c-4e37-bd77-fc3da179f33e.sql:33 ---
+
+-- 4. Re-create disciplines policy using the security definer function
+-- This is now safe because the function does not trigger RLS checks.
+
+--- 20260814172145_2dfb0d16-451c-4e37-bd77-fc3da179f33e.sql:46 ---
+-- 5. Do the same for clinical_cases to be safe
+DROP POLICY IF EXISTS "Students can view clinical cases of their disciplines" ON public.clinical_cases;
+CREATE POLICY "Students can view clinical cases of their disciplines"
+
+--- 20260814172229_554a4025-0c1e-433f-afa1-d56fb5cead2b.sql:3 ---
+-- 1. Drop EVERYTHING related to disciplines policies
+DROP POLICY IF EXISTS "Students can see enrolled disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "Teachers can manage their own disciplines" ON public.disciplines;
+
+--- 20260814172229_554a4025-0c1e-433f-afa1-d56fb5cead2b.sql:4 ---
+DROP POLICY IF EXISTS "Students can see enrolled disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "Teachers can manage their own disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "Admins can see everything" ON public.disciplines;
+
+--- 20260814172229_554a4025-0c1e-433f-afa1-d56fb5cead2b.sql:5 ---
+DROP POLICY IF EXISTS "Teachers can manage their own disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "Admins can see everything" ON public.disciplines;
+
+
+--- 20260814172229_554a4025-0c1e-433f-afa1-d56fb5cead2b.sql:15 ---
+-- 3. Also fix discipline_students to be absolutely permissive for reads
+DROP POLICY IF EXISTS "Students can see their own enrollments" ON public.discipline_students;
+CREATE POLICY "authenticated_view_enrollments"
+
+--- 20260814172229_554a4025-0c1e-433f-afa1-d56fb5cead2b.sql:23 ---
+-- 4. Check if we have recursive policies on material_modules or materials
+DROP POLICY IF EXISTS "Students can see modules of their disciplines" ON public.material_modules;
+CREATE POLICY "authenticated_view_modules"
+
+--- 20260814172229_554a4025-0c1e-433f-afa1-d56fb5cead2b.sql:30 ---
+
+DROP POLICY IF EXISTS "Students can see materials of their modules" ON public.materials;
+CREATE POLICY "authenticated_view_materials"
+
+--- 20260814172301_dd1a03ad-7e56-4145-958d-afb3ffff4574.sql:4 ---
+-- 1. Drop the policy that depends on the function
+DROP POLICY IF EXISTS "Students can view clinical cases of their disciplines" ON public.clinical_cases;
+
+
+--- 20260814172301_dd1a03ad-7e56-4145-958d-afb3ffff4574.sql:7 ---
+-- 2. Now drop the function
+DROP FUNCTION IF EXISTS public.check_is_enrolled(uuid, uuid);
+
+
+--- 20260814172301_dd1a03ad-7e56-4145-958d-afb3ffff4574.sql:10 ---
+-- 3. Disable RLS entirely for core tables to break recursion once and for all
+ALTER TABLE public.disciplines DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.discipline_students DISABLE ROW LEVEL SECURITY;
+
+--- 20260814172301_dd1a03ad-7e56-4145-958d-afb3ffff4574.sql:11 ---
+ALTER TABLE public.disciplines DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.discipline_students DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.material_modules DISABLE ROW LEVEL SECURITY;
+
+--- 20260814172301_dd1a03ad-7e56-4145-958d-afb3ffff4574.sql:12 ---
+ALTER TABLE public.discipline_students DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.material_modules DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.materials DISABLE ROW LEVEL SECURITY;
+
+--- 20260814172301_dd1a03ad-7e56-4145-958d-afb3ffff4574.sql:13 ---
+ALTER TABLE public.material_modules DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.materials DISABLE ROW LEVEL SECURITY;
+
+
+--- 20260814172345_c6778530-27d9-4e8f-aac3-3e5a211cd2be.sql:4 ---
+-- 1. Enable RLS back for everyone
+ALTER TABLE public.disciplines ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.discipline_students ENABLE ROW LEVEL SECURITY;
+
+--- 20260814172345_c6778530-27d9-4e8f-aac3-3e5a211cd2be.sql:5 ---
+ALTER TABLE public.disciplines ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.discipline_students ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.material_modules ENABLE ROW LEVEL SECURITY;
+
+--- 20260814172345_c6778530-27d9-4e8f-aac3-3e5a211cd2be.sql:6 ---
+ALTER TABLE public.discipline_students ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.material_modules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.materials ENABLE ROW LEVEL SECURITY;
+
+--- 20260814172345_c6778530-27d9-4e8f-aac3-3e5a211cd2be.sql:7 ---
+ALTER TABLE public.material_modules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.materials ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260814172345_c6778530-27d9-4e8f-aac3-3e5a211cd2be.sql:10 ---
+-- 2. Drop the 'true' policies we added for debugging
+DROP POLICY IF EXISTS "authenticated_view_disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "authenticated_view_enrollments" ON public.discipline_students;
+
+--- 20260814172345_c6778530-27d9-4e8f-aac3-3e5a211cd2be.sql:11 ---
+DROP POLICY IF EXISTS "authenticated_view_disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "authenticated_view_enrollments" ON public.discipline_students;
+DROP POLICY IF EXISTS "authenticated_view_modules" ON public.material_modules;
+
+--- 20260814172345_c6778530-27d9-4e8f-aac3-3e5a211cd2be.sql:12 ---
+DROP POLICY IF EXISTS "authenticated_view_enrollments" ON public.discipline_students;
+DROP POLICY IF EXISTS "authenticated_view_modules" ON public.material_modules;
+DROP POLICY IF EXISTS "authenticated_view_materials" ON public.materials;
+
+--- 20260814172345_c6778530-27d9-4e8f-aac3-3e5a211cd2be.sql:13 ---
+DROP POLICY IF EXISTS "authenticated_view_modules" ON public.material_modules;
+DROP POLICY IF EXISTS "authenticated_view_materials" ON public.materials;
+
+
+--- 20260814172345_c6778530-27d9-4e8f-aac3-3e5a211cd2be.sql:15 ---
+
+-- 3. Re-create the check_is_enrolled function (Security Definer)
+-- This was the key to breaking the recursion.
+
+--- 20260814172345_c6778530-27d9-4e8f-aac3-3e5a211cd2be.sql:21 ---
+STABLE
+SECURITY DEFINER
+SET search_path = public
+
+--- 20260814172427_e8da7387-a3ee-49f5-bc8f-fd9e936a6fce.sql:6 ---
+-- 1. Drop all known policies on disciplines
+DROP POLICY IF EXISTS "disciplines_select_policy" ON public.disciplines;
+DROP POLICY IF EXISTS "Students can see enrolled disciplines" ON public.disciplines;
+
+--- 20260814172427_e8da7387-a3ee-49f5-bc8f-fd9e936a6fce.sql:7 ---
+DROP POLICY IF EXISTS "disciplines_select_policy" ON public.disciplines;
+DROP POLICY IF EXISTS "Students can see enrolled disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "Teachers can manage their own disciplines" ON public.disciplines;
+
+--- 20260814172427_e8da7387-a3ee-49f5-bc8f-fd9e936a6fce.sql:8 ---
+DROP POLICY IF EXISTS "Students can see enrolled disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "Teachers can manage their own disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "Admins can see everything" ON public.disciplines;
+
+--- 20260814172427_e8da7387-a3ee-49f5-bc8f-fd9e936a6fce.sql:9 ---
+DROP POLICY IF EXISTS "Teachers can manage their own disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "Admins can see everything" ON public.disciplines;
+DROP POLICY IF EXISTS "authenticated_view_disciplines" ON public.disciplines;
+
+--- 20260814172427_e8da7387-a3ee-49f5-bc8f-fd9e936a6fce.sql:10 ---
+DROP POLICY IF EXISTS "Admins can see everything" ON public.disciplines;
+DROP POLICY IF EXISTS "authenticated_view_disciplines" ON public.disciplines;
+
+
+--- 20260814172427_e8da7387-a3ee-49f5-bc8f-fd9e936a6fce.sql:13 ---
+-- 2. Drop all known policies on discipline_students
+DROP POLICY IF EXISTS "discipline_students_select_policy" ON public.discipline_students;
+DROP POLICY IF EXISTS "Students can see their own enrollments" ON public.discipline_students;
+
+--- 20260814172427_e8da7387-a3ee-49f5-bc8f-fd9e936a6fce.sql:14 ---
+DROP POLICY IF EXISTS "discipline_students_select_policy" ON public.discipline_students;
+DROP POLICY IF EXISTS "Students can see their own enrollments" ON public.discipline_students;
+DROP POLICY IF EXISTS "authenticated_view_enrollments" ON public.discipline_students;
+
+--- 20260814172427_e8da7387-a3ee-49f5-bc8f-fd9e936a6fce.sql:15 ---
+DROP POLICY IF EXISTS "Students can see their own enrollments" ON public.discipline_students;
+DROP POLICY IF EXISTS "authenticated_view_enrollments" ON public.discipline_students;
+
+
+--- 20260814172427_e8da7387-a3ee-49f5-bc8f-fd9e936a6fce.sql:19 ---
+-- If this still fails, the recursion is coming from a VIEW or TRIGGER.
+ALTER TABLE public.disciplines DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.discipline_students DISABLE ROW LEVEL SECURITY;
+
+--- 20260814172427_e8da7387-a3ee-49f5-bc8f-fd9e936a6fce.sql:20 ---
+ALTER TABLE public.disciplines DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.discipline_students DISABLE ROW LEVEL SECURITY;
+
+
+--- 20260814172500_e0b0b96b-4923-441a-bc2f-3048c5e88bd8.sql:1 ---
+-- Clean restoration of RLS policies with SECURITY DEFINER to avoid recursion
+
+
+--- 20260814172500_e0b0b96b-4923-441a-bc2f-3048c5e88bd8.sql:3 ---
+
+-- 1. Create the Security Definer helper again
+CREATE OR REPLACE FUNCTION public.check_is_enrolled(_discipline_id uuid, _user_id uuid)
+
+--- 20260814172500_e0b0b96b-4923-441a-bc2f-3048c5e88bd8.sql:8 ---
+STABLE
+SECURITY DEFINER
+SET search_path = public
+
+--- 20260814172500_e0b0b96b-4923-441a-bc2f-3048c5e88bd8.sql:21 ---
+-- This is where the infinite recursion was happening.
+-- By using a Security Definer function, we bypass the RLS check on discipline_students.
+ALTER TABLE public.disciplines ENABLE ROW LEVEL SECURITY;
+
+--- 20260814172500_e0b0b96b-4923-441a-bc2f-3048c5e88bd8.sql:22 ---
+-- By using a Security Definer function, we bypass the RLS check on discipline_students.
+ALTER TABLE public.disciplines ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "disciplines_select_policy" ON public.disciplines;
+
+--- 20260814172500_e0b0b96b-4923-441a-bc2f-3048c5e88bd8.sql:23 ---
+ALTER TABLE public.disciplines ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "disciplines_select_policy" ON public.disciplines;
+CREATE POLICY "disciplines_select_policy"
+
+--- 20260814172500_e0b0b96b-4923-441a-bc2f-3048c5e88bd8.sql:36 ---
+-- We avoid referencing 'disciplines' here to be absolutely safe.
+ALTER TABLE public.discipline_students ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "discipline_students_select_policy" ON public.discipline_students;
+
+--- 20260814172500_e0b0b96b-4923-441a-bc2f-3048c5e88bd8.sql:37 ---
+ALTER TABLE public.discipline_students ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "discipline_students_select_policy" ON public.discipline_students;
+CREATE POLICY "discipline_students_select_policy"
+
+--- 20260814172500_e0b0b96b-4923-441a-bc2f-3048c5e88bd8.sql:49 ---
+-- 4. Restore materials policies (they were safe, but let's re-add securely)
+ALTER TABLE public.material_modules ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "material_modules_select_policy" ON public.material_modules;
+
+--- 20260814172500_e0b0b96b-4923-441a-bc2f-3048c5e88bd8.sql:50 ---
+ALTER TABLE public.material_modules ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "material_modules_select_policy" ON public.material_modules;
+CREATE POLICY "material_modules_select_policy"
+
+--- 20260814172500_e0b0b96b-4923-441a-bc2f-3048c5e88bd8.sql:61 ---
+
+ALTER TABLE public.materials ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "materials_select_policy" ON public.materials;
+
+--- 20260814172500_e0b0b96b-4923-441a-bc2f-3048c5e88bd8.sql:62 ---
+ALTER TABLE public.materials ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "materials_select_policy" ON public.materials;
+CREATE POLICY "materials_select_policy"
+
+--- 20260814172529_c4c3def8-aec1-499d-b81b-4030cdd164fd.sql:5 ---
+-- 1. Drop the check_is_enrolled function just in case
+DROP POLICY IF EXISTS "disciplines_select_policy" ON public.disciplines CASCADE;
+DROP POLICY IF EXISTS "material_modules_select_policy" ON public.material_modules CASCADE;
+
+--- 20260814172529_c4c3def8-aec1-499d-b81b-4030cdd164fd.sql:6 ---
+DROP POLICY IF EXISTS "disciplines_select_policy" ON public.disciplines CASCADE;
+DROP POLICY IF EXISTS "material_modules_select_policy" ON public.material_modules CASCADE;
+DROP POLICY IF EXISTS "materials_select_policy" ON public.materials CASCADE;
+
+--- 20260814172529_c4c3def8-aec1-499d-b81b-4030cdd164fd.sql:7 ---
+DROP POLICY IF EXISTS "material_modules_select_policy" ON public.material_modules CASCADE;
+DROP POLICY IF EXISTS "materials_select_policy" ON public.materials CASCADE;
+DROP FUNCTION IF EXISTS public.check_is_enrolled(uuid, uuid) CASCADE;
+
+--- 20260814172529_c4c3def8-aec1-499d-b81b-4030cdd164fd.sql:8 ---
+DROP POLICY IF EXISTS "materials_select_policy" ON public.materials CASCADE;
+DROP FUNCTION IF EXISTS public.check_is_enrolled(uuid, uuid) CASCADE;
+
+
+--- 20260814172529_c4c3def8-aec1-499d-b81b-4030cdd164fd.sql:12 ---
+-- such as profiles, institutions, or anything else referenced in a policy
+DROP POLICY IF EXISTS "Profiles are viewable by owner and admin" ON public.profiles;
+CREATE POLICY "Profiles are viewable by owner and admin"
+
+--- 20260814172652_4ec5c2ae-ca76-453e-9946-e053844d5305.sql:1 ---
+-- RESTAURAR ACESSO DO ALUNO VIA SERVER FUNCTION (SECURITY DEFINER)
+-- O erro 42P17 (recursão infinita) acontece quando o RLS tenta validar o acesso 
+
+--- 20260814172652_4ec5c2ae-ca76-453e-9946-e053844d5305.sql:6 ---
+
+-- 1. Criar a função Security Definer que será a fonte da verdade para o RLS
+-- Esta função ignora o RLS das tabelas consultadas.
+
+--- 20260814172652_4ec5c2ae-ca76-453e-9946-e053844d5305.sql:12 ---
+STABLE
+SECURITY DEFINER
+SET search_path = public
+
+--- 20260814172652_4ec5c2ae-ca76-453e-9946-e053844d5305.sql:28 ---
+-- 2. Limpar políticas recursivas
+ALTER TABLE public.disciplines ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "disciplines_select_policy" ON public.disciplines;
+
+--- 20260814172652_4ec5c2ae-ca76-453e-9946-e053844d5305.sql:29 ---
+ALTER TABLE public.disciplines ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "disciplines_select_policy" ON public.disciplines;
+DROP POLICY IF EXISTS "Students can see enrolled disciplines" ON public.disciplines;
+
+--- 20260814172652_4ec5c2ae-ca76-453e-9946-e053844d5305.sql:30 ---
+DROP POLICY IF EXISTS "disciplines_select_policy" ON public.disciplines;
+DROP POLICY IF EXISTS "Students can see enrolled disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "Teachers can manage their own disciplines" ON public.disciplines;
+
+--- 20260814172652_4ec5c2ae-ca76-453e-9946-e053844d5305.sql:31 ---
+DROP POLICY IF EXISTS "Students can see enrolled disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "Teachers can manage their own disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "Admins can see everything" ON public.disciplines;
+
+--- 20260814172652_4ec5c2ae-ca76-453e-9946-e053844d5305.sql:32 ---
+DROP POLICY IF EXISTS "Teachers can manage their own disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "Admins can see everything" ON public.disciplines;
+DROP POLICY IF EXISTS "authenticated_view_disciplines" ON public.disciplines;
+
+--- 20260814172652_4ec5c2ae-ca76-453e-9946-e053844d5305.sql:33 ---
+DROP POLICY IF EXISTS "Admins can see everything" ON public.disciplines;
+DROP POLICY IF EXISTS "authenticated_view_disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "disciplines_secure_base" ON public.disciplines;
+
+--- 20260814172652_4ec5c2ae-ca76-453e-9946-e053844d5305.sql:34 ---
+DROP POLICY IF EXISTS "authenticated_view_disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "disciplines_secure_base" ON public.disciplines;
+
+
+--- 20260814172652_4ec5c2ae-ca76-453e-9946-e053844d5305.sql:44 ---
+-- 4. Limpar políticas recursivas de Matrículas
+ALTER TABLE public.discipline_students ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "discipline_students_select_policy" ON public.discipline_students;
+
+--- 20260814172652_4ec5c2ae-ca76-453e-9946-e053844d5305.sql:45 ---
+ALTER TABLE public.discipline_students ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "discipline_students_select_policy" ON public.discipline_students;
+DROP POLICY IF EXISTS "Students can see their own enrollments" ON public.discipline_students;
+
+--- 20260814172652_4ec5c2ae-ca76-453e-9946-e053844d5305.sql:46 ---
+DROP POLICY IF EXISTS "discipline_students_select_policy" ON public.discipline_students;
+DROP POLICY IF EXISTS "Students can see their own enrollments" ON public.discipline_students;
+DROP POLICY IF EXISTS "authenticated_view_enrollments" ON public.discipline_students;
+
+--- 20260814172652_4ec5c2ae-ca76-453e-9946-e053844d5305.sql:47 ---
+DROP POLICY IF EXISTS "Students can see their own enrollments" ON public.discipline_students;
+DROP POLICY IF EXISTS "authenticated_view_enrollments" ON public.discipline_students;
+DROP POLICY IF EXISTS "discipline_students_secure_base" ON public.discipline_students;
+
+--- 20260814172652_4ec5c2ae-ca76-453e-9946-e053844d5305.sql:48 ---
+DROP POLICY IF EXISTS "authenticated_view_enrollments" ON public.discipline_students;
+DROP POLICY IF EXISTS "discipline_students_secure_base" ON public.discipline_students;
+
+
+--- 20260814172652_4ec5c2ae-ca76-453e-9946-e053844d5305.sql:62 ---
+    -- Esta subquery consulta 'disciplines', mas o RLS de 'disciplines'
+    -- agora usa a função SECURITY DEFINER, quebrando o loop.
+    SELECT 1 FROM public.disciplines d WHERE d.id = discipline_id AND d.teacher_id = auth.uid()
+
+--- 20260814181508_822c0149-f0f2-4a5e-8fe4-0abe0df8a7b8.sql:10 ---
+STABLE
+SECURITY DEFINER
+SET search_path = public
+
+--- 20260814181508_822c0149-f0f2-4a5e-8fe4-0abe0df8a7b8.sql:20 ---
+-- 2. Limpar políticas problemáticas na tabela disciplines
+DROP POLICY IF EXISTS "disciplines_membership_select" ON public.disciplines;
+DROP POLICY IF EXISTS "disciplines_select_policy" ON public.disciplines;
+
+--- 20260814181508_822c0149-f0f2-4a5e-8fe4-0abe0df8a7b8.sql:21 ---
+DROP POLICY IF EXISTS "disciplines_membership_select" ON public.disciplines;
+DROP POLICY IF EXISTS "disciplines_select_policy" ON public.disciplines;
+DROP POLICY IF EXISTS "disciplines_select_policy_v2" ON public.disciplines;
+
+--- 20260814181508_822c0149-f0f2-4a5e-8fe4-0abe0df8a7b8.sql:22 ---
+DROP POLICY IF EXISTS "disciplines_select_policy" ON public.disciplines;
+DROP POLICY IF EXISTS "disciplines_select_policy_v2" ON public.disciplines;
+
+
+--- 20260814181508_822c0149-f0f2-4a5e-8fe4-0abe0df8a7b8.sql:37 ---
+-- 4. Ajustar política de discipline_students para não ser recursiva também
+DROP POLICY IF EXISTS "discipline_students_membership_select" ON public.discipline_students;
+
+
+--- 20260814181740_0b331cd8-0641-4e6c-a389-c37a1b65c550.sql:3 ---
+-- A recursão ocorria porque uma única política tentava validar múltiplos papéis usando subqueries recursivas.
+-- Dividimos em políticas atômicas e usamos a função SECURITY DEFINER que já criamos para alunos.
+
+
+--- 20260814181740_0b331cd8-0641-4e6c-a389-c37a1b65c550.sql:6 ---
+-- 1. Limpar políticas antigas na tabela disciplines
+DROP POLICY IF EXISTS "disciplines_access_policy_fixed" ON public.disciplines;
+DROP POLICY IF EXISTS "disciplines_membership_select" ON public.disciplines;
+
+--- 20260814181740_0b331cd8-0641-4e6c-a389-c37a1b65c550.sql:7 ---
+DROP POLICY IF EXISTS "disciplines_access_policy_fixed" ON public.disciplines;
+DROP POLICY IF EXISTS "disciplines_membership_select" ON public.disciplines;
+DROP POLICY IF EXISTS "disciplines_select_policy" ON public.disciplines;
+
+--- 20260814181740_0b331cd8-0641-4e6c-a389-c37a1b65c550.sql:8 ---
+DROP POLICY IF EXISTS "disciplines_membership_select" ON public.disciplines;
+DROP POLICY IF EXISTS "disciplines_select_policy" ON public.disciplines;
+DROP POLICY IF EXISTS "disciplines_select_policy_v2" ON public.disciplines;
+
+--- 20260814181740_0b331cd8-0641-4e6c-a389-c37a1b65c550.sql:9 ---
+DROP POLICY IF EXISTS "disciplines_select_policy" ON public.disciplines;
+DROP POLICY IF EXISTS "disciplines_select_policy_v2" ON public.disciplines;
+DROP POLICY IF EXISTS "disciplines_teacher_direct" ON public.disciplines;
+
+--- 20260814181740_0b331cd8-0641-4e6c-a389-c37a1b65c550.sql:10 ---
+DROP POLICY IF EXISTS "disciplines_select_policy_v2" ON public.disciplines;
+DROP POLICY IF EXISTS "disciplines_teacher_direct" ON public.disciplines;
+DROP POLICY IF EXISTS "disciplines_admin_direct" ON public.disciplines;
+
+--- 20260814181740_0b331cd8-0641-4e6c-a389-c37a1b65c550.sql:11 ---
+DROP POLICY IF EXISTS "disciplines_teacher_direct" ON public.disciplines;
+DROP POLICY IF EXISTS "disciplines_admin_direct" ON public.disciplines;
+DROP POLICY IF EXISTS "disciplines_student_enrollment" ON public.disciplines;
+
+--- 20260814181740_0b331cd8-0641-4e6c-a389-c37a1b65c550.sql:12 ---
+DROP POLICY IF EXISTS "disciplines_admin_direct" ON public.disciplines;
+DROP POLICY IF EXISTS "disciplines_student_enrollment" ON public.disciplines;
+
+
+--- 20260814181740_0b331cd8-0641-4e6c-a389-c37a1b65c550.sql:22 ---
+
+-- Política para o Administrador: Usa has_role (que é SECURITY DEFINER e não recursiva)
+CREATE POLICY "disciplines_admin_select"
+
+--- 20260814181740_0b331cd8-0641-4e6c-a389-c37a1b65c550.sql:29 ---
+
+-- Política para o Aluno Matriculado: Usa a função check_student_enrollment (SECURITY DEFINER)
+-- Esta função consulta apenas discipline_students, evitando o loop.
+
+--- 20260814181740_0b331cd8-0641-4e6c-a389-c37a1b65c550.sql:38 ---
+-- 3. Limpar políticas antigas na tabela discipline_students
+DROP POLICY IF EXISTS "discipline_students_access_policy_fixed" ON public.discipline_students;
+DROP POLICY IF EXISTS "discipline_students_membership_select" ON public.discipline_students;
+
+--- 20260814181740_0b331cd8-0641-4e6c-a389-c37a1b65c550.sql:39 ---
+DROP POLICY IF EXISTS "discipline_students_access_policy_fixed" ON public.discipline_students;
+DROP POLICY IF EXISTS "discipline_students_membership_select" ON public.discipline_students;
+DROP POLICY IF EXISTS "discipline_students_self" ON public.discipline_students;
+
+--- 20260814181740_0b331cd8-0641-4e6c-a389-c37a1b65c550.sql:40 ---
+DROP POLICY IF EXISTS "discipline_students_membership_select" ON public.discipline_students;
+DROP POLICY IF EXISTS "discipline_students_self" ON public.discipline_students;
+DROP POLICY IF EXISTS "discipline_students_admin" ON public.discipline_students;
+
+--- 20260814181740_0b331cd8-0641-4e6c-a389-c37a1b65c550.sql:41 ---
+DROP POLICY IF EXISTS "discipline_students_self" ON public.discipline_students;
+DROP POLICY IF EXISTS "discipline_students_admin" ON public.discipline_students;
+DROP POLICY IF EXISTS "discipline_students_teacher" ON public.discipline_students;
+
+--- 20260814181740_0b331cd8-0641-4e6c-a389-c37a1b65c550.sql:42 ---
+DROP POLICY IF EXISTS "discipline_students_admin" ON public.discipline_students;
+DROP POLICY IF EXISTS "discipline_students_teacher" ON public.discipline_students;
+
+
+--- 20260814181818_e3955bb3-2cac-4934-a8dd-bc405b744616.sql:5 ---
+-- 1. Remover TODAS as políticas existentes para evitar conflitos
+DROP POLICY IF EXISTS "disciplines_teacher_select" ON public.disciplines;
+DROP POLICY IF EXISTS "disciplines_admin_select" ON public.disciplines;
+
+--- 20260814181818_e3955bb3-2cac-4934-a8dd-bc405b744616.sql:6 ---
+DROP POLICY IF EXISTS "disciplines_teacher_select" ON public.disciplines;
+DROP POLICY IF EXISTS "disciplines_admin_select" ON public.disciplines;
+DROP POLICY IF EXISTS "disciplines_student_select" ON public.disciplines;
+
+--- 20260814181818_e3955bb3-2cac-4934-a8dd-bc405b744616.sql:7 ---
+DROP POLICY IF EXISTS "disciplines_admin_select" ON public.disciplines;
+DROP POLICY IF EXISTS "disciplines_student_select" ON public.disciplines;
+DROP POLICY IF EXISTS "disciplines_access_policy_fixed" ON public.disciplines;
+
+--- 20260814181818_e3955bb3-2cac-4934-a8dd-bc405b744616.sql:8 ---
+DROP POLICY IF EXISTS "disciplines_student_select" ON public.disciplines;
+DROP POLICY IF EXISTS "disciplines_access_policy_fixed" ON public.disciplines;
+DROP POLICY IF EXISTS "Teachers can manage their own disciplines" ON public.disciplines;
+
+--- 20260814181818_e3955bb3-2cac-4934-a8dd-bc405b744616.sql:9 ---
+DROP POLICY IF EXISTS "disciplines_access_policy_fixed" ON public.disciplines;
+DROP POLICY IF EXISTS "Teachers can manage their own disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "Admins can manage all disciplines" ON public.disciplines;
+
+--- 20260814181818_e3955bb3-2cac-4934-a8dd-bc405b744616.sql:10 ---
+DROP POLICY IF EXISTS "Teachers can manage their own disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "Admins can manage all disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "Students can see their own enrollments" ON public.discipline_students;
+
+--- 20260814181818_e3955bb3-2cac-4934-a8dd-bc405b744616.sql:11 ---
+DROP POLICY IF EXISTS "Admins can manage all disciplines" ON public.disciplines;
+DROP POLICY IF EXISTS "Students can see their own enrollments" ON public.discipline_students;
+DROP POLICY IF EXISTS "Teachers can manage students in their disciplines" ON public.discipline_students;
+
+--- 20260814181818_e3955bb3-2cac-4934-a8dd-bc405b744616.sql:12 ---
+DROP POLICY IF EXISTS "Students can see their own enrollments" ON public.discipline_students;
+DROP POLICY IF EXISTS "Teachers can manage students in their disciplines" ON public.discipline_students;
+DROP POLICY IF EXISTS "Admins can manage all discipline_students" ON public.discipline_students;
+
+--- 20260814181818_e3955bb3-2cac-4934-a8dd-bc405b744616.sql:13 ---
+DROP POLICY IF EXISTS "Teachers can manage students in their disciplines" ON public.discipline_students;
+DROP POLICY IF EXISTS "Admins can manage all discipline_students" ON public.discipline_students;
+DROP POLICY IF EXISTS "discipline_students_self_select" ON public.discipline_students;
+
+--- 20260814181818_e3955bb3-2cac-4934-a8dd-bc405b744616.sql:14 ---
+DROP POLICY IF EXISTS "Admins can manage all discipline_students" ON public.discipline_students;
+DROP POLICY IF EXISTS "discipline_students_self_select" ON public.discipline_students;
+DROP POLICY IF EXISTS "discipline_students_admin_select" ON public.discipline_students;
+
+--- 20260814181818_e3955bb3-2cac-4934-a8dd-bc405b744616.sql:15 ---
+DROP POLICY IF EXISTS "discipline_students_self_select" ON public.discipline_students;
+DROP POLICY IF EXISTS "discipline_students_admin_select" ON public.discipline_students;
+DROP POLICY IF EXISTS "discipline_students_teacher_select" ON public.discipline_students;
+
+--- 20260814181818_e3955bb3-2cac-4934-a8dd-bc405b744616.sql:16 ---
+DROP POLICY IF EXISTS "discipline_students_admin_select" ON public.discipline_students;
+DROP POLICY IF EXISTS "discipline_students_teacher_select" ON public.discipline_students;
+DROP POLICY IF EXISTS "discipline_students_access_policy_fixed" ON public.discipline_students;
+
+--- 20260814181818_e3955bb3-2cac-4934-a8dd-bc405b744616.sql:17 ---
+DROP POLICY IF EXISTS "discipline_students_teacher_select" ON public.discipline_students;
+DROP POLICY IF EXISTS "discipline_students_access_policy_fixed" ON public.discipline_students;
+
+
+--- 20260814181818_e3955bb3-2cac-4934-a8dd-bc405b744616.sql:20 ---
+-- 2. Garantir que as tabelas tenham RLS ativo
+ALTER TABLE public.disciplines ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.discipline_students ENABLE ROW LEVEL SECURITY;
+
+--- 20260814181818_e3955bb3-2cac-4934-a8dd-bc405b744616.sql:21 ---
+ALTER TABLE public.disciplines ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.discipline_students ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260814181818_e3955bb3-2cac-4934-a8dd-bc405b744616.sql:32 ---
+
+-- B) Administrador vê tudo (Usa SECURITY DEFINER has_role)
+CREATE POLICY "disciplines_admin_all"
+
+--- 20260814181818_e3955bb3-2cac-4934-a8dd-bc405b744616.sql:39 ---
+
+-- C) Aluno vê disciplinas onde está matriculado (Usa SECURITY DEFINER check_student_enrollment)
+-- Esta função consulta APENAS a tabela discipline_students, portanto não há recursão.
+
+--- 20260814182023_d69ce2f5-1499-4160-a095-6f98b6a8add8.sql:10 ---
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON public.disciplines', pol.policyname);
+    END LOOP;
+
+--- 20260814182023_d69ce2f5-1499-4160-a095-6f98b6a8add8.sql:21 ---
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON public.discipline_students', pol.policyname);
+    END LOOP;
+
+--- 20260814182023_d69ce2f5-1499-4160-a095-6f98b6a8add8.sql:26 ---
+-- 3. Ensure RLS is enabled
+ALTER TABLE public.disciplines ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.discipline_students ENABLE ROW LEVEL SECURITY;
+
+--- 20260814182023_d69ce2f5-1499-4160-a095-6f98b6a8add8.sql:27 ---
+ALTER TABLE public.disciplines ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.discipline_students ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260814182023_d69ce2f5-1499-4160-a095-6f98b6a8add8.sql:29 ---
+
+-- 4. Re-create Security Definer functions with explicit search_path and qualified names
+CREATE OR REPLACE FUNCTION public.check_student_enrollment(_discipline_id uuid, _user_id uuid)
+
+--- 20260814182023_d69ce2f5-1499-4160-a095-6f98b6a8add8.sql:34 ---
+STABLE
+SECURITY DEFINER
+SET search_path = public
+
+--- 20260814182023_d69ce2f5-1499-4160-a095-6f98b6a8add8.sql:47 ---
+STABLE
+SECURITY DEFINER
+SET search_path = public
+
+--- 20260814182209_c7424a72-733a-4533-9830-79730d09b55c.sql:1 ---
+ALTER TABLE public.assessments DROP COLUMN IF EXISTS assessment_date;
+ALTER TABLE public.assessments ADD COLUMN assessment_date timestamptz;
+
+--- 20260814182209_c7424a72-733a-4533-9830-79730d09b55c.sql:2 ---
+ALTER TABLE public.assessments DROP COLUMN IF EXISTS assessment_date;
+ALTER TABLE public.assessments ADD COLUMN assessment_date timestamptz;
+
+--- 20260814210900_add_assessment_time.sql:2 ---
+-- Change assessment_date from date to timestamptz to support time tracking
+ALTER TABLE public.assessments 
+  ALTER COLUMN assessment_date TYPE timestamptz 
+
+--- 20260818000000_restructure_academic_works.sql:5 ---
+    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'academic_work_submissions' AND COLUMN_NAME = 'group_id') THEN
+        ALTER TABLE public.academic_work_submissions ADD COLUMN group_id uuid REFERENCES public.activity_groups(id) ON DELETE SET NULL;
+    END IF;
+
+--- 20260818000000_restructure_academic_works.sql:19 ---
+-- Políticas de RLS para academic_works (se não existirem ou para garantir)
+ALTER TABLE public.academic_works ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260818000000_restructure_academic_works.sql:21 ---
+
+DROP POLICY IF EXISTS "Professores podem gerenciar trabalhos de suas disciplinas" ON public.academic_works;
+CREATE POLICY "Professores podem gerenciar trabalhos de suas disciplinas" 
+
+--- 20260818000000_restructure_academic_works.sql:34 ---
+
+DROP POLICY IF EXISTS "Alunos podem ver trabalhos publicados" ON public.academic_works;
+CREATE POLICY "Alunos podem ver trabalhos publicados" 
+
+--- 20260818000000_restructure_academic_works.sql:49 ---
+-- Políticas de RLS para academic_work_submissions
+ALTER TABLE public.academic_work_submissions ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260818000000_restructure_academic_works.sql:51 ---
+
+DROP POLICY IF EXISTS "Alunos podem ver suas próprias submissões ou de seu grupo" ON public.academic_work_submissions;
+CREATE POLICY "Alunos podem ver suas próprias submissões ou de seu grupo" 
+
+--- 20260818000000_restructure_academic_works.sql:65 ---
+
+DROP POLICY IF EXISTS "Professores podem ver todas as submissões" ON public.academic_work_submissions;
+CREATE POLICY "Professores podem ver todas as submissões" 
+
+--- 20260818141731_f8739c93-1ef9-475a-a730-a641ec325934.sql:7 ---
+  id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  message_id uuid NOT NULL REFERENCES public.chat_messages(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+
+--- 20260818141731_f8739c93-1ef9-475a-a730-a641ec325934.sql:8 ---
+  message_id uuid NOT NULL REFERENCES public.chat_messages(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  read_at timestamptz NOT NULL DEFAULT now(),
+
+--- 20260818141731_f8739c93-1ef9-475a-a730-a641ec325934.sql:19 ---
+
+ALTER TABLE public.chat_message_reads ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260818141731_f8739c93-1ef9-475a-a730-a641ec325934.sql:60 ---
+-- 2. Ensure REPLICA IDENTITY FULL for direct_messages to track updates in realtime (read receipts)
+ALTER TABLE public.direct_messages REPLICA IDENTITY FULL;
+
+--- 20260818145042_fc3435f8-7891-429c-86cb-38a2b0735747.sql:3 ---
+
+DROP POLICY IF EXISTS "reads_insert_self" ON public.chat_message_reads;
+DROP POLICY IF EXISTS "reads_update_self" ON public.chat_message_reads;
+
+--- 20260818145042_fc3435f8-7891-429c-86cb-38a2b0735747.sql:4 ---
+DROP POLICY IF EXISTS "reads_insert_self" ON public.chat_message_reads;
+DROP POLICY IF EXISTS "reads_update_self" ON public.chat_message_reads;
+
+
+--- 20260818183103_83cce4d1-3954-44b1-8268-fe960103da28.sql:5 ---
+    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'academic_work_submissions' AND COLUMN_NAME = 'group_id') THEN
+        ALTER TABLE public.academic_work_submissions ADD COLUMN group_id uuid REFERENCES public.activity_groups(id) ON DELETE SET NULL;
+    END IF;
+
+--- 20260818183103_83cce4d1-3954-44b1-8268-fe960103da28.sql:26 ---
+-- Políticas de RLS para academic_works
+ALTER TABLE public.academic_works ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260818183103_83cce4d1-3954-44b1-8268-fe960103da28.sql:28 ---
+
+DROP POLICY IF EXISTS "Professores podem gerenciar trabalhos de suas disciplinas" ON public.academic_works;
+CREATE POLICY "Professores podem gerenciar trabalhos de suas disciplinas" 
+
+--- 20260818183103_83cce4d1-3954-44b1-8268-fe960103da28.sql:41 ---
+
+DROP POLICY IF EXISTS "Alunos podem ver trabalhos publicados" ON public.academic_works;
+CREATE POLICY "Alunos podem ver trabalhos publicados" 
+
+--- 20260818183103_83cce4d1-3954-44b1-8268-fe960103da28.sql:56 ---
+-- Políticas de RLS para academic_work_submissions
+ALTER TABLE public.academic_work_submissions ENABLE ROW LEVEL SECURITY;
+
+
+--- 20260818183103_83cce4d1-3954-44b1-8268-fe960103da28.sql:58 ---
+
+DROP POLICY IF EXISTS "Alunos podem ver suas próprias submissões ou de seu grupo" ON public.academic_work_submissions;
+CREATE POLICY "Alunos podem ver suas próprias submissões ou de seu grupo" 
+
+--- 20260818183103_83cce4d1-3954-44b1-8268-fe960103da28.sql:72 ---
+
+DROP POLICY IF EXISTS "Professores podem ver todas as submissões" ON public.academic_work_submissions;
+CREATE POLICY "Professores podem ver todas as submissões" 
+
+--- 20261005120000_online_exams_biometrics.sql:33 ---
+  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id           uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  kind              public.biometric_kind NOT NULL DEFAULT 'face',
+
+--- 20261005120000_online_exams_biometrics.sql:58 ---
+
+-- Função auxiliar (padrão SECURITY DEFINER do projeto)
+CREATE OR REPLACE FUNCTION public.user_can_use_biometrics(_user_id uuid)
+
+--- 20261005120000_online_exams_biometrics.sql:61 ---
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT EXISTS (
+
+--- 20261005120000_online_exams_biometrics.sql:78 ---
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  assessment_id         uuid NOT NULL REFERENCES public.assessments(id) ON DELETE CASCADE,
+  discipline_id         uuid NOT NULL REFERENCES public.disciplines(id) ON DELETE CASCADE,
+
+--- 20261005120000_online_exams_biometrics.sql:79 ---
+  assessment_id         uuid NOT NULL REFERENCES public.assessments(id) ON DELETE CASCADE,
+  discipline_id         uuid NOT NULL REFERENCES public.disciplines(id) ON DELETE CASCADE,
+  created_by            uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+
+--- 20261005120000_online_exams_biometrics.sql:80 ---
+  discipline_id         uuid NOT NULL REFERENCES public.disciplines(id) ON DELETE CASCADE,
+  created_by            uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  title                 text NOT NULL,
+
+--- 20261005120000_online_exams_biometrics.sql:123 ---
+  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  exam_id           uuid NOT NULL REFERENCES public.online_exams(id) ON DELETE CASCADE,
+  student_id        uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+
+--- 20261005120000_online_exams_biometrics.sql:124 ---
+  exam_id           uuid NOT NULL REFERENCES public.online_exams(id) ON DELETE CASCADE,
+  student_id        uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  attempt_number    integer NOT NULL DEFAULT 1 CHECK (attempt_number >= 1),
+
+--- 20261005120000_online_exams_biometrics.sql:173 ---
+  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id        uuid NOT NULL REFERENCES public.exam_sessions(id) ON DELETE CASCADE,
+  question_id       uuid NOT NULL REFERENCES public.assessment_questions(id) ON DELETE CASCADE,
+
+--- 20261005120000_online_exams_biometrics.sql:174 ---
+  session_id        uuid NOT NULL REFERENCES public.exam_sessions(id) ON DELETE CASCADE,
+  question_id       uuid NOT NULL REFERENCES public.assessment_questions(id) ON DELETE CASCADE,
+
+
+--- 20261005120000_online_exams_biometrics.sql:223 ---
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT EXISTS (
+
+--- 20261005120000_online_exams_biometrics.sql:232 ---
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT EXISTS (
+
+--- 20261005120000_online_exams_biometrics.sql:268 ---
+-- ---------- 8.1 user_biometrics ----------
+ALTER TABLE public.user_biometrics ENABLE ROW LEVEL SECURITY;
+REVOKE SELECT ON public.user_biometrics FROM anon;
+
+--- 20261005120000_online_exams_biometrics.sql:271 ---
+
+DROP POLICY IF EXISTS user_biometrics_own ON public.user_biometrics;
+CREATE POLICY user_biometrics_own ON public.user_biometrics
+
+--- 20261005120000_online_exams_biometrics.sql:278 ---
+-- Professor da disciplina enxerga a biometria dos alunos matriculados
+DROP POLICY IF EXISTS user_biometrics_teacher_read ON public.user_biometrics;
+CREATE POLICY user_biometrics_teacher_read ON public.user_biometrics
+
+--- 20261005120000_online_exams_biometrics.sql:289 ---
+
+DROP POLICY IF EXISTS user_biometrics_admin_all ON public.user_biometrics;
+CREATE POLICY user_biometrics_admin_all ON public.user_biometrics
+
+--- 20261005120000_online_exams_biometrics.sql:296 ---
+-- ---------- 8.2 online_exams ----------
+ALTER TABLE public.online_exams ENABLE ROW LEVEL SECURITY;
+REVOKE SELECT ON public.online_exams FROM anon;
+
+--- 20261005120000_online_exams_biometrics.sql:299 ---
+
+DROP POLICY IF EXISTS online_exams_teacher_manage ON public.online_exams;
+CREATE POLICY online_exams_teacher_manage ON public.online_exams
+
+--- 20261005120000_online_exams_biometrics.sql:305 ---
+
+DROP POLICY IF EXISTS online_exams_student_read ON public.online_exams;
+CREATE POLICY online_exams_student_read ON public.online_exams
+
+--- 20261005120000_online_exams_biometrics.sql:313 ---
+
+DROP POLICY IF EXISTS online_exams_admin_all ON public.online_exams;
+CREATE POLICY online_exams_admin_all ON public.online_exams
+
+--- 20261005120000_online_exams_biometrics.sql:320 ---
+-- ---------- 8.3 exam_sessions ----------
+ALTER TABLE public.exam_sessions ENABLE ROW LEVEL SECURITY;
+REVOKE SELECT ON public.exam_sessions FROM anon;
+
+--- 20261005120000_online_exams_biometrics.sql:323 ---
+
+DROP POLICY IF EXISTS exam_sessions_student_all ON public.exam_sessions;
+CREATE POLICY exam_sessions_student_all ON public.exam_sessions
+
+--- 20261005120000_online_exams_biometrics.sql:329 ---
+
+DROP POLICY IF EXISTS exam_sessions_teacher_read ON public.exam_sessions;
+CREATE POLICY exam_sessions_teacher_read ON public.exam_sessions
+
+--- 20261005120000_online_exams_biometrics.sql:340 ---
+
+DROP POLICY IF EXISTS exam_sessions_admin_all ON public.exam_sessions;
+CREATE POLICY exam_sessions_admin_all ON public.exam_sessions
+
+--- 20261005120000_online_exams_biometrics.sql:347 ---
+-- ---------- 8.4 exam_answers ----------
+ALTER TABLE public.exam_answers ENABLE ROW LEVEL SECURITY;
+REVOKE SELECT ON public.exam_answers FROM anon;
+
+--- 20261005120000_online_exams_biometrics.sql:351 ---
+-- Aluno escreve e lê as próprias respostas
+DROP POLICY IF EXISTS exam_answers_student_all ON public.exam_answers;
+CREATE POLICY exam_answers_student_all ON public.exam_answers
+
+--- 20261005120000_online_exams_biometrics.sql:358 ---
+-- Professor da disciplina lê para corrigir; admin corrige
+DROP POLICY IF EXISTS exam_answers_grader_read ON public.exam_answers;
+CREATE POLICY exam_answers_grader_read ON public.exam_answers
+
+--- 20261005120000_online_exams_biometrics.sql:363 ---
+
+DROP POLICY IF EXISTS exam_answers_grader_update ON public.exam_answers;
+CREATE POLICY exam_answers_grader_update ON public.exam_answers
+
+--- 20261005130000_secure_biometrics_rls.sql:16 ---
+-- embedding e grava. O cliente recebe apenas metadados de status
+-- (existe? quando foi cadastrado?) através de funções SECURITY DEFINER
+-- de leitura mínima.
+
+--- 20261005130000_secure_biometrics_rls.sql:34 ---
+-- -------------------------------------------------------------
+DROP POLICY IF EXISTS user_biometrics_own ON public.user_biometrics;
+DROP POLICY IF EXISTS user_biometrics_teacher_read ON public.user_biometrics;
+
+--- 20261005130000_secure_biometrics_rls.sql:35 ---
+DROP POLICY IF EXISTS user_biometrics_own ON public.user_biometrics;
+DROP POLICY IF EXISTS user_biometrics_teacher_read ON public.user_biometrics;
+DROP POLICY IF EXISTS user_biometrics_admin_all ON public.user_biometrics;
+
+--- 20261005130000_secure_biometrics_rls.sql:36 ---
+DROP POLICY IF EXISTS user_biometrics_teacher_read ON public.user_biometrics;
+DROP POLICY IF EXISTS user_biometrics_admin_all ON public.user_biometrics;
+
+
+--- 20261005130000_secure_biometrics_rls.sql:42 ---
+
+ALTER TABLE public.user_biometrics ENABLE ROW LEVEL SECURITY;
+
+
+--- 20261005130000_secure_biometrics_rls.sql:45 ---
+-- -------------------------------------------------------------
+-- 3. Leitura de metadados (sem template) via função SECURITY DEFINER
+--    Retorna se o aluno tem biometria cadastrada, para a UI decidir
+
+--- 20261005130000_secure_biometrics_rls.sql:61 ---
+STABLE
+SECURITY DEFINER
+SET search_path = public
+
+--- 20261005130000_secure_biometrics_rls.sql:84 ---
+STABLE
+SECURITY DEFINER
+SET search_path = public
+
+--- 20261005130000_secure_biometrics_rls.sql:134 ---
+  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id        uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  biometric_id   uuid REFERENCES public.user_biometrics(id) ON DELETE SET NULL,
+
+--- 20261005130000_secure_biometrics_rls.sql:146 ---
+
+ALTER TABLE public.biometric_audit_log ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.biometric_audit_log FROM anon, authenticated;
+
+--- 20261007000000_online_exam_presence_code.sql:13 ---
+-- 1) Colunas
+ALTER TABLE public.online_exams
+  ADD COLUMN IF NOT EXISTS presence_code_required boolean NOT NULL DEFAULT false;
+
+--- 20261007000000_online_exam_presence_code.sql:16 ---
+
+ALTER TABLE public.online_exams
+  ADD COLUMN IF NOT EXISTS presence_code_hash text;
+
+--- 20261007000000_online_exam_presence_code.sql:26 ---
+  ) THEN
+    ALTER TABLE public.online_exams
+      ADD CONSTRAINT online_exams_presence_code_chk
+
+--- 20261007000000_online_exam_presence_code.sql:27 ---
+    ALTER TABLE public.online_exams
+      ADD CONSTRAINT online_exams_presence_code_chk
+      CHECK (presence_code_hash IS NULL OR presence_code_required = true);
+
+--- 20261008000000_drop_presence_code_columns.sql:14 ---
+
+ALTER TABLE public.online_exams DROP CONSTRAINT IF EXISTS online_exams_presence_code_chk;
+
+
+--- 20261008000000_drop_presence_code_columns.sql:16 ---
+
+DROP INDEX IF EXISTS public.idx_online_exams_presence_code_required;
+
+
+--- 20261008000000_drop_presence_code_columns.sql:18 ---
+
+ALTER TABLE public.online_exams DROP COLUMN IF EXISTS presence_code_hash;
+ALTER TABLE public.online_exams DROP COLUMN IF EXISTS presence_code_required;
+
+--- 20261008000000_drop_presence_code_columns.sql:19 ---
+ALTER TABLE public.online_exams DROP COLUMN IF EXISTS presence_code_hash;
+ALTER TABLE public.online_exams DROP COLUMN IF EXISTS presence_code_required;
+
+
+--- 20261008120000_create_online_exams_tables.sql:63 ---
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  assessment_id         uuid NOT NULL REFERENCES public.assessments(id) ON DELETE CASCADE,
+  discipline_id         uuid NOT NULL REFERENCES public.disciplines(id) ON DELETE CASCADE,
+
+--- 20261008120000_create_online_exams_tables.sql:64 ---
+  assessment_id         uuid NOT NULL REFERENCES public.assessments(id) ON DELETE CASCADE,
+  discipline_id         uuid NOT NULL REFERENCES public.disciplines(id) ON DELETE CASCADE,
+  created_by            uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+
+--- 20261008120000_create_online_exams_tables.sql:65 ---
+  discipline_id         uuid NOT NULL REFERENCES public.disciplines(id) ON DELETE CASCADE,
+  created_by            uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  title                 text NOT NULL,
+
+--- 20261008120000_create_online_exams_tables.sql:112 ---
+  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  exam_id           uuid NOT NULL REFERENCES public.online_exams(id) ON DELETE CASCADE,
+  student_id        uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+
+--- 20261008120000_create_online_exams_tables.sql:113 ---
+  exam_id           uuid NOT NULL REFERENCES public.online_exams(id) ON DELETE CASCADE,
+  student_id        uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  attempt_number    integer NOT NULL DEFAULT 1 CHECK (attempt_number >= 1),
+
+--- 20261008120000_create_online_exams_tables.sql:157 ---
+  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id        uuid NOT NULL REFERENCES public.exam_sessions(id) ON DELETE CASCADE,
+  question_id       uuid NOT NULL REFERENCES public.assessment_questions(id) ON DELETE CASCADE,
+
+--- 20261008120000_create_online_exams_tables.sql:158 ---
+  session_id        uuid NOT NULL REFERENCES public.exam_sessions(id) ON DELETE CASCADE,
+  question_id       uuid NOT NULL REFERENCES public.assessment_questions(id) ON DELETE CASCADE,
+
+
+--- 20261008120000_create_online_exams_tables.sql:202 ---
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT EXISTS (
+
+--- 20261008120000_create_online_exams_tables.sql:211 ---
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT EXISTS (
+
+--- 20261008120000_create_online_exams_tables.sql:245 ---
+-- ---------- 7.1 online_exams ----------
+ALTER TABLE public.online_exams ENABLE ROW LEVEL SECURITY;
+REVOKE SELECT ON public.online_exams FROM anon;
+
+--- 20261008120000_create_online_exams_tables.sql:248 ---
+
+DROP POLICY IF EXISTS online_exams_teacher_manage ON public.online_exams;
+CREATE POLICY online_exams_teacher_manage ON public.online_exams
+
+--- 20261008120000_create_online_exams_tables.sql:254 ---
+
+DROP POLICY IF EXISTS online_exams_student_read ON public.online_exams;
+CREATE POLICY online_exams_student_read ON public.online_exams
+
+--- 20261008120000_create_online_exams_tables.sql:262 ---
+
+DROP POLICY IF EXISTS online_exams_admin_all ON public.online_exams;
+CREATE POLICY online_exams_admin_all ON public.online_exams
+
+--- 20261008120000_create_online_exams_tables.sql:269 ---
+-- ---------- 7.2 exam_sessions ----------
+ALTER TABLE public.exam_sessions ENABLE ROW LEVEL SECURITY;
+REVOKE SELECT ON public.exam_sessions FROM anon;
+
+--- 20261008120000_create_online_exams_tables.sql:272 ---
+
+DROP POLICY IF EXISTS exam_sessions_student_all ON public.exam_sessions;
+CREATE POLICY exam_sessions_student_all ON public.exam_sessions
+
+--- 20261008120000_create_online_exams_tables.sql:278 ---
+
+DROP POLICY IF EXISTS exam_sessions_teacher_read ON public.exam_sessions;
+CREATE POLICY exam_sessions_teacher_read ON public.exam_sessions
+
+--- 20261008120000_create_online_exams_tables.sql:289 ---
+
+DROP POLICY IF EXISTS exam_sessions_admin_all ON public.exam_sessions;
+CREATE POLICY exam_sessions_admin_all ON public.exam_sessions
+
+--- 20261008120000_create_online_exams_tables.sql:296 ---
+-- ---------- 7.3 exam_answers ----------
+ALTER TABLE public.exam_answers ENABLE ROW LEVEL SECURITY;
+REVOKE SELECT ON public.exam_answers FROM anon;
+
+--- 20261008120000_create_online_exams_tables.sql:300 ---
+-- Aluno escreve e lê as próprias respostas
+DROP POLICY IF EXISTS exam_answers_student_all ON public.exam_answers;
+CREATE POLICY exam_answers_student_all ON public.exam_answers
+
+--- 20261008120000_create_online_exams_tables.sql:307 ---
+-- Professor da disciplina lê para corrigir; admin corrige
+DROP POLICY IF EXISTS exam_answers_grader_read ON public.exam_answers;
+CREATE POLICY exam_answers_grader_read ON public.exam_answers
+
+--- 20261008120000_create_online_exams_tables.sql:312 ---
+
+DROP POLICY IF EXISTS exam_answers_grader_update ON public.exam_answers;
+CREATE POLICY exam_answers_grader_update ON public.exam_answers
+
+--- 20261008130000_link_online_exam_to_attendance.sql:19 ---
+
+ALTER TABLE public.online_exams
+  ADD COLUMN IF NOT EXISTS attendance_session_id uuid
+
+--- 20261008150000_online_exams_assessment_unique.sql:40 ---
+--    duplicatas automaticamente (cada prova pode ter exam_sessions
+--    e exam_answers vinculados via FK ON DELETE CASCADE — apaga-las
+--    destruiria tentativas de alunos). Em vez disso, abortamos
+
+--- 20261008150000_online_exams_assessment_unique.sql:58 ---
+    RAISE EXCEPTION
+      '[uniq_online_exams_assessment] Existem % assessment_id com mais de uma prova online (linhas duplicadas). Resolva antes de rodar esta migration: apague manualmente as duplicadas (DELETE FROM public.online_exams WHERE id IN (...)) preservando a prova correta e suas exam_sessions/exam_answers. Em seguida reaplique esta migration.',
+      v_dup_count
+
+--- 20261008150000_online_exams_assessment_unique.sql:65 ---
+
+DROP INDEX IF EXISTS public.idx_online_exams_assessment;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_online_exams_assessment
+
+--- 20261008150000_online_exams_assessment_unique.sql:70 ---
+-- 2. Remove a RPC que o backend deixou de chamar
+DROP FUNCTION IF EXISTS public.upsert_online_exam_config(
+  uuid, uuid, uuid, text, text, text, timestamptz, timestamptz,
+
+--- 20261008150000_online_exams_assessment_unique.sql:74 ---
+  boolean, jsonb, text
+) CASCADE;
+
+================================================================================
+CONSULTAS SQL DE DIAGNOSTICO â€” MIGRATION 20261009000000_REMOVE_BIOMETRICS
+================================================================================
+
+ALVO: projeto V2 (identificar via dashboard do Supabase antes de qualquer
+       execucao). NAO E producao.
+REVISAO: inteiramente estatica. Nenhuma consulta foi executada no banco,
+         nem validada contra uma instancia real do PostgreSQL ou do Supabase.
+         A responsabilidade por qualquer execucao e inteiramente do DBA.
+NAO DECLARA: a migration segura, aprovada ou pronta para aplicacao.
+
+================================================================================
+1. FK exam_sessions.biometric_ref â†’ user_biometrics.id
+================================================================================
+
+-- PRE-CONDIÃ‡ÃƒO (obrigatoria):
+--   As duas tabelas DEVEM existir. Confirmar SEPARADAMENTE antes de
+--   prosseguir com esta consulta:
+--     SELECT to_regclass('public.exam_sessions')   IS NOT NULL;
+--     SELECT to_regclass('public.user_biometrics') IS NOT NULL;
+--   Executar esta consulta SOMENTE se ambas retornarem TRUE.
+--   ::regclass NAO protege contra erro de tabela inexistente.
+--
+-- RESULTADO ESPERADO:
+--   Cenario A (0512 aplicada): 1 linha.
+--   Cenario B (0512+0513): 1 linha.
+--   Cenario C (0812 sem 0512): 0 linhas.
+--   Cenario D ou pos-migration 090: 0 linhas.
+--
+-- PERMISSAO: acesso a pg_constraint, pg_attribute e pg_class.
+
+SELECT
+  c.oid                                         AS constraint_oid,
+  c.conname                                      AS constraint_name,
+  c.conrelid::regclass                          AS source_table,
+  c.confrelid::regclass                         AS referenced_table,
+  (
+    SELECT string_agg(a.attname, ', ' ORDER BY u.ord)
+    FROM unnest(c.conkey) WITH ORDINALITY AS u(attnum, ord)
+    JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = u.attnum
+  )                                             AS source_columns,
+  (
+    SELECT string_agg(a.attname, ', ' ORDER BY u.ord)
+    FROM unnest(c.confkey) WITH ORDINALITY AS u(attnum, ord)
+    JOIN pg_attribute a ON a.attrelid = c.confrelid AND a.attnum = u.attnum
+  )                                             AS referenced_columns,
+  pg_get_constraintdef(c.oid)                  AS constraint_definition,
+  c.deferrable,
+  c.deferred
+FROM pg_constraint c
+WHERE c.conrelid = 'public.exam_sessions'::regclass
+  AND c.contype  = 'f'
+  AND c.confrelid = 'public.user_biometrics'::regclass;
+
+================================================================================
+2. DEPENDENCIAS DOS ENUMS biometric_kind E biometric_verify_result
+================================================================================
+
+-- PRE-CONDIÃ‡ÃƒO: cada enum deve existir no banco.
+--   Confirmar SEPARADAMENTE:
+--     SELECT to_regtype('public.biometric_kind') IS NOT NULL;
+--     SELECT to_regtype('public.biometric_verify_result') IS NOT NULL;
+--
+-- LIMITACOES FUNDAMENTAIS:
+--   1. pg_depend lista TODAS as entradas de dependencia.
+--      Cada linha PRECISA ser analisada pelo DBA â€” NAO ha classificacao
+--      automatica que prove seguranca do DROP TYPE.
+--   2. deptype isolado NAO e suficiente. O DBA deve inspecionar cada
+--      objeto dependente real. Quando um objeto e dropado, suas entradas
+--      em pg_depend sao removidas junto; toda linha corresponde a um
+--      objeto que ainda existe no banco.
+--   3. pg_describe_object(classid, objid, objsubid) descreve o objeto
+--      DEPENDENTE. O resultado exige interpretacao pelo DBA.
+--   4. ::regtype sobre refobjid so e valido quando refclassid = pg_type.
+--   5. Se o DROP TYPE falhar, a transacao e revertida.
+--
+-- PERMISSAO: acesso a pg_depend e pg_class.
+
+-- 2.1 biometric_kind
+SELECT
+  d.refclassid::regclass                       AS referenced_catalog,
+  d.refobjid::regtype                          AS referenced_type_name,
+  d.refobjid                                    AS referenced_oid,
+  d.classid::regclass                           AS dependent_catalog,
+  d.objid                                       AS dependent_oid,
+  d.objsubid,
+  d.deptype,
+  pg_describe_object(d.classid, d.objid, d.objsubid)
+                                                   AS dependent_description,
+  CASE
+    WHEN d.classid = 'pg_constraint'::regclass
+    THEN pg_get_constraintdef(d.objid)
+    ELSE NULL
+  END                                           AS constraint_def_if_applicable
+FROM pg_depend d
+WHERE d.refclassid = 'pg_type'::regclass
+  AND d.refobjid   = 'public.biometric_kind'::regtype
+ORDER BY d.deptype, d.classid, d.objid;
+
+-- 2.2 biometric_verify_result
+-- PRE-CONDIÃ‡ÃƒO: SELECT to_regtype('public.biometric_verify_result') IS NOT NULL;
+SELECT
+  d.refclassid::regclass                       AS referenced_catalog,
+  d.refobjid::regtype                          AS referenced_type_name,
+  d.refobjid                                    AS referenced_oid,
+  d.classid::regclass                           AS dependent_catalog,
+  d.objid                                       AS dependent_oid,
+  d.objsubid,
+  d.deptype,
+  pg_describe_object(d.classid, d.objid, d.objsubid)
+                                                   AS dependent_description,
+  CASE
+    WHEN d.classid = 'pg_constraint'::regclass
+    THEN pg_get_constraintdef(d.objid)
+    ELSE NULL
+  END                                           AS constraint_def_if_applicable
+FROM pg_depend d
+WHERE d.refclassid = 'pg_type'::regclass
+  AND d.refobjid   = 'public.biometric_verify_result'::regtype
+ORDER BY d.deptype, d.classid, d.objid;
+
+================================================================================
+3. PRIVILEGIOS EXECUTE DAS 4 FUNCOES BIOMETRICAS
+================================================================================
+
+-- PRE-CONDIÃ‡ÃƒO: cada funcao pode ou nao existir. Confirmar SEPARADAMENTE
+--   (to_regprocedure para funcoes com assinatura):
+--     SELECT to_regprocedure('public.user_can_use_biometrics(uuid)')        IS NOT NULL;
+--     SELECT to_regprocedure('public.student_has_active_biometrics(uuid)')  IS NOT NULL;
+--     SELECT to_regprocedure('public.my_biometric_enrollments()')           IS NOT NULL;
+--     SELECT to_regprocedure('public.guard_biometric_identity()')          IS NOT NULL;
+--
+-- TRES ASPECTOS DISTINTOS:
+--   A) GRANT direto a um role nomeado: visivel em routine_privileges.
+--   B) GRANT a PUBLIC: visivel em aclexplode sobre proacl/acldefault
+--      quando ae.grantee = 0.
+--   C) Membership em outro role: NAO visivel nesta secao.
+--      Se role R tem EXECUTE e role S e MEMBER de R, S executa sem
+--      que isso apareca. Verificar via pg_auth_members (superuser).
+--   ACLs NAO resolvem membership em roles.
+--
+-- PERMISSAO: acesso a information_schema e pg_proc.
+
+-- 3.1 Grants diretos
+SELECT
+  r.routine_schema,
+  r.routine_name,
+  r.specific_name,
+  rp.grantee,
+  rp.privilege_type,
+  rp.is_grantable
+FROM information_schema.routines r
+LEFT JOIN information_schema.routine_privileges rp
+       ON rp.specific_schema = r.routine_schema
+      AND rp.specific_name   = r.specific_name
+WHERE r.routine_schema = 'public'
+  AND r.routine_name IN (
+    'user_can_use_biometrics',
+    'student_has_active_biometrics',
+    'my_biometric_enrollments',
+    'guard_biometric_identity'
+  )
+ORDER BY r.routine_name, rp.grantee NULLS LAST;
+
+-- 3.2 ACLs via pg_proc.proacl + acldefault para proacl NULL
+SELECT
+  p.proname                                      AS function_name,
+  p.pronamespace::regnamespace                  AS function_schema,
+  format('%s(%s)', p.proname, pg_get_function_arguments(p.oid))
+                                                   AS signature,
+  CASE WHEN ae.grantee = 0 THEN 'PUBLIC' ELSE rr.rolname END
+                                                   AS grantee_name,
+  ae.privilege_type,
+  ae.is_grantable,
+  CASE WHEN ae.grantee = 0 THEN 'PUBLIC' ELSE 'role' END
+                                                   AS grant_type,
+  CASE WHEN p.proacl IS NOT NULL THEN 'explicit_proacl' ELSE 'acldefault' END
+                                                   AS acl_source
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+CROSS JOIN LATERAL aclexplode(
+  COALESCE(p.proacl, acldefault('f', p.proowner))
+) AS ae
+LEFT JOIN pg_roles rr ON rr.oid = ae.grantee
+WHERE n.nspname = 'public'
+  AND p.proname IN (
+    'user_can_use_biometrics',
+    'student_has_active_biometrics',
+    'my_biometric_enrollments',
+    'guard_biometric_identity'
+  )
+ORDER BY p.proname, ae.grantee, ae.privilege_type;
+
+================================================================================
+4. COLUNAS BIOMETRICAS EM exam_sessions â€” METADADOS
+================================================================================
+
+-- PRE-CONDIÃ‡ÃƒO: exam_sessions deve existir.
+--   Confirmar: SELECT to_regclass('public.exam_sessions') IS NOT NULL;
+--
+-- RESULTADO ESPERADO:
+--   A, B: biometric_ref, biometric_status, biometric_match_score â€” 3 linhas.
+--   C, D, pos-090: 0 linhas.
+--
+-- IMPORTANTE: executar ANTES de qualquer SELECT de dados sobre exam_sessions.
+--   Consultar uma coluna inexistente causa ERRO SQL, nao resultado vazio.
+--
+-- PERMISSAO: acesso a information_schema.columns.
+
+SELECT
+  column_name,
+  data_type,
+  is_nullable,
+  column_default,
+  udt_name
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name   = 'exam_sessions'
+  AND column_name IN (
+    'biometric_ref',
+    'biometric_status',
+    'biometric_match_score'
+  )
+ORDER BY ordinal_position;
+
+================================================================================
+5. PREVIEW E CONTAGEM DOS DADOS EM exam_sessions
+================================================================================
+
+-- PRE-CONDIÃ‡ÃƒO GERAL: exam_sessions deve existir.
+--   Confirmar: SELECT to_regclass('public.exam_sessions') IS NOT NULL;
+--   Se FALSE, nao executar nenhuma sub-consulta de dados.
+--
+-- PRE-CONDIÃ‡ÃƒO POR VERSÃƒO: cada SELECT so pode ser executado se TODAS
+--   as colunas referenciadas existirem no banco. Consultar uma coluna
+--   inexistente causa ERRO SQL, nao resultado vazio.
+--   Antes de executar, confirmar cada coluna via information_schema.columns.
+--
+-- Colunas a verificar em exam_sessions:
+--   biometric_ref | biometric_status | biometric_match_score
+--   id | exam_id | student_id | attempt_number | status | updated_at
+-- Colunas a verificar em online_exams:
+--   id | title
+--
+-- LIMITACAO: LIMIT 20 e preview, NAO backup.
+
+-- 5.1 Contagem total
+SELECT
+  'exam_sessions total rows' AS metric,
+  COUNT(*)                   AS value
+FROM public.exam_sessions;
+
+-- 5.2 Contagens por coluna biometrica
+SELECT
+  'exam_sessions: biometric_ref NOT NULL' AS metric,
+  COUNT(*)                                 AS value
+FROM public.exam_sessions
+WHERE biometric_ref IS NOT NULL;
+
+SELECT
+  'exam_sessions: biometric_match_score NOT NULL' AS metric,
+  COUNT(*)                                        AS value
+FROM public.exam_sessions
+WHERE biometric_match_score IS NOT NULL;
+
+SELECT
+  'exam_sessions: biometric_status NOT NULL (inclui default pending)' AS metric,
+  COUNT(*)                                                             AS value
+FROM public.exam_sessions
+WHERE biometric_status IS NOT NULL;
+
+-- 5.3 Preview â€” VARIANTES A a H
+-- Executar SOMENTE a variante cuja combinacao de colunas existentes
+-- corresponda exatamente a listada. Confirmar TODAS as colunas usadas
+-- (exam_sessions e online_exams) antes de executar cada SELECT.
+
+-- Versao A: biometric_ref + biometric_status + biometric_match_score + title
+-- Colunas: exam_sessions: biometric_ref, biometric_status, biometric_match_score,
+--   id, exam_id, student_id, attempt_number, status, updated_at;
+--   online_exams: id, title
+SELECT
+  es.id, es.exam_id, es.student_id, es.attempt_number,
+  es.status::text                               AS session_status,
+  es.biometric_status::text                     AS biometric_status,
+  es.biometric_match_score,
+  es.biometric_ref,
+  es.updated_at,
+  oe.title                                      AS exam_title
+FROM public.exam_sessions es
+LEFT JOIN public.online_exams oe ON oe.id = es.exam_id
+WHERE
+  es.biometric_ref            IS NOT NULL
+  OR es.biometric_match_score IS NOT NULL
+  OR es.biometric_status     IS NOT NULL
+ORDER BY es.updated_at DESC
+LIMIT 20;
+
+-- Versao B: biometric_ref + title
+-- Colunas: exam_sessions: biometric_ref, id, exam_id, student_id,
+--   attempt_number, status, updated_at; online_exams: id, title
+SELECT
+  es.id, es.exam_id, es.student_id, es.attempt_number,
+  es.status::text                               AS session_status,
+  es.biometric_ref,
+  es.updated_at,
+  oe.title                                      AS exam_title
+FROM public.exam_sessions es
+LEFT JOIN public.online_exams oe ON oe.id = es.exam_id
+WHERE es.biometric_ref IS NOT NULL
+ORDER BY es.updated_at DESC
+LIMIT 20;
+
+-- Versao C: biometric_match_score + title
+-- Colunas: exam_sessions: biometric_match_score, id, exam_id, student_id,
+--   attempt_number, status, updated_at; online_exams: id, title
+SELECT
+  es.id, es.exam_id, es.student_id, es.attempt_number,
+  es.status::text                               AS session_status,
+  es.biometric_match_score,
+  es.updated_at,
+  oe.title                                      AS exam_title
+FROM public.exam_sessions es
+LEFT JOIN public.online_exams oe ON oe.id = es.exam_id
+WHERE es.biometric_match_score IS NOT NULL
+ORDER BY es.updated_at DESC
+LIMIT 20;
+
+-- Versao D: biometric_status + title
+-- Colunas: exam_sessions: biometric_status, id, exam_id, student_id,
+--   attempt_number, status, updated_at; online_exams: id, title
+SELECT
+  es.id, es.exam_id, es.student_id, es.attempt_number,
+  es.status::text                               AS session_status,
+  es.biometric_status::text                     AS biometric_status,
+  es.updated_at,
+  oe.title                                      AS exam_title
+FROM public.exam_sessions es
+LEFT JOIN public.online_exams oe ON oe.id = es.exam_id
+WHERE es.biometric_status IS NOT NULL
+ORDER BY es.updated_at DESC
+LIMIT 20;
+
+-- Versao E: biometric_ref + biometric_match_score + title
+-- Colunas: exam_sessions: biometric_ref, biometric_match_score, id, exam_id,
+--   student_id, attempt_number, status, updated_at; online_exams: id, title
+SELECT
+  es.id, es.exam_id, es.student_id, es.attempt_number,
+  es.status::text                               AS session_status,
+  es.biometric_match_score,
+  es.biometric_ref,
+  es.updated_at,
+  oe.title                                      AS exam_title
+FROM public.exam_sessions es
+LEFT JOIN public.online_exams oe ON oe.id = es.exam_id
+WHERE
+  es.biometric_ref IS NOT NULL
+  OR es.biometric_match_score IS NOT NULL
+ORDER BY es.updated_at DESC
+LIMIT 20;
+
+-- Versao F: biometric_ref + biometric_status + title
+-- Colunas: exam_sessions: biometric_ref, biometric_status, id, exam_id,
+--   student_id, attempt_number, status, updated_at; online_exams: id, title
+SELECT
+  es.id, es.exam_id, es.student_id, es.attempt_number,
+  es.status::text                               AS session_status,
+  es.biometric_status::text                     AS biometric_status,
+  es.biometric_ref,
+  es.updated_at,
+  oe.title                                      AS exam_title
+FROM public.exam_sessions es
+LEFT JOIN public.online_exams oe ON oe.id = es.exam_id
+WHERE
+  es.biometric_ref IS NOT NULL
+  OR es.biometric_status IS NOT NULL
+ORDER BY es.updated_at DESC
+LIMIT 20;
+
+-- Versao G: biometric_match_score + biometric_status + title
+-- Colunas: exam_sessions: biometric_match_score, biometric_status, id, exam_id,
+--   student_id, attempt_number, status, updated_at; online_exams: id, title
+SELECT
+  es.id, es.exam_id, es.student_id, es.attempt_number,
+  es.status::text                               AS session_status,
+  es.biometric_status::text                     AS biometric_status,
+  es.biometric_match_score,
+  es.updated_at,
+  oe.title                                      AS exam_title
+FROM public.exam_sessions es
+LEFT JOIN public.online_exams oe ON oe.id = es.exam_id
+WHERE
+  es.biometric_match_score IS NOT NULL
+  OR es.biometric_status IS NOT NULL
+ORDER BY es.updated_at DESC
+LIMIT 20;
+
+-- Versao H: sem filtro biometrico
+-- Colunas: exam_sessions: id, exam_id, student_id, attempt_number,
+--   status, updated_at; online_exams: id, title
+SELECT
+  es.id, es.exam_id, es.student_id, es.attempt_number,
+  es.status::text                               AS session_status,
+  es.updated_at,
+  oe.title                                      AS exam_title
+FROM public.exam_sessions es
+LEFT JOIN public.online_exams oe ON oe.id = es.exam_id
+ORDER BY es.updated_at DESC
+LIMIT 20;
+
+-- 5.4 Bloco dinamico
+DO $$
+DECLARE
+  v_has_ref    boolean;
+  v_has_status boolean;
+  v_has_score  boolean;
+  v_session_exists boolean;
+BEGIN
+  SELECT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'exam_sessions'
+  ) INTO v_session_exists;
+
+  IF NOT v_session_exists THEN
+    RAISE NOTICE 'exam_sessions: tabela nao existe neste banco';
+    RETURN;
+  END IF;
+
+  SELECT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'exam_sessions'
+      AND column_name = 'biometric_ref'
+  ) INTO v_has_ref;
+
+  SELECT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'exam_sessions'
+      AND column_name = 'biometric_status'
+  ) INTO v_has_status;
+
+  SELECT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'exam_sessions'
+      AND column_name = 'biometric_match_score'
+  ) INTO v_has_score;
+
+  IF v_has_ref THEN
+    RAISE NOTICE 'biometric_ref NOT NULL: %',
+      (SELECT COUNT(*) FROM public.exam_sessions WHERE biometric_ref IS NOT NULL);
+  END IF;
+
+  IF v_has_status THEN
+    RAISE NOTICE 'biometric_status NOT NULL: %',
+      (SELECT COUNT(*) FROM public.exam_sessions WHERE biometric_status IS NOT NULL);
+  END IF;
+
+  IF v_has_score THEN
+    RAISE NOTICE 'biometric_match_score NOT NULL: %',
+      (SELECT COUNT(*) FROM public.exam_sessions WHERE biometric_match_score IS NOT NULL);
+  END IF;
+
+  IF NOT (v_has_ref OR v_has_status OR v_has_score) THEN
+    RAISE NOTICE 'Nenhuma coluna biometrica existe em exam_sessions neste banco';
+  END IF;
+END $$;
+
+================================================================================
+6. CONTAGEM NAS TABELAS BIOMETRICAS
+================================================================================
+
+-- PRE-CONDIÃ‡ÃƒO: cada tabela pode ou nao existir. O DO block verifica
+--   internamente via to_regclass e nao gera erro.
+--
+-- CENARIOS:
+--   A (0512):         user_biometrics existe; biometric_audit_log nao.
+--   B (0512+0513):    ambas existem.
+--   C (0812 sem 0512): user_biometrics pode nao existir; audit_log nao.
+--   D ou pos-090:      nenhuma existe.
+--
+-- NOTA: DO e procedural. RAISE NOTICE envia mensagem lateral, nao devolve
+--   resultado tabular. Queries individuais separadas disponiveis apos
+--   confirmacao de existencia com to_regclass.
+--
+-- PERMISSAO: service_role ignora RLS.
+
+DO $$
+DECLARE
+  v_ub  bigint;
+  v_bal bigint;
+BEGIN
+  IF to_regclass('public.user_biometrics') IS NOT NULL THEN
+    EXECUTE 'SELECT COUNT(*) FROM public.user_biometrics' INTO v_ub;
+    RAISE NOTICE 'user_biometrics: %', v_ub;
+  ELSE
+    RAISE NOTICE 'user_biometrics: tabela nao existe neste banco';
+  END IF;
+
+  IF to_regclass('public.biometric_audit_log') IS NOT NULL THEN
+    EXECUTE 'SELECT COUNT(*) FROM public.biometric_audit_log' INTO v_bal;
+    RAISE NOTICE 'biometric_audit_log: %', v_bal;
+  ELSE
+    RAISE NOTICE 'biometric_audit_log: tabela nao existe neste banco';
+  END IF;
+END $$;
+
+================================================================================
+7. PRIVILEGIOS NAS TABELAS BIOMETRICAS
+================================================================================
+
+-- PRE-CONDIÃ‡ÃƒO: cada tabela pode ou nao existir.
+--   Confirmar SEPARADAMENTE:
+--     SELECT to_regclass('public.user_biometrics')     IS NOT NULL;
+--     SELECT to_regclass('public.biometric_audit_log') IS NOT NULL;
+--
+-- CINCO ASPECTOS DISTINTOS:
+--   A) GRANTS DIRETOS: visiveis em information_schema.table_privileges.
+--   B) PRIVILEGIOS A PUBLIC: visiveis em aclexplode sobre relacl/acldefault
+--      quando ae.grantee = 0.
+--   C) OWNERSHIP: identificado por pg_class.relowner. O owner tem todos
+--      os privilegios automaticamente â€” NAO aparece em table_privileges.
+--   D) ACL PADRAO: se relacl for NULL, a ACL efetiva e
+--      acldefault('r', relowner).
+--   E) MEMBERSHIP em roles: NAO visivel nesta secao. Verificar via
+--      pg_auth_members (superuser).
+--
+-- table_privileges sozinha NAO cobre todos os privilegios efetivos.
+--
+-- PERMISSAO: acesso a information_schema e pg_class.
+
+-- 7.1A PrivilÃ©gios listados por information_schema.table_privileges
+-- A view pode listar PUBLIC quando aplicavel. Roles com privilegios
+-- herdados via membership NAO aparecem nesta view.
+SELECT
+  tp.table_schema,
+  tp.table_name,
+  tp.grantee,
+  tp.privilege_type,
+  tp.is_grantable
+FROM information_schema.table_privileges tp
+WHERE tp.table_schema = 'public'
+  AND tp.table_name IN (
+    'user_biometrics',
+    'biometric_audit_log'
+  )
+ORDER BY tp.table_name, tp.grantee, tp.privilege_type;
+
+-- 7.1B Ownership das tabelas
+SELECT
+  c.relnamespace::regnamespace                  AS table_schema,
+  c.relname                                      AS table_name,
+  c.relowner::regrole                          AS owner
+FROM pg_class c
+WHERE c.relnamespace = 'public'::regnamespace
+  AND c.relname IN (
+    'user_biometrics',
+    'biometric_audit_log'
+  )
+ORDER BY c.relname;
+
+-- 7.2 ACL via aclexplode sobre relacl/acldefault
+-- user_biometrics â€” so executar se existir
+SELECT
+  c.relname                                      AS table_name,
+  c.relowner::regrole                          AS table_owner,
+  c.relacl IS NOT NULL                          AS has_explicit_relacl,
+  CASE WHEN ae.grantee = 0 THEN 'PUBLIC' ELSE ae.grantee::regrole::text END
+                                                   AS grantee,
+  ae.privilege_type,
+  ae.is_grantable,
+  CASE WHEN ae.grantee = 0 THEN 'PUBLIC' ELSE 'role' END
+                                                   AS grant_type,
+  CASE WHEN c.relacl IS NOT NULL THEN 'from_relacl' ELSE 'from_acldefault' END
+                                                   AS acl_source
+FROM pg_class c
+CROSS JOIN LATERAL aclexplode(
+  COALESCE(c.relacl, acldefault('r', c.relowner))
+) AS ae
+WHERE c.relnamespace = 'public'::regnamespace
+  AND c.relname = 'user_biometrics';
+
+-- biometric_audit_log â€” so executar se existir
+SELECT
+  c.relname                                      AS table_name,
+  c.relowner::regrole                          AS table_owner,
+  c.relacl IS NOT NULL                          AS has_explicit_relacl,
+  CASE WHEN ae.grantee = 0 THEN 'PUBLIC' ELSE ae.grantee::regrole::text END
+                                                   AS grantee,
+  ae.privilege_type,
+  ae.is_grantable,
+  CASE WHEN ae.grantee = 0 THEN 'PUBLIC' ELSE 'role' END
+                                                   AS grant_type,
+  CASE WHEN c.relacl IS NOT NULL THEN 'from_relacl' ELSE 'from_acldefault' END
+                                                   AS acl_source
+FROM pg_class c
+CROSS JOIN LATERAL aclexplode(
+  COALESCE(c.relacl, acldefault('r', c.relowner))
+) AS ae
+WHERE c.relnamespace = 'public'::regnamespace
+  AND c.relname = 'biometric_audit_log';
+
+-- 7.3 Privilegios padrao de novos objetos no schema public
+-- pg_default_acl trata de privilegios PADRAO de objetos FUTUROS.
+-- NAO e a ACL de tabelas ja existentes â€” ver secao 7.2.
+-- Requer superuser para resultado completo.
+SELECT
+  n.nspname                                      AS schema_name,
+  a.defaclrole::regrole                         AS default_for_role,
+  CASE a.defaclobjtype
+    WHEN 'r' THEN 'tables'
+    WHEN 'f' THEN 'functions'
+    WHEN 'T' THEN 'types'
+    WHEN 'n' THEN 'schemas'
+    ELSE a.defaclobjtype
+  END                                            AS object_type,
+  a.defaclacl                                    AS default_privileges
+FROM pg_default_acl a
+JOIN pg_namespace n ON n.oid = a.defaclnamespace
+WHERE n.nspname = 'public';
+
+================================================================================
+8. VERIFICACAO DE TRIGGERS BIOMETRICOS
+================================================================================
+
+-- PRE-CONDIÃ‡ÃƒO: user_biometrics deve existir.
+--   Confirmar: SELECT to_regclass('public.user_biometrics') IS NOT NULL;
+--   Se FALSE, nao executar.
+--
+-- RESULTADO ESPERADO:
+--   Cenarios A, B: trg_guard_biometric_identity aparece (criado por 0513).
+--   Cenarios C, D, pos-090: 0 linhas.
+--
+-- PERMISSAO: acesso a pg_trigger e pg_class.
+
+SELECT
+  t.tgname                                       AS trigger_name,
+  c.relname                                      AS table_name,
+  c.relnamespace::regnamespace                  AS table_schema,
+  t.tgtype                                       AS raw_tgtype,
+  pg_get_triggerdef(t.oid, true)                AS trigger_definition,
+  t.tgenabled                                    AS enabled_mode
+FROM pg_trigger t
+JOIN pg_class c ON c.oid = t.tgrelid
+WHERE c.relnamespace = 'public'::regnamespace
+  AND c.relname      = 'user_biometrics'
+  AND NOT t.tgisinternal
+  AND t.tgname IN ('trg_guard_biometric_identity')
+ORDER BY t.tgname;
+
+================================================================================
+9. EXISTENCIA DE TODOS OS OBJETOS BIOMETRICOS â€” RESUMO DE TRIAGEM
+================================================================================
+
+SELECT
+  'user_biometrics'             AS object_name,
+  'table'                       AS object_type,
+  to_regclass('public.user_biometrics')            IS NOT NULL AS object_exists
+UNION ALL
+SELECT 'biometric_audit_log',   'table',
+       to_regclass('public.biometric_audit_log') IS NOT NULL AS object_exists
+UNION ALL
+SELECT 'exam_sessions',          'table',
+       to_regclass('public.exam_sessions')        IS NOT NULL AS object_exists
+UNION ALL
+SELECT 'online_exams',           'table',
+       to_regclass('public.online_exams')        IS NOT NULL AS object_exists
+UNION ALL
+SELECT 'user_can_use_biometrics(uuid)',       'function',
+       to_regprocedure('public.user_can_use_biometrics(uuid)')    IS NOT NULL AS object_exists
+UNION ALL
+SELECT 'student_has_active_biometrics(uuid)', 'function',
+       to_regprocedure('public.student_has_active_biometrics(uuid)') IS NOT NULL AS object_exists
+UNION ALL
+SELECT 'my_biometric_enrollments()',         'function',
+       to_regprocedure('public.my_biometric_enrollments()')        IS NOT NULL AS object_exists
+UNION ALL
+SELECT 'guard_biometric_identity()',        'function',
+       to_regprocedure('public.guard_biometric_identity()')        IS NOT NULL AS object_exists
+UNION ALL
+SELECT 'biometric_kind',                     'enum_type',
+       to_regtype('public.biometric_kind')                   IS NOT NULL AS object_exists
+UNION ALL
+SELECT 'biometric_verify_result',            'enum_type',
+       to_regtype('public.biometric_verify_result')          IS NOT NULL AS object_exists
+UNION ALL
+SELECT 'online_exam_status',                 'enum_type',
+       to_regtype('public.online_exam_status')              IS NOT NULL AS object_exists
+UNION ALL
+SELECT 'exam_session_status',                'enum_type',
+       to_regtype('public.exam_session_status')             IS NOT NULL AS object_exists
+ORDER BY object_type, object_name;
+
+================================================================================
+CHECKLIST DE CONSISTENCIA â€” PRE-CONDIÃ‡Ã•ES POR CONSULTA
+================================================================================
+
+| Consulta    | Pre-condicao executavel                                   | O que muda se ignorada                          |
+|-------------|----------------------------------------------------------|-------------------------------------------------|
+| 1. FK       | exam_sessions = TRUE E user_biometrics = TRUE          | ::regclass falha na conversao                  |
+| 2.1         | to_regtype('biometric_kind') = TRUE                      | 0 linhas, sem erro â€” confirmar para interpretar |
+| 2.2         | to_regtype('biometric_verify_result') = TRUE             | 0 linhas, sem erro â€” confirmar para interpretar |
+| 3.1         | nenhuma                                                  | N/A                                           |
+| 3.2         | nenhuma (proacl NULL tratado com acldefault)             | N/A                                           |
+| 4            | exam_sessions = TRUE                                     | 0 linhas, sem erro                             |
+| 5.1          | exam_sessions = TRUE                                     | Erro de tabela inexistente                    |
+| 5.2 biometric_ref | exam_sessions = TRUE E biometric_ref existe         | Erro SQL: coluna inexistente                  |
+| 5.2 biometric_match | exam_sessions = TRUE E biometric_match_score existe | Erro SQL: coluna inexistente                |
+| 5.2 biometric_status | exam_sessions = TRUE E biometric_status existe  | Erro SQL: coluna inexistente                  |
+| 5.3-A        | exam_sessions = TRUE; biometric_ref E biometric_status E biometric_match_score existem; id, exam_id, student_id, attempt_number, status, updated_at existem em exam_sessions; online_exams.id E online_exams.title existem | Erro SQL: coluna inexistente |
+| 5.3-B        | exam_sessions = TRUE; biometric_ref existe; id, exam_id, student_id, attempt_number, status, updated_at existem em exam_sessions; online_exams.id E online_exams.title existem | Erro SQL |
+| 5.3-C        | exam_sessions = TRUE; biometric_match_score existe; id, exam_id, student_id, attempt_number, status, updated_at existem em exam_sessions; online_exams.id E online_exams.title existem | Erro SQL |
+| 5.3-D        | exam_sessions = TRUE; biometric_status existe; id, exam_id, student_id, attempt_number, status, updated_at existem em exam_sessions; online_exams.id E online_exams.title existem | Erro SQL |
+| 5.3-E        | exam_sessions = TRUE; biometric_ref E biometric_match_score existem; id, exam_id, student_id, attempt_number, status, updated_at existem em exam_sessions; online_exams.id E online_exams.title existem | Erro SQL |
+| 5.3-F        | exam_sessions = TRUE; biometric_ref E biometric_status existem; id, exam_id, student_id, attempt_number, status, updated_at existem em exam_sessions; online_exams.id E online_exams.title existem | Erro SQL |
+| 5.3-G        | exam_sessions = TRUE; biometric_match_score E biometric_status existem; id, exam_id, student_id, attempt_number, status, updated_at existem em exam_sessions; online_exams.id E online_exams.title existem | Erro SQL |
+| 5.3-H        | exam_sessions = TRUE; id, exam_id, student_id, attempt_number, status, updated_at existem em exam_sessions; online_exams.id E online_exams.title existem | Erro SQL |
+| 5.4 DO        | nenhuma (verifica internamente; retorna sem erro se tabela ausente) | N/A |
+| 6 DO          | nenhuma (verifica internamente)                          | N/A                                           |
+| 6 queries     | to_regclass da tabela = TRUE                             | Erro de tabela inexistente                    |
+| 7.1A          | ajustar table_name IN conforme to_regclass de cada tabela | 0 linhas se tabela inexistente                |
+| 7.1B          | ajustar c.relname IN conforme to_regclass de cada tabela  | 0 linhas se tabela inexistente                |
+| 7.2           | to_regclass da tabela = TRUE                             | JOIN retorna 0 linhas se inexistente          |
+| 7.3           | login deve ser superuser para resultado completo          | N/A; resultado pode estar incompleto          |
+| 8             | user_biometrics = TRUE                                   | JOIN retorna 0 linhas, mas pre-condicao protege |
+| 9             | nenhuma (testes independentes)                           | N/A                                           |
+
+================================================================================
+RESUMO â€” O QUE AINDA DEPENDE DO DBA
+================================================================================
+
+1. Confirmar projeto V2: ID/organizacao no dashboard Supabase antes de
+   qualquer execucao.
+
+2. Ordem de execucao recomendada:
+   - Executar 9 primeiro (triagem).
+   - Se cenario A ou B: executar 4 (confirma colunas).
+   - Com resultado de 4, executar 5.2 e a variante correta de 5.3
+     apenas para as colunas confirmadas em 4.
+   - Executar 2.1 e 2.2 para cada enum que existir.
+   - Executar 1 se ambas tabelas existirem.
+
+3. Interpretacao de pg_depend (consulta 2): cada linha precisa de
+   analise pelo DBA. deptype isolado nao e prova de seguranca do
+   DROP TYPE. Nao ha classificacao automatica segura.
+
+4. Privilegios efetivos (consultas 3 e 7): grants diretos sao apenas
+   uma parte. Ownership (7.1B via relowner), grants a PUBLIC (7.2 via
+   aclexplode), ACL padrao (7.2 via acldefault) e membership em roles
+   (NAO coberto por nenhuma das consultas) precisam ser considerados
+   em conjunto.
+
+5. Metodo de backup (consulta 5): se houver dados a preservar, o DBA
+   decide o metodo. LIMIT nao e backup.
+
+6. Membership em roles: nenhuma das consultas 3 ou 7 verifica
+   membership. Se role A e MEMBER de role B e B tem privilegios,
+   A herda sem que isso apareca. Verificar via pg_auth_members
+   requer superuser.
+
+7. pg_default_acl (7.3): consulta APENAS os privilegios padrao de
+   objetos FUTUROS no schema public. NAO e a ACL de tabelas ja
+   existentes â€” isso e feito pela consulta 7.2.
+
+================================================================================
+AVISO FINAL
+================================================================================
+
+Esta secao de consultas SQL e inteiramente estatica. Nenhuma consulta
+foi executada no banco, nem validada contra uma instancia real do
+PostgreSQL ou do Supabase. A sintaxe foi revisada, mas a execucao real
+em staging ou producao e de responsabilidade exclusiva do DBA. Nao
+declara a V2 pronta para publicacao nem as migrations seguras ou
+aprovadas para aplicacao.
+
+
+--- MIGRATIONS 149 vs 153 (COMPARACAO DIRETA) ---
+
+online_exams (linha 76 em 149, linha 61 em 153):
+- ESTRUTURA: IDENTICA em ambas as migrations
+- Colunas biometric_* em online_exams: PRESENTES em ambas
+
+exam_sessions (linha 121 em 149, linha 110 em 153):
+- 149 CRIA: biometric_status, biometric_match_score, biometric_ref
+- 153 CRIA: SEM colunas biometric_* (sem biometric_status, biometric_match_score, biometric_ref)
+- 149 indice parcial: COM condicao WHERE status IN ('not_started','in_progress') (identico a 153)
+- 153 indice parcial: COM condicao WHERE status IN ('not_started','in_progress')
+- ESTRUTURAS SAO DIFERENTES
+
+exam_answers (linha 171 em 149, linha 155 em 153):
+- ESTRUTURA: IDENTICA em ambas as migrations
+
+AVISO: CREATE TABLE IF NOT EXISTS NAO modifica estrutura de tabela preexistente.
+Se 149 executar primeiro, exam_sessions tera colunas biometricas.
+Se 153 executar primeiro, exam_sessions NAO tera colunas biometricas.
+
+--- MIGRATION 156 - OBJETOS REMOVIDOS (verificado no SQL) ---
+
+DROP FUNCTION IF EXISTS:
+1. guard_biometric_identity
+2. user_can_use_biometrics(uuid)
+3. student_has_active_biometrics(uuid)
+4. my_biometric_enrollments()
+
+DROP TABLE IF EXISTS:
+5. biometric_audit_log
+6. user_biometrics
+
+DROP TYPE IF EXISTS:
+7. biometric_kind
+8. biometric_verify_result
+
+ALTER TABLE DROP COLUMN IF EXISTS (exam_sessions):
+9. biometric_ref
+10. biometric_status
+11. biometric_match_score
+
+ALTER TABLE DROP COLUMN IF EXISTS (online_exams):
+12. biometric_kind_required
+13. biometric_required
+14. require_face_match
+
+TOTAL: 14 objetos/remocoes declaradas
+
+NOTA: 156 usa DROP IF EXISTS para todos os objetos. Se um objeto
+nao existir (ex: colunas biometricas em banco que usou apenas 153),
+o DROP COLUMN nao causa erro. Efeitos dependem do estado do banco.
+

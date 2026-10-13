@@ -19,8 +19,8 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as DisciplinesDisciplineIdRouteImport } from './routes/disciplines.$disciplineId'
-import { Route as AlunoAvaliacaoExamIdRouteImport } from './routes/aluno.avaliacao.$examId'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
+import { Route as AlunoAvaliacaoExamIdRouteImport } from './routes/aluno.avaliacao.$examId'
 import { Route as ApiPublicApplyUpdateRouteImport } from './routes/api/public/apply-update'
 import { Route as ApiPublicVersionRouteImport } from './routes/api/public/version'
 import { Route as ApiPublicHooksAttendanceClosingRouteImport } from './routes/api/public/hooks/attendance-closing'
@@ -79,15 +79,15 @@ const DisciplinesDisciplineIdRoute = DisciplinesDisciplineIdRouteImport.update({
   path: '/disciplines/$disciplineId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AlunoAvaliacaoExamIdRoute = AlunoAvaliacaoExamIdRouteImport.update({
-  id: '/aluno/avaliacao/$examId',
-  path: '/aluno/avaliacao/$examId',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const InviteTokenRoute = InviteTokenRouteImport.update({
   id: '/invite/$token',
   path: '/invite/$token',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AlunoAvaliacaoExamIdRoute = AlunoAvaliacaoExamIdRouteImport.update({
+  id: '/avaliacao/$examId',
+  path: '/avaliacao/$examId',
+  getParentRoute: () => AlunoRoute,
 } as any)
 const ApiPublicApplyUpdateRoute = ApiPublicApplyUpdateRouteImport.update({
   id: '/api/public/apply-update',
@@ -130,7 +130,7 @@ const LovableEmailQueueProcessRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/aluno': typeof AlunoRoute
+  '/aluno': typeof AlunoRouteWithChildren
   '/billing': typeof BillingRoute
   '/branding': typeof BrandingRoute
   '/diary': typeof DiaryRoute
@@ -139,8 +139,8 @@ export interface FileRoutesByFullPath {
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
   '/disciplines/$disciplineId': typeof DisciplinesDisciplineIdRoute
-  '/aluno/avaliacao/$examId': typeof AlunoAvaliacaoExamIdRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/aluno/avaliacao/$examId': typeof AlunoAvaliacaoExamIdRoute
   '/api/public/apply-update': typeof ApiPublicApplyUpdateRoute
   '/api/public/version': typeof ApiPublicVersionRoute
   '/api/public/hooks/attendance-closing': typeof ApiPublicHooksAttendanceClosingRoute
@@ -151,7 +151,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/aluno': typeof AlunoRoute
+  '/aluno': typeof AlunoRouteWithChildren
   '/billing': typeof BillingRoute
   '/branding': typeof BrandingRoute
   '/diary': typeof DiaryRoute
@@ -160,8 +160,8 @@ export interface FileRoutesByTo {
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
   '/disciplines/$disciplineId': typeof DisciplinesDisciplineIdRoute
-  '/aluno/avaliacao/$examId': typeof AlunoAvaliacaoExamIdRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/aluno/avaliacao/$examId': typeof AlunoAvaliacaoExamIdRoute
   '/api/public/apply-update': typeof ApiPublicApplyUpdateRoute
   '/api/public/version': typeof ApiPublicVersionRoute
   '/api/public/hooks/attendance-closing': typeof ApiPublicHooksAttendanceClosingRoute
@@ -173,7 +173,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/aluno': typeof AlunoRoute
+  '/aluno': typeof AlunoRouteWithChildren
   '/billing': typeof BillingRoute
   '/branding': typeof BrandingRoute
   '/diary': typeof DiaryRoute
@@ -182,8 +182,8 @@ export interface FileRoutesById {
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
   '/disciplines/$disciplineId': typeof DisciplinesDisciplineIdRoute
-  '/aluno/avaliacao/$examId': typeof AlunoAvaliacaoExamIdRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/aluno/avaliacao/$examId': typeof AlunoAvaliacaoExamIdRoute
   '/api/public/apply-update': typeof ApiPublicApplyUpdateRoute
   '/api/public/version': typeof ApiPublicVersionRoute
   '/api/public/hooks/attendance-closing': typeof ApiPublicHooksAttendanceClosingRoute
@@ -204,9 +204,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/signup'
-        | '/disciplines/$disciplineId'
-    | '/aluno/avaliacao/$examId'
+    | '/disciplines/$disciplineId'
     | '/invite/$token'
+    | '/aluno/avaliacao/$examId'
     | '/api/public/apply-update'
     | '/api/public/version'
     | '/api/public/hooks/attendance-closing'
@@ -225,9 +225,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/signup'
-        | '/disciplines/$disciplineId'
-    | '/aluno/avaliacao/$examId'
+    | '/disciplines/$disciplineId'
     | '/invite/$token'
+    | '/aluno/avaliacao/$examId'
     | '/api/public/apply-update'
     | '/api/public/version'
     | '/api/public/hooks/attendance-closing'
@@ -246,9 +246,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/signup'
-        | '/disciplines/$disciplineId'
-    | '/aluno/avaliacao/$examId'
+    | '/disciplines/$disciplineId'
     | '/invite/$token'
+    | '/aluno/avaliacao/$examId'
     | '/api/public/apply-update'
     | '/api/public/version'
     | '/api/public/hooks/attendance-closing'
@@ -260,7 +260,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AlunoRoute: typeof AlunoRoute
+  AlunoRoute: typeof AlunoRouteWithChildren
   BillingRoute: typeof BillingRoute
   BrandingRoute: typeof BrandingRoute
   DiaryRoute: typeof DiaryRoute
@@ -269,7 +269,6 @@ export interface RootRouteChildren {
   LogoutRoute: typeof LogoutRoute
   SignupRoute: typeof SignupRoute
   DisciplinesDisciplineIdRoute: typeof DisciplinesDisciplineIdRoute
-  AlunoAvaliacaoExamIdRoute: typeof AlunoAvaliacaoExamIdRoute
   InviteTokenRoute: typeof InviteTokenRoute
   ApiPublicApplyUpdateRoute: typeof ApiPublicApplyUpdateRoute
   ApiPublicVersionRoute: typeof ApiPublicVersionRoute
@@ -352,19 +351,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DisciplinesDisciplineIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/aluno/avaliacao/$examId': {
-      id: '/aluno/avaliacao/$examId'
-      path: '/aluno/avaliacao/$examId'
-      fullPath: '/aluno/avaliacao/$examId'
-      preLoaderRoute: typeof AlunoAvaliacaoExamIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/invite/$token': {
       id: '/invite/$token'
       path: '/invite/$token'
       fullPath: '/invite/$token'
       preLoaderRoute: typeof InviteTokenRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/aluno/avaliacao/$examId': {
+      id: '/aluno/avaliacao/$examId'
+      path: '/avaliacao/$examId'
+      fullPath: '/aluno/avaliacao/$examId'
+      preLoaderRoute: typeof AlunoAvaliacaoExamIdRouteImport
+      parentRoute: typeof AlunoRoute
     }
     '/api/public/apply-update': {
       id: '/api/public/apply-update'
@@ -418,9 +417,19 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AlunoRouteChildren {
+  AlunoAvaliacaoExamIdRoute: typeof AlunoAvaliacaoExamIdRoute
+}
+
+const AlunoRouteChildren: AlunoRouteChildren = {
+  AlunoAvaliacaoExamIdRoute: AlunoAvaliacaoExamIdRoute,
+}
+
+const AlunoRouteWithChildren = AlunoRoute._addFileChildren(AlunoRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AlunoRoute: AlunoRoute,
+  AlunoRoute: AlunoRouteWithChildren,
   BillingRoute: BillingRoute,
   BrandingRoute: BrandingRoute,
   DiaryRoute: DiaryRoute,
@@ -429,7 +438,6 @@ const rootRouteChildren: RootRouteChildren = {
   LogoutRoute: LogoutRoute,
   SignupRoute: SignupRoute,
   DisciplinesDisciplineIdRoute: DisciplinesDisciplineIdRoute,
-  AlunoAvaliacaoExamIdRoute: AlunoAvaliacaoExamIdRoute,
   InviteTokenRoute: InviteTokenRoute,
   ApiPublicApplyUpdateRoute: ApiPublicApplyUpdateRoute,
   ApiPublicVersionRoute: ApiPublicVersionRoute,
