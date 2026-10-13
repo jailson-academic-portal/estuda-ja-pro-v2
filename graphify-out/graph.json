@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-08T13:59:13.923290+00:00",
+  "generated_at": "2026-10-13T16:46:54.799744+00:00",
   "files": [
     {
       "path": "roadmap.md",
@@ -26,16 +26,12 @@
       "bytes": 378
     },
     {
-      "path": ".mcp.json",
-      "bytes": 233
-    },
-    {
       "path": "tsconfig.json",
       "bytes": 672
     },
     {
       "path": "vite.config.ts",
-      "bytes": 1585
+      "bytes": 366
     },
     {
       "path": "eslint.config.js",
@@ -2193,19 +2189,19 @@
     },
     {
       "source": "vite.config.ts",
-      "target": "@lovable.dev/vite-tanstack-config"
+      "target": "vite"
     },
     {
       "source": "vite.config.ts",
-      "target": "node:crypto"
+      "target": "@vitejs/plugin-react"
     },
     {
       "source": "vite.config.ts",
-      "target": "node:fs"
+      "target": "@tailwindcss/vite"
     },
     {
       "source": "vite.config.ts",
-      "target": "node:path"
+      "target": "vite-tsconfig-paths"
     },
     {
       "source": "eslint.config.js",
