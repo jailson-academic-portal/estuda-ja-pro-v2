@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-13T17:55:42.202842+00:00",
+  "generated_at": "2026-10-13T18:05:32.698195+00:00",
   "files": [
     {
       "path": "roadmap.md",
@@ -19,7 +19,7 @@
     },
     {
       "path": "nitro.config.ts",
-      "bytes": 883
+      "bytes": 264
     },
     {
       "path": "setup_banco_provas.sql",
