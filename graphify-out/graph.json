@@ -1,9 +1,13 @@
 {
-  "generated_at": "2026-10-13T16:46:54.799744+00:00",
+  "generated_at": "2026-10-13T17:02:02.815033+00:00",
   "files": [
     {
       "path": "roadmap.md",
       "bytes": 2047
+    },
+    {
+      "path": "vercel.json",
+      "bytes": 174
     },
     {
       "path": "drizzle.config.ts",
@@ -22,6 +26,10 @@
       "bytes": 55952
     },
     {
+      "path": "index.html",
+      "bytes": 390
+    },
+    {
       "path": "AGENTS.md",
       "bytes": 378
     },
@@ -31,7 +39,7 @@
     },
     {
       "path": "vite.config.ts",
-      "bytes": 366
+      "bytes": 1103
     },
     {
       "path": "eslint.config.js",
@@ -43,15 +51,23 @@
     },
     {
       "path": "package.json",
-      "bytes": 4529
+      "bytes": 5074
     },
     {
       "path": "components.json",
       "bytes": 443
     },
     {
+      "path": "CLAUDE.md",
+      "bytes": 3295
+    },
+    {
+      "path": "ACESSOS_CONFIGURACAO.md",
+      "bytes": 7448
+    },
+    {
       "path": ".claude/settings.local.json",
-      "bytes": 53
+      "bytes": 100
     },
     {
       "path": "public/push-sw.js",
@@ -67,7 +83,7 @@
     },
     {
       "path": "src/routeTree.gen.ts",
-      "bytes": 16403
+      "bytes": 16589
     },
     {
       "path": "src/styles.css",
@@ -138,6 +154,10 @@
       "bytes": 3414
     },
     {
+      "path": "supabase/migrations/20261010000001_academic_hierarchy.sql",
+      "bytes": 3567
+    },
+    {
       "path": "supabase/migrations/20260807225013_f9b52005-3649-4904-a774-35f98611f7ef.sql",
       "bytes": 1290
     },
@@ -183,7 +203,7 @@
     },
     {
       "path": "supabase/migrations/20260806163420_550c5a1e-640c-490e-8633-b56763f00141.sql",
-      "bytes": 715
+      "bytes": 652
     },
     {
       "path": "supabase/migrations/20260429181151_1dd69716-a0ed-4da0-b579-1eab903d0470.sql",
@@ -271,7 +291,7 @@
     },
     {
       "path": "supabase/migrations/20260802025845_f5d969c5-5afa-447b-aaec-ae9170263739.sql",
-      "bytes": 3930
+      "bytes": 3792
     },
     {
       "path": "supabase/migrations/20260814165622_51ddd63d-6e16-4c65-b36f-92bfa6cd0263.sql",
@@ -355,11 +375,11 @@
     },
     {
       "path": "supabase/migrations/20260731005326_9637e100-deb7-4e8e-9329-b8fc8e3e46ba.sql",
-      "bytes": 1339
+      "bytes": 1027
     },
     {
       "path": "supabase/migrations/20260430010937_623abe36-6dc9-4385-aef5-abbcd950f37d.sql",
-      "bytes": 4694
+      "bytes": 4705
     },
     {
       "path": "supabase/migrations/20260630155659_0f8a3a17-34e8-4caf-b44c-6b0f7b042363.sql",
@@ -368,6 +388,10 @@
     {
       "path": "supabase/migrations/20261008120000_create_online_exams_tables.sql",
       "bytes": 15018
+    },
+    {
+      "path": "supabase/migrations/20261012120000_promote_jailson_admin_teacher.sql",
+      "bytes": 2592
     },
     {
       "path": "supabase/migrations/20261005120000_online_exams_biometrics.sql",
@@ -388,10 +412,6 @@
     {
       "path": "supabase/migrations/20260802164656_9e9228e4-e88f-447a-9d3e-eca8c66707f4.sql",
       "bytes": 839
-    },
-    {
-      "path": "supabase/migrations/20240804164500_academic_hierarchy.sql",
-      "bytes": 3567
     },
     {
       "path": "supabase/migrations/20260531162213_3398ba91-0ef4-4bbb-9791-052c68be8349.sql",
@@ -432,10 +452,6 @@
     {
       "path": "supabase/migrations/20260531163747_eb4bf9f3-90ef-46a5-986d-958c38d2d452.sql",
       "bytes": 2674
-    },
-    {
-      "path": "supabase/migrations/20250802000000_simulsaude_schema.sql",
-      "bytes": 2875
     },
     {
       "path": "supabase/migrations/20260709220234_86117ada-bba5-4f5f-b0dd-eadef17a76a6.sql",
@@ -479,7 +495,7 @@
     },
     {
       "path": "supabase/migrations/20260802025905_367cad93-0e67-4d6e-949c-1b1db8cf395a.sql",
-      "bytes": 969
+      "bytes": 803
     },
     {
       "path": "supabase/migrations/20260706172141_60db7f9d-19f8-4a40-9278-120013fb8282.sql",
@@ -558,16 +574,16 @@
       "bytes": 112
     },
     {
-      "path": "supabase/migrations/20240802151400_clinical_cases_deadlines.sql",
-      "bytes": 1270
-    },
-    {
       "path": "supabase/migrations/20260429170922_c4d5b84d-ac2d-421a-9979-8ec3b1d36eed.sql",
       "bytes": 8754
     },
     {
       "path": "supabase/migrations/20260508190905_d06ecb9b-bd54-415c-9a46-e26f1c731acc.sql",
       "bytes": 70
+    },
+    {
+      "path": "supabase/migrations/20261010000000_clinical_cases_deadlines.sql",
+      "bytes": 1270
     },
     {
       "path": "supabase/migrations/20260429191108_2f3eec73-beba-4fc3-bf03-6821b401c69b.sql",
@@ -607,7 +623,7 @@
     },
     {
       "path": "supabase/migrations/20260818000000_restructure_academic_works.sql",
-      "bytes": 2881
+      "bytes": 3119
     },
     {
       "path": "supabase/migrations/20260529211350_bd046e5a-2ae1-46ab-a76d-f74526f7a692.sql",
@@ -720,6 +736,10 @@
     {
       "path": "supabase/migrations/20260531162152_a883bf68-f2fb-41a5-a4bb-cfc2a581f206.sql",
       "bytes": 783
+    },
+    {
+      "path": "supabase/migrations/20261009000000_remove_biometrics.sql",
+      "bytes": 13480
     },
     {
       "path": "supabase/migrations/20260526194739_c0e53705-5827-4f3b-bf87-4551bf0e89d7.sql",
@@ -1018,6 +1038,10 @@
       "bytes": 1282
     },
     {
+      "path": "src/backend/submissions-pure.test.ts",
+      "bytes": 9118
+    },
+    {
       "path": "src/backend/push.functions.ts",
       "bytes": 1613
     },
@@ -1111,7 +1135,7 @@
     },
     {
       "path": "src/backend/activities.functions.ts",
-      "bytes": 15044
+      "bytes": 15303
     },
     {
       "path": "src/backend/enrollment-validation.functions.ts",
@@ -1215,7 +1239,7 @@
     },
     {
       "path": "src/backend/online-exams.functions.ts",
-      "bytes": 23025
+      "bytes": 22207
     },
     {
       "path": "src/backend/calendar.functions.ts",
@@ -1262,6 +1286,10 @@
       "bytes": 18139
     },
     {
+      "path": "src/backend/online-exams-pure.ts",
+      "bytes": 2636
+    },
+    {
       "path": "src/backend/simulsaude-cases.functions.ts",
       "bytes": 23257
     },
@@ -1278,6 +1306,10 @@
       "bytes": 1185
     },
     {
+      "path": "src/backend/submissions-pure.ts",
+      "bytes": 5822
+    },
+    {
       "path": "src/backend/analytics.server.ts",
       "bytes": 9860
     },
@@ -1287,7 +1319,11 @@
     },
     {
       "path": "src/backend/works.functions.ts",
-      "bytes": 36112
+      "bytes": 36412
+    },
+    {
+      "path": "src/backend/online-exams-pure.test.ts",
+      "bytes": 7847
     },
     {
       "path": "src/assets/discipline-modules-ref.png.asset.json",
@@ -1695,7 +1731,7 @@
     },
     {
       "path": "src/components/discipline/WorkSubmissionAssistant.tsx",
-      "bytes": 37496
+      "bytes": 37461
     },
     {
       "path": "src/components/discipline/LabDialogs.tsx",
@@ -1767,7 +1803,7 @@
     },
     {
       "path": "src/components/discipline/WorksModule.tsx",
-      "bytes": 105407
+      "bytes": 105360
     },
     {
       "path": "src/components/discipline/AttendanceQr.tsx",
@@ -1807,7 +1843,7 @@
     },
     {
       "path": "src/components/discipline/AssessmentsModule.tsx",
-      "bytes": 71679
+      "bytes": 71857
     },
     {
       "path": "src/components/discipline/AssessmentGraderDialog.tsx",
@@ -1831,11 +1867,11 @@
     },
     {
       "path": "src/components/discipline/ActivitiesModule.tsx",
-      "bytes": 82010
+      "bytes": 81920
     },
     {
       "path": "src/components/discipline/InlineSubmissionDialog.tsx",
-      "bytes": 13988
+      "bytes": 13904
     },
     {
       "path": "src/components/discipline/DataTablesModule.tsx",
@@ -1847,7 +1883,7 @@
     },
     {
       "path": "src/components/discipline/OnlineExamConfigDialog.tsx",
-      "bytes": 15628
+      "bytes": 15738
     },
     {
       "path": "src/components/discipline/StudentsModule.tsx",
@@ -1999,7 +2035,7 @@
     },
     {
       "path": "src/routes/api/public/apply-update.ts",
-      "bytes": 983
+      "bytes": 1600
     },
     {
       "path": "src/routes/api/public/hooks/attendance-closing.ts",
@@ -2189,19 +2225,19 @@
     },
     {
       "source": "vite.config.ts",
-      "target": "vite"
+      "target": "@lovable.dev/vite-tanstack-config"
     },
     {
       "source": "vite.config.ts",
-      "target": "@vitejs/plugin-react"
+      "target": "node:crypto"
     },
     {
       "source": "vite.config.ts",
-      "target": "@tailwindcss/vite"
+      "target": "node:fs"
     },
     {
       "source": "vite.config.ts",
-      "target": "vite-tsconfig-paths"
+      "target": "node:path"
     },
     {
       "source": "eslint.config.js",
@@ -2273,11 +2309,11 @@
     },
     {
       "source": "src/routeTree.gen.ts",
-      "target": "./routes/aluno.avaliacao.$examId"
+      "target": "./routes/invite.$token"
     },
     {
       "source": "src/routeTree.gen.ts",
-      "target": "./routes/invite.$token"
+      "target": "./routes/aluno.avaliacao.$examId"
     },
     {
       "source": "src/routeTree.gen.ts",
@@ -3108,6 +3144,18 @@
       "target": "@/integrations/supabase/auth-middleware"
     },
     {
+      "source": "src/backend/submissions-pure.test.ts",
+      "target": "node:test"
+    },
+    {
+      "source": "src/backend/submissions-pure.test.ts",
+      "target": "node:assert/strict"
+    },
+    {
+      "source": "src/backend/submissions-pure.test.ts",
+      "target": "./submissions-pure.js"
+    },
+    {
       "source": "src/backend/push.functions.ts",
       "target": "@tanstack/react-start"
     },
@@ -3705,6 +3753,10 @@
     },
     {
       "source": "src/backend/activities.functions.ts",
+      "target": "./submissions-pure"
+    },
+    {
+      "source": "src/backend/activities.functions.ts",
       "target": "@/lib/document-filename"
     },
     {
@@ -4280,6 +4332,10 @@
       "target": "@/integrations/supabase/online-exams.types"
     },
     {
+      "source": "src/backend/online-exams.functions.ts",
+      "target": "./online-exams-pure"
+    },
+    {
       "source": "src/backend/calendar.functions.ts",
       "target": "@tanstack/react-start"
     },
@@ -4609,6 +4665,10 @@
     },
     {
       "source": "src/backend/works.functions.ts",
+      "target": "./submissions-pure"
+    },
+    {
+      "source": "src/backend/works.functions.ts",
       "target": "@/lib/diary-assessments"
     },
     {
@@ -4630,6 +4690,18 @@
     {
       "source": "src/backend/works.functions.ts",
       "target": "@/lib/document-header"
+    },
+    {
+      "source": "src/backend/online-exams-pure.test.ts",
+      "target": "node:test"
+    },
+    {
+      "source": "src/backend/online-exams-pure.test.ts",
+      "target": "node:assert/strict"
+    },
+    {
+      "source": "src/backend/online-exams-pure.test.ts",
+      "target": "./online-exams-pure.js"
     },
     {
       "source": "src/routes/logout.tsx",
