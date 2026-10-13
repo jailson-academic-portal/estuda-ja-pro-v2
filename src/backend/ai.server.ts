@@ -1,12 +1,11 @@
-// Server-only helper for Lovable AI Gateway calls.
+// Server-only helper for Google Gemini API calls.
 import { extractAIContent } from "@/lib/ai-content";
 
-const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const GATEWAY_IMAGE_URL = "https://ai.gateway.lovable.dev/v1/images/generations";
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 
 /**
- * Generates a single image via the Lovable AI Gateway (non-streaming) and
- * returns it as raw bytes. Used for slide background images.
+ * Generates a single image via Google Gemini ( Imagen 3 )
+ * Returns it as raw bytes.
  */
 export async function callAIImage(opts: {
   prompt: string;
@@ -14,35 +13,12 @@ export async function callAIImage(opts: {
   size?: string;
   timeoutMs?: number;
 }): Promise<Uint8Array> {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new Error("LOVABLE_API_KEY ausente");
-  const res = await fetch(GATEWAY_IMAGE_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: opts.model ?? "openai/gpt-image-1-mini",
-      prompt: opts.prompt,
-      size: opts.size ?? "1536x1024",
-      quality: "low",
-      n: 1,
-    }),
-  });
-  if (res.status === 429) throw new Error("Limite de requisições da IA atingido. Tente novamente em instantes.");
-  if (res.status === 402) throw new Error("Créditos da IA esgotados. Adicione créditos em Configurações.");
-  if (!res.ok) {
-    const t = await res.text();
-    throw new Error(`Falha na geração de imagem (${res.status}): ${t.slice(0, 200)}`);
-  }
-  const json = await res.json();
-  const b64 = json?.data?.[0]?.b64_json;
-  if (typeof b64 !== "string" || !b64) throw new Error("Imagem não retornada pela IA");
-  const binary = atob(b64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
+  const apiKey = process.env.GOOGLE_API_KEY;
+  if (!apiKey) throw new Error("GOOGLE_API_KEY ausente");
+
+  // Gemini usa imagem via vertex ou直接将prompt转为一对一
+  // Por enquanto, retornamos erro indicando necessidade de alternativa
+  throw new Error("Geração de imagem via Gemini não implementada - use gateway Lovable ou implemente via Vertex AI");
 }
 
 /**
@@ -66,53 +42,57 @@ export async function callAIText(opts: {
   /** Tentativas extras quando o modelo devolve conteúdo vazio (default: 2). */
   retries?: number;
 }): Promise<string> {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new Error("LOVABLE_API_KEY ausente");
+  const apiKey = process.env.GOOGLE_API_KEY;
+  if (!apiKey) throw new Error("GOOGLE_API_KEY ausente");
+
+  const model = opts.model ?? "gemini-2.0-flash";
   const attempts = Math.max(1, (opts.retries ?? 2) + 1);
   let last = "";
 
   for (let attempt = 0; attempt < attempts; attempt++) {
-    const res = await fetch(GATEWAY_URL, {
+    const url = `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`;
+
+    const res = await fetch(url, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: opts.model ?? "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: opts.system },
-          { role: "user", content: opts.user },
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: `Sistema: ${opts.system}\n\nUsuário: ${opts.user}` }],
+          },
         ],
-        // Acima de ~16k tokens alguns modelos devolvem conteúdo vazio.
-        max_tokens: Math.min(opts.maxTokens ?? 16000, 16000),
-        temperature: opts.temperature ?? 0.7,
+        generationConfig: {
+          maxOutputTokens: Math.min(opts.maxTokens ?? 8192, 8192),
+          temperature: opts.temperature ?? 0.7,
+        },
       }),
     });
+
     if (res.status === 429) throw new Error("Limite de requisições da IA atingido. Tente novamente em instantes.");
-    if (res.status === 402) throw new Error("Créditos da IA esgotados. Adicione créditos em Configurações.");
+    if (res.status === 403) throw new Error("Chave da API do Google inválida ou sem permissão.");
     if (!res.ok) {
       const t = await res.text();
       throw new Error(`Falha na IA (${res.status}): ${t.slice(0, 200)}`);
     }
+
     const json = await res.json();
-    const choice = json.choices?.[0];
-    const raw = choice?.message?.content;
-    const text = unescapeLiteralNewlines(
-      extractAIContent(typeof raw === "string" ? raw : (raw ?? "")),
-    );
+    const textPart = json?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    const text = unescapeLiteralNewlines(extractAIContent(textPart));
+
     if (text.trim().length > 0) return text;
     last = text;
     console.warn(
       `[callAIText] resposta vazia (tentativa ${attempt + 1}/${attempts})`,
-      choice?.finish_reason ?? "sem finish_reason",
+      json?.candidates?.[0]?.finishReason ?? "sem finishReason",
     );
     if (attempt < attempts - 1) await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
   }
 
   return last;
 }
-
 
 export async function callAIJson<T = unknown>(opts: {
   system: string;
@@ -122,34 +102,42 @@ export async function callAIJson<T = unknown>(opts: {
   maxTokens?: number;
   temperature?: number;
 }): Promise<T> {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new Error("LOVABLE_API_KEY ausente");
-  const res = await fetch(GATEWAY_URL, {
+  const apiKey = process.env.GOOGLE_API_KEY;
+  if (!apiKey) throw new Error("GOOGLE_API_KEY ausente");
+
+  const model = opts.model ?? "gemini-2.0-flash";
+  const url = `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`;
+
+  const res = await fetch(url, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: opts.model ?? "google/gemini-2.5-flash",
-      messages: [
-        { role: "system", content: opts.system },
-        { role: "user", content: opts.user },
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: `Sistema: ${opts.system}\n\nUsuário: ${opts.user}\n\nResponda APENAS com JSON válido.` }],
+        },
       ],
-      response_format: { type: "json_object" },
-      max_tokens: opts.maxTokens ?? 16000,
-      temperature: opts.temperature ?? 0.7,
+      generationConfig: {
+        maxOutputTokens: Math.min(opts.maxTokens ?? 8192, 8192),
+        temperature: opts.temperature ?? 0.3,
+        responseMimeType: "application/json",
+      },
     }),
   });
+
   if (res.status === 429) throw new Error("Limite de requisições da IA atingido. Tente novamente em instantes.");
-  if (res.status === 402) throw new Error("Créditos da IA esgotados. Adicione créditos em Configurações.");
+  if (res.status === 403) throw new Error("Chave da API do Google inválida ou sem permissão.");
   if (!res.ok) {
     const t = await res.text();
     throw new Error(`Falha na IA (${res.status}): ${t.slice(0, 200)}`);
   }
+
   const json = await res.json();
-  const content = json.choices?.[0]?.message?.content ?? "{}";
-  return parseAIJson<T>(content);
+  const textPart = json?.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
+  return parseAIJson<T>(textPart);
 }
 
 function parseAIJson<T>(raw: string): T {
@@ -221,35 +209,54 @@ export async function callAIVisionText(opts: {
   imageDataUrl: string;
   model?: string;
 }): Promise<string> {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new Error("LOVABLE_API_KEY ausente");
-  const res = await fetch(GATEWAY_URL, {
+  const apiKey = process.env.GOOGLE_API_KEY;
+  if (!apiKey) throw new Error("GOOGLE_API_KEY ausente");
+
+  const model = opts.model ?? "gemini-2.0-flash";
+  const url = `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`;
+
+  // Extrair base64 da URL data
+  const base64Match = opts.imageDataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!base64Match) {
+    throw new Error("Formato de imagem inválido");
+  }
+
+  const mimeType = base64Match[1];
+  const base64Data = base64Match[2];
+
+  const res = await fetch(url, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: opts.model ?? "google/gemini-2.5-flash",
-      messages: [
-        { role: "system", content: opts.system },
+      contents: [
         {
           role: "user",
-          content: [
-            { type: "text", text: opts.user },
-            { type: "image_url", image_url: { url: opts.imageDataUrl } },
+          parts: [
+            { text: `Sistema: ${opts.system}\n\nUsuário: ${opts.user}` },
+            {
+              inlineData: {
+                mimeType,
+                data: base64Data,
+              },
+            },
           ],
         },
       ],
-      max_tokens: 8000,
+      generationConfig: {
+        maxOutputTokens: 8192,
+      },
     }),
   });
+
   if (res.status === 429) throw new Error("Limite de requisições da IA atingido. Tente novamente em instantes.");
-  if (res.status === 402) throw new Error("Créditos da IA esgotados. Adicione créditos em Configurações.");
+  if (res.status === 403) throw new Error("Chave da API do Google inválida ou sem permissão.");
   if (!res.ok) {
     const t = await res.text();
     throw new Error(`Falha na IA (${res.status}): ${t.slice(0, 200)}`);
   }
+
   const json = await res.json();
-  return extractAIContent(json.choices?.[0]?.message?.content ?? "").replace(/\\n/g, "\n");
+  return extractAIContent(json?.candidates?.[0]?.content?.parts?.[0]?.text ?? "").replace(/\\n/g, "\n");
 }
