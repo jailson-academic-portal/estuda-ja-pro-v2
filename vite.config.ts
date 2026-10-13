@@ -14,6 +14,13 @@ export default defineConfig({
     define: {
       __BUILD_ID__: JSON.stringify(createSourceHash()),
     },
+    ssr: {
+      // Externalizar módulos Node.js que não devem ser bundleados
+      external: ["https", "http", "http2", "zlib", "stream", "util", "buffer"],
+    },
+    optimizeDeps: {
+      exclude: ["@supabase/supabase-js"],
+    },
   },
 });
 
