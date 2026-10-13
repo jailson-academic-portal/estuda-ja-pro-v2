@@ -14,10 +14,15 @@ export default defineConfig({
     define: {
       __BUILD_ID__: JSON.stringify(createSourceHash()),
     },
+    // Configurações específicas para o build server-side
     ssr: {
-      // Garantir que módulos Node.js não sejam resolvidos para o browser
-      noExternal: [],
+      // Forçar que https/http sejam tratados como externos
+      external: ['https', 'http'],
     },
+  },
+  // Configuração do Nitro para Vercel
+  nitro: {
+    preset: 'vercel',
   },
 });
 
