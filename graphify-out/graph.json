@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-13T17:37:15.781119+00:00",
+  "generated_at": "2026-10-13T17:46:19.948607+00:00",
   "files": [
     {
       "path": "roadmap.md",
@@ -16,6 +16,10 @@
     {
       "path": "package-lock.json",
       "bytes": 713769
+    },
+    {
+      "path": "nitro.config.ts",
+      "bytes": 883
     },
     {
       "path": "setup_banco_provas.sql",
@@ -39,7 +43,7 @@
     },
     {
       "path": "vite.config.ts",
-      "bytes": 1680
+      "bytes": 1219
     },
     {
       "path": "eslint.config.js",
@@ -2222,6 +2226,10 @@
     {
       "source": "drizzle.config.ts",
       "target": "drizzle-kit"
+    },
+    {
+      "source": "nitro.config.ts",
+      "target": "nitropack"
     },
     {
       "source": "vite.config.ts",
